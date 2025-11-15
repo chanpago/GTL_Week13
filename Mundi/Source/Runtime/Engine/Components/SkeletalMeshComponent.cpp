@@ -37,7 +37,7 @@ void USkeletalMeshComponent::BeginPlay()
     UAnimNotify_PlaySound* N_PlaySound = NewObject<UAnimNotify_PlaySound>(); 
     N_PlaySound->Sound = UResourceManager::GetInstance().Load<USound>("Data/Audio/CGC1.wav");
 
-    WalkAnim->AddPlaySoundNotify(0.5f, N_PlaySound);
+    static_cast<UAnimSequenceBase*>(WalkAnim)->AddPlaySoundNotify(0.5f, N_PlaySound);
 }
 
 void USkeletalMeshComponent::TickComponent(float DeltaTime)
