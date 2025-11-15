@@ -2,7 +2,7 @@
 #include "SkeletalMeshComponent.h"
 #include "Source/Runtime/Engine/Animation/AnimDateModel.h"
 #include "Source/Runtime/Engine/Animation/AnimSequence.h"
-
+#include "Source/Runtime/Engine/Animation/AnimInstance.h"
 #include "Source/Runtime/Engine/Animation/AnimTypes.h"
 
 USkeletalMeshComponent::USkeletalMeshComponent()
@@ -45,8 +45,16 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime)
 
     if (!SkeletalMesh) { return; }
 
-    // 애니메이션 업데이트
-    TickAnimation(DeltaTime);
+    // AnimInstance가 있으면 AnimInstance를 통해 애니메이션 업데이트
+    if (AnimInstance)
+    {
+        AnimInstance->NativeUpdateAnimation(DeltaTime);
+    }
+    else
+    {
+        // 기존 방식: 직접 애니메이션 업데이트
+        TickAnimation(DeltaTime);
+    }
 }
 
 void USkeletalMeshComponent::SetSkeletalMesh(const FString& PathFileName)
@@ -440,4 +448,50 @@ void USkeletalMeshComponent::TickAnimInstances(float DeltaTime)
 
     // 6. 포즈 변경 사항을 스키닝에 반영
     ForceRecomputePose();
+}
+
+// ============================================================
+// AnimInstance Integration
+// ============================================================
+
+void USkeletalMeshComponent::SetAnimationPose(const TArray<FTransform>& InPose)
+{
+    if (!SkeletalMesh || !SkeletalMesh->GetSkeletalMeshData())
+    {
+        return;
+    }
+
+    const FSkeleton& Skeleton = SkeletalMesh->GetSkeletalMeshData()->Skeleton;
+    const int32 NumBones = Skeleton.Bones.Num();
+
+    // 포즈가 스켈레톤과 일치하는지 확인
+    if (InPose.Num() != NumBones)
+    {
+        UE_LOG("SetAnimationPose: Pose size mismatch (%d != %d)", InPose.Num(), NumBones);
+        return;
+    }
+
+    // AnimInstance가 계산한 포즈를 CurrentLocalSpacePose에 복사
+    // 주의: AnimInstance의 포즈는 본 트랙 순서이므로 스켈레톤 본 순서와 매칭해야 함
+    for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+    {
+        if (BoneIndex < InPose.Num())
+        {
+            CurrentLocalSpacePose[BoneIndex] = InPose[BoneIndex];
+        }
+    }
+
+    // 포즈 변경 사항을 스키닝에 반영
+    ForceRecomputePose();
+}
+
+void USkeletalMeshComponent::SetAnimInstance(UAnimInstance* InAnimInstance)
+{
+    AnimInstance = InAnimInstance;
+
+    if (AnimInstance)
+    {
+        AnimInstance->Initialize(this);
+        UE_LOG("AnimInstance initialized for SkeletalMeshComponent");
+    }
 }

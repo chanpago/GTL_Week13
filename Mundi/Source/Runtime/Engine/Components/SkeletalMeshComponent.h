@@ -4,6 +4,7 @@
 // Include for FPendingAnimNotify and FAnimNotifyEvent types
 #include "Source/Runtime/Engine/Animation/AnimTypes.h"
 class UAnimSequence;
+class UAnimInstance;
 struct FPendingAnimNotify;
 
 UCLASS(DisplayName="스켈레탈 메시 컴포넌트", Description="스켈레탈 메시를 렌더링하는 컴포넌트입니다")
@@ -83,6 +84,22 @@ public:
 
     void DispatchAnimNotifies();
 
+    /**
+     * @brief AnimInstance에서 계산한 포즈를 컴포넌트에 적용
+     * @param InPose 적용할 포즈 (본별 로컬 트랜스폼)
+     */
+    void SetAnimationPose(const TArray<FTransform>& InPose);
+
+    /**
+     * @brief AnimInstance 가져오기
+     */
+    UAnimInstance* GetAnimInstance() const { return AnimInstance; }
+
+    /**
+     * @brief AnimInstance 설정 (선택적)
+     */
+    void SetAnimInstance(UAnimInstance* InAnimInstance);
+
 protected:
     /**
      * @brief 애니메이션 업데이트 (TickComponent에서 호출)
@@ -115,6 +132,10 @@ protected:
 
     /** 애니메이션 재생 속도 */
     float PlayRate = 1.0f;
+
+    /** 애니메이션 인스턴스 (향후 확장) */
+    UPROPERTY()
+    UAnimInstance* AnimInstance = nullptr;
 
 // Editor Section
 public:
