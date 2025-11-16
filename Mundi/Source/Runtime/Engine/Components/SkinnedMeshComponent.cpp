@@ -79,10 +79,10 @@ void USkinnedMeshComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMes
 
    if (bSkinningMatricesDirty && !bForceGPUSkinning)
    {
-      TIME_PROFILE(CPUSkinning)
+      TIME_PROFILE(Dynamic)
       bSkinningMatricesDirty = false;
       SkeletalMesh->UpdateVertexBuffer(SkinnedVertices, CPUSkinnedVertexBuffer);
-      TIME_PROFILE_END(CPUSkinning)
+      TIME_PROFILE_END(Dynamic)
    }
 
    if (bForceGPUSkinning &&
@@ -330,20 +330,8 @@ void USkinnedMeshComponent::PerformSkinning()
    if (!SkeletalMesh || FinalSkinningMatrices.IsEmpty()) { return; }
    if (!bSkinningMatricesDirty) { return; }
 
-   if (bForceGPUSkinning &&
-      SkinningMatrixBuffer && SkinningNormalMatrixBuffer &&
-      !FinalSkinningMatrices.IsEmpty())
-   {
-      D3D11RHI* RHIDevice = GEngine.GetRHIDevice();
-      RHIDevice->UpdateStructuredBuffer(SkinningMatrixBuffer,
-                                        FinalSkinningMatrices.data(),
-                                        sizeof(FMatrix) *
-                                        FinalSkinningMatrices.Num());
-
-      RHIDevice->UpdateStructuredBuffer(SkinningNormalMatrixBuffer,
-                                        FinalSkinningNormalMatrices.data(),
-                                        sizeof(FMatrix) *
-                                        FinalSkinningNormalMatrices.Num());
+   if (bForceGPUSkinning)
+   {      
       return;
    }
 

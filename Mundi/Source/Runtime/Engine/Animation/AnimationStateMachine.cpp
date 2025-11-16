@@ -3,6 +3,8 @@
 #include "AnimInstance.h"
 #include "AnimSequence.h"
 
+IMPLEMENT_CLASS(UAnimationStateMachine)
+
 void UAnimationStateMachine::Initialize(UAnimInstance* InOwner)
 {
     Owner = InOwner;
@@ -120,7 +122,7 @@ void UAnimationStateMachine::ChangeState(const FName& NewStateName, float BlendT
         if (BlendTime > 0.0f)
         {
             // 블렌드 사용
-            Owner->BlendTo(NewState->Sequence, BlendTime);
+            Owner->BlendTo(NewState->Sequence, NewState->bLoop, NewState->PlayRate, BlendTime);
         }
         else
         {

@@ -107,7 +107,7 @@ public:
      * @brief AnimInstance 초기화
      * @param InComponent 소유 컴포넌트
      */
-    void Initialize(USkeletalMeshComponent* InComponent);
+    virtual void Initialize(USkeletalMeshComponent* InComponent);
 
     // ============================================================
     // Update & Pose Evaluation
@@ -145,9 +145,11 @@ public:
     /**
      * @brief 다른 시퀀스로 블렌드
      * @param Sequence 블렌드할 시퀀스
+     * @param bLoop 타겟 시퀀스 루프 여부
+     * @param InPlayRate 타겟 시퀀스 재생 속도
      * @param BlendTime 블렌드 시간
      */
-    void BlendTo(UAnimSequence* Sequence, float BlendTime);
+    void BlendTo(UAnimSequence* Sequence, bool bLoop, float InPlayRate, float BlendTime);
 
     /**
      * @brief 재생 중인지 확인
@@ -215,6 +217,11 @@ public:
     USkeletalMeshComponent* GetOwningComponent() const { return OwningComponent; }
 
 protected:
+    // PlayState 헬퍼
+    void EvaluatePoseForState(const FAnimationPlayState& PlayState, TArray<FTransform>& OutPose) const;
+    void AdvancePlayState(FAnimationPlayState& PlayState, float DeltaSeconds);
+    void BlendPoseArrays(const TArray<FTransform>& FromPose, const TArray<FTransform>& ToPose, float Alpha, TArray<FTransform>& OutPose) const;
+
     // 소유 컴포넌트
     USkeletalMeshComponent* OwningComponent = nullptr;
 
@@ -239,3 +246,4 @@ protected:
     float MovementSpeed = 0.0f;
     bool bIsMoving = false;
 };
+

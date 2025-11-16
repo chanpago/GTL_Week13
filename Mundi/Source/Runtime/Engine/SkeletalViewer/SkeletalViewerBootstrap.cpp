@@ -47,6 +47,7 @@ ViewerState* SkeletalViewerBootstrap::CreateViewerState(const char* Name, UWorld
     if (InWorld)
     {
         State->World->GetRenderSettings().SetShowFlags(InWorld->GetRenderSettings().GetShowFlags());
+        State->World->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_EditorIcon);;
     }
 
     return State;

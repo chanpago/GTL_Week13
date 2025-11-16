@@ -7,6 +7,8 @@
 #include "Source/Runtime/Engine/Animation/AnimTypes.h"
 #include "Source/Runtime/Engine/Animation/AnimationAsset.h"
 #include "Source/Runtime/Engine/Animation/AnimNotify_PlaySound.h"
+#include "Source/Runtime/Engine/Animation/Team2AnimInstance.h"
+#include "InputManager.h"
 
 #include "PlatformTime.h"
 
@@ -21,25 +23,19 @@ void USkeletalMeshComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    // TEST: Load and play animation using UE-style API
-    UAnimationAsset* WalkAnim = RESOURCE.Get<UAnimSequence>("Data/JamesWalking.fbx_mixamo.com");
+    // Team2AnimInstance를 사용한 상태머신 기반 애니메이션 시스템
+    // AnimationBlueprint 모드로 전환
+    SetAnimationMode(EAnimationMode::AnimationBlueprint);
 
-    if (WalkAnim)
-    {
-        UE_LOG("Animation loaded successfully! Duration: %.2f seconds", WalkAnim->GetPlayLength());
+    // Team2AnimInstance 생성 및 설정
+    UTeam2AnimInstance* Team2AnimInst = NewObject<UTeam2AnimInstance>();
+    SetAnimInstance(Team2AnimInst);
 
-        // UE 스타일 API 사용
-        PlayAnimation(WalkAnim, true);
-    }
-    else
-    {
-        UE_LOG("Failed to load animation: Data/James/James.fbx_mixamo.com");
-    }
-
-    UAnimNotify_PlaySound* N_PlaySound = NewObject<UAnimNotify_PlaySound>(); 
-    N_PlaySound->Sound = UResourceManager::GetInstance().Load<USound>("Data/Audio/CGC1.wav");
-
-    static_cast<UAnimSequenceBase*>(WalkAnim)->AddPlaySoundNotify(0.5f, N_PlaySound);
+    UE_LOG("Team2AnimInstance initialized - Idle/Walk/Run state machine ready");
+    UE_LOG("Use SetMovementSpeed() to control animation transitions");
+    UE_LOG("  Speed < 0.1: Idle animation");
+    UE_LOG("  Speed 0.1 ~ 5.0: Walk animation");
+    UE_LOG("  Speed >= 5.0: Run animation");
 }
 
 void USkeletalMeshComponent::TickComponent(float DeltaTime)
@@ -48,9 +44,65 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime)
 
     if (!SkeletalMesh) { return; }
 
-    // AnimInstance가 있으면 AnimInstance를 통해 애니메이션 업데이트 (권장 경로)
+    // Team2AnimInstance 테스트를 위한 키 입력 처리
     if (AnimInstance)
     {
+        //UE_LOG("Tick Component Running");
+
+        
+        UInputManager& InputManager = UInputManager::GetInstance();
+
+        static float CurrentSpeed = 0.0f;
+        static float LastLoggedSpeed = -1.0f;
+
+        // W 키: 속도 증가 (Walk -> Run 전환 테스트)
+        if (InputManager.IsKeyDown('W'))
+        {
+            CurrentSpeed += DeltaTime * 5.0f; // 초당 5.0 증가
+            CurrentSpeed = FMath::Min(CurrentSpeed, 10.0f); // 최대 10.0
+            AnimInstance->SetMovementSpeed(CurrentSpeed);
+
+            // 0.5 단위로 속도가 변경될 때마다 로그 출력
+            if (FMath::Abs(CurrentSpeed - LastLoggedSpeed) >= 0.5f)
+            {
+                UE_LOG("[Team2AnimInstance] Speed: %.2f (W key - Increasing)", CurrentSpeed);
+                LastLoggedSpeed = CurrentSpeed;
+            }
+        }
+        // S 키: 속도 감소 (Run -> Walk 전환 테스트)
+        else if (InputManager.IsKeyDown('S'))
+        {
+            CurrentSpeed -= DeltaTime * 5.0f; // 초당 5.0 감소
+            CurrentSpeed = FMath::Max(CurrentSpeed, 0.0f); // 최소 0.0
+            AnimInstance->SetMovementSpeed(CurrentSpeed);
+
+            // 0.5 단위로 속도가 변경될 때마다 로그 출력
+            if (FMath::Abs(CurrentSpeed - LastLoggedSpeed) >= 0.5f)
+            {
+                UE_LOG("[Team2AnimInstance] Speed: %.2f (S key - Decreasing)", CurrentSpeed);
+                LastLoggedSpeed = CurrentSpeed;
+            }
+        }
+        // R 키: 속도 리셋 (한 번만 눌렀을 때)
+        else if (InputManager.IsKeyPressed('R'))
+        {
+            CurrentSpeed = 0.0f;
+            AnimInstance->SetMovementSpeed(CurrentSpeed);
+            UE_LOG("[Team2AnimInstance] Speed RESET to 0.0");
+            LastLoggedSpeed = CurrentSpeed;
+        }
+
+        // 현재 속도 상태를 주기적으로 로그 (5초마다)
+        static float LogTimer = 0.0f;
+        LogTimer += DeltaTime;
+        if (LogTimer >= 5.0f)
+        {
+            UE_LOG("[Team2AnimInstance] Current Speed: %.2f, IsMoving: %d, Threshold: 5.0",
+                CurrentSpeed,
+                AnimInstance->GetIsMoving() ? 1 : 0);
+            LogTimer = 0.0f;
+        }
+
         // AnimInstance가 NativeUpdateAnimation에서:
         // 1. 상태머신 업데이트 (있다면)
         // 2. 시간 갱신 및 루핑 처리

@@ -32,7 +32,7 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
         AnimStateMachine->ProcessState(DeltaSeconds);
     }
 
-    if (!CurrentPlayState.bIsPlaying || !CurrentPlayState.Sequence)
+    if (!CurrentPlayState.Sequence)
     {
         return;
     }
@@ -40,36 +40,48 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     // 이전 시간 저장 (노티파이 검출용)
     PreviousPlayTime = CurrentPlayState.CurrentTime;
 
-    // 시간 갱신
-    CurrentPlayState.CurrentTime += DeltaSeconds * CurrentPlayState.PlayRate;
+    // 현재 상태 시간 갱신
+    AdvancePlayState(CurrentPlayState, DeltaSeconds);
 
-    float PlayLength = CurrentPlayState.Sequence->GetPlayLength();
+    const bool bIsBlending = (BlendTimeRemaining > 0.0f && BlendTargetState.Sequence != nullptr);
 
-    // 루핑 처리
-    if (CurrentPlayState.bIsLooping)
+    if (bIsBlending)
     {
-        if (CurrentPlayState.CurrentTime >= PlayLength)
+        AdvancePlayState(BlendTargetState, DeltaSeconds);
+
+        const float SafeTotalTime = FMath::Max(BlendTotalTime, 1e-6f);
+        float BlendAlpha = 1.0f - (BlendTimeRemaining / SafeTotalTime);
+        BlendAlpha = FMath::Clamp(BlendAlpha, 0.0f, 1.0f);
+
+        TArray<FTransform> FromPose;
+        TArray<FTransform> TargetPose;
+        EvaluatePoseForState(CurrentPlayState, FromPose);
+        EvaluatePoseForState(BlendTargetState, TargetPose);
+
+        TArray<FTransform> BlendedPose;
+        BlendPoseArrays(FromPose, TargetPose, BlendAlpha, BlendedPose);
+
+        if (OwningComponent && BlendedPose.Num() > 0)
         {
-            CurrentPlayState.CurrentTime = FMath::Fmod(CurrentPlayState.CurrentTime, PlayLength);
+            OwningComponent->SetAnimationPose(BlendedPose);
+        }
+
+        BlendTimeRemaining = FMath::Max(BlendTimeRemaining - DeltaSeconds, 0.0f);
+        if (BlendTimeRemaining <= 1e-4f)
+        {
+            CurrentPlayState = BlendTargetState;
+            CurrentPlayState.BlendWeight = 1.0f;
+
+            BlendTargetState = FAnimationPlayState();
+            BlendTimeRemaining = 0.0f;
+            BlendTotalTime = 0.0f;
         }
     }
-    else
-    {
-        // 비루핑: 끝에 도달하면 정지
-        if (CurrentPlayState.CurrentTime >= PlayLength)
-        {
-            CurrentPlayState.CurrentTime = PlayLength;
-            CurrentPlayState.bIsPlaying = false;
-        }
-    }
-
-    // 포즈 추출 및 컴포넌트에 적용
-    if (OwningComponent)
+    else if (OwningComponent)
     {
         TArray<FTransform> Pose;
-        EvaluatePose(Pose);
+        EvaluatePoseForState(CurrentPlayState, Pose);
 
-        // 컴포넌트의 로컬 포즈에 적용
         if (Pose.Num() > 0)
         {
             OwningComponent->SetAnimationPose(Pose);
@@ -83,33 +95,11 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     UpdateAnimationCurves();
 }
 
+
 void UAnimInstance::EvaluatePose(TArray<FTransform>& OutPose)
 {
-    if (!CurrentPlayState.Sequence)
-    {
-        return;
-    }
-
-    UAnimDataModel* DataModel = CurrentPlayState.Sequence->GetDataModel();
-    if (!DataModel)
-    {
-        return;
-    }
-
-    int32 NumBones = DataModel->GetNumBoneTracks();
-    OutPose.SetNum(NumBones);
-
-    // FAnimExtractContext 생성
-    FAnimExtractContext ExtractContext(CurrentPlayState.CurrentTime, CurrentPlayState.bIsLooping);
-    FPoseContext PoseContext(NumBones);
-
-    // 애니메이션 포즈 추출
-    CurrentPlayState.Sequence->GetAnimationPose(PoseContext, ExtractContext);
-
-    // 결과 복사
-    OutPose = PoseContext.Pose;
+    EvaluatePoseForState(CurrentPlayState, OutPose);
 }
-
 // ============================================================
 // Playback API
 // ============================================================
@@ -143,7 +133,7 @@ void UAnimInstance::StopSequence()
     UE_LOG("UAnimInstance::StopSequence - Stopped");
 }
 
-void UAnimInstance::BlendTo(UAnimSequence* Sequence, float BlendTime)
+void UAnimInstance::BlendTo(UAnimSequence* Sequence, bool bLoop, float InPlayRate, float BlendTime)
 {
     if (!Sequence)
     {
@@ -151,28 +141,28 @@ void UAnimInstance::BlendTo(UAnimSequence* Sequence, float BlendTime)
         return;
     }
 
-    // 간단한 블렌드 구현 (향후 확장 가능)
-    // 현재는 즉시 전환
     BlendTargetState.Sequence = Sequence;
     BlendTargetState.CurrentTime = 0.0f;
-    BlendTargetState.PlayRate = CurrentPlayState.PlayRate;
-    BlendTargetState.bIsLooping = CurrentPlayState.bIsLooping;
+    BlendTargetState.PlayRate = InPlayRate;
+    BlendTargetState.bIsLooping = bLoop;
     BlendTargetState.bIsPlaying = true;
     BlendTargetState.BlendWeight = 0.0f;
 
-    BlendTimeRemaining = BlendTime;
-    BlendTotalTime = BlendTime;
+    BlendTimeRemaining = FMath::Max(BlendTime, 0.0f);
+    BlendTotalTime = BlendTimeRemaining;
 
-    if (BlendTime <= 0.0f)
+    if (BlendTimeRemaining <= 0.0f)
     {
         // 즉시 전환
         CurrentPlayState = BlendTargetState;
         CurrentPlayState.BlendWeight = 1.0f;
+        BlendTargetState = FAnimationPlayState();
     }
 
     UE_LOG("UAnimInstance::BlendTo - Blending to: %s (BlendTime: %.2f)",
         Sequence->ObjectName.ToString().c_str(), BlendTime);
 }
+
 
 // ============================================================
 // Notify & Curve Processing
@@ -246,5 +236,86 @@ void UAnimInstance::SetStateMachine(UAnimationStateMachine* InStateMachine)
     {
         AnimStateMachine->Initialize(this);
         UE_LOG("AnimInstance: StateMachine set and initialized");
+    }
+}
+void UAnimInstance::EvaluatePoseForState(const FAnimationPlayState& PlayState, TArray<FTransform>& OutPose) const
+{
+    OutPose.Empty();
+
+    if (!PlayState.Sequence)
+    {
+        return;
+    }
+
+    UAnimDataModel* DataModel = PlayState.Sequence->GetDataModel();
+    if (!DataModel)
+    {
+        return;
+    }
+
+    const int32 NumBones = DataModel->GetNumBoneTracks();
+    OutPose.SetNum(NumBones);
+
+    FAnimExtractContext ExtractContext(PlayState.CurrentTime, PlayState.bIsLooping);
+    FPoseContext PoseContext(NumBones);
+    PlayState.Sequence->GetAnimationPose(PoseContext, ExtractContext);
+
+    OutPose = PoseContext.Pose;
+}
+
+void UAnimInstance::AdvancePlayState(FAnimationPlayState& PlayState, float DeltaSeconds)
+{
+    if (!PlayState.Sequence || !PlayState.bIsPlaying)
+    {
+        return;
+    }
+
+    PlayState.CurrentTime += DeltaSeconds * PlayState.PlayRate;
+
+    const float PlayLength = PlayState.Sequence->GetPlayLength();
+    if (PlayLength <= 0.0f)
+    {
+        return;
+    }
+
+    if (PlayState.bIsLooping)
+    {
+        if (PlayState.CurrentTime >= PlayLength)
+        {
+            PlayState.CurrentTime = FMath::Fmod(PlayState.CurrentTime, PlayLength);
+        }
+    }
+    else if (PlayState.CurrentTime >= PlayLength)
+    {
+        PlayState.CurrentTime = PlayLength;
+        PlayState.bIsPlaying = false;
+    }
+}
+
+void UAnimInstance::BlendPoseArrays(const TArray<FTransform>& FromPose, const TArray<FTransform>& ToPose, float Alpha, TArray<FTransform>& OutPose) const
+{
+    const int32 NumBones = FMath::Min(FromPose.Num(), ToPose.Num());
+    if (NumBones == 0)
+    {
+        OutPose = FromPose;
+        return;
+    }
+
+    const float ClampedAlpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
+    OutPose.SetNum(NumBones);
+
+    for (int32 BoneIndex = 0; BoneIndex < NumBones; ++BoneIndex)
+    {
+        const FTransform& From = FromPose[BoneIndex];
+        const FTransform& To = ToPose[BoneIndex];
+
+        FTransform Result;
+        //Result.Lerp(From,To,ClampedAlpha);
+        Result.Translation = FMath::Lerp(From.Translation, To.Translation, ClampedAlpha);
+        Result.Scale3D = FMath::Lerp(From.Scale3D, To.Scale3D, ClampedAlpha);
+        Result.Rotation = FQuat::Slerp(From.Rotation, To.Rotation, ClampedAlpha);
+        Result.Rotation.Normalize();
+
+        OutPose[BoneIndex] = Result;
     }
 }
