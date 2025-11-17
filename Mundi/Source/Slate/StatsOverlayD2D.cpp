@@ -381,7 +381,8 @@ void UStatsOverlayD2D::Draw()
 		double GPUSkinning = GET_GPU_STAT("GPUSkinning")
 		// CPU 스키닝
 		double CPUSkinning = FScopeCycleCounter::GetTimeProfile("CPUSkinning").GetTime();
-		double Dynamic = FScopeCycleCounter::GetTimeProfile("Dynamic").GetTime();
+		double VertexBuffer = FScopeCycleCounter::GetTimeProfile("VertexBuffer").GetTime();
+		double StructuredBuffer = FScopeCycleCounter::GetTimeProfile("StructuredBuffer").GetTime();
 
 		const FSkinningStats& SkinningStats = FSkinningStatManager::GetInstance().GetStats();
 		FWideString AllSkinningType = UTF8ToWide(SkinningStats.SkinningType);		
@@ -391,15 +392,17 @@ void UStatsOverlayD2D::Draw()
 			L"[Skeletal Stats]\n All Skinning Type : %s\n Total Skeletals : %u\n Total Bones : %u\n Total Vertices : %u\n"
 			L"[Times]\n"
 			L" CPU Skinning : %.3f\n"
-			L" GPU Skinning : %.3f\n"
-			L" Dynamic Buffer : %.3f\n",
+			L" Vertex Buffer : %.3f\n"
+			L" GPU Draw Time : %.3f\n"
+			L" Structured Buffer : %.3f\n",
 			AllSkinningType.c_str(),
 			SkinningStats.TotalSkeletals,
 			SkinningStats.TotalBones,
 			SkinningStats.TotalVertices,
 			CPUSkinning,
+			VertexBuffer,
 			GPUSkinning,
-			Dynamic
+			StructuredBuffer
 		);
 
 		const float SkinningPanelHeight = 180.0f;
