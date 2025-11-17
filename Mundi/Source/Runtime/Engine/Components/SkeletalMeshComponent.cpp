@@ -375,8 +375,16 @@ void USkeletalMeshComponent::SetAnimationTime(float InTime)
             CurrentAnimationTime = FMath::Clamp(CurrentAnimationTime, 0.0f, PlayLength);
         }
 
+
+
+        GatherNotifiesFromRange(PrevAnimationTime, CurrentAnimationTime);
+        
         /* @todo 애니메이션 갱신을 위해 추가함. 이후, 애니메이션 계산 로직만을 별도로 분리해야 할 필요 존재함 */
         TickAnimInstances(0.0f);
+
+        DispatchAnimNotifies();
+
+        PrevAnimationTime = CurrentAnimationTime;
     }
 }
 
@@ -392,6 +400,24 @@ void USkeletalMeshComponent::GatherNotifies(float DeltaTime)
 
     // 시간 업데이트
     const float PrevTime = CurrentAnimationTime;
+    const float DeltaMove = DeltaTime * PlayRate;
+
+    // 이번 틱 구간 [PrevTime -> PrevTime + DeltaMove]에서 발생한 Notify 수집 
+    CurrentAnimation->GetAnimNotify(PrevTime, DeltaMove, PendingNotifies);
+}
+
+void USkeletalMeshComponent::GatherNotifiesFromRange(float PrevTime, float CurTime)
+{
+    if (!CurrentAnimation)
+    {
+        return;
+    }
+
+    // 이전 틱에 저장 된 PendingNotifies 지우고 시작
+    PendingNotifies.Empty();
+
+    // 시간 업데이트
+    float DeltaTime = CurTime - PrevTime;
     const float DeltaMove = DeltaTime * PlayRate;
 
     // 이번 틱 구간 [PrevTime -> PrevTime + DeltaMove]에서 발생한 Notify 수집 

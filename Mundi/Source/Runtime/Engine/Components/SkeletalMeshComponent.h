@@ -102,6 +102,7 @@ public:
     * @brief Notifies들을 수집하는 함수
     */
     void GatherNotifies(float DeltaTime);
+    void GatherNotifiesFromRange(float PrevTime, float CurTime);
 
     void DispatchAnimNotifies();
 
@@ -150,6 +151,9 @@ protected:
 
     /** 현재 애니메이션 재생 시간 (초) */
     float CurrentAnimationTime = 0.0f;
+     
+    /** 이전 애니메이션 재생 시간 (초) */
+    float PrevAnimationTime = 0.0f;
 
     /** 애니메이션 재생 속도 */
     float PlayRate = 1.0f;

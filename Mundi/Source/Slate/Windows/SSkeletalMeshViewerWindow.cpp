@@ -12,8 +12,11 @@
 #include "SkinningStats.h"
 #include "Source/Runtime/Engine/Animation/AnimSequence.h"
 #include "Source/Runtime/Engine/Collision/Picking.h"
-#include "Source/Runtime/Engine/GameFramework/CameraActor.h"
-
+#include "Source/Runtime/Engine/Animation/AnimNotify_PlaySound.h"
+#include "Source/Runtime/AssetManagement/ResourceManager.h"
+#include "Source/Editor/PlatformProcess.h"
+#include <filesystem>
+#include "Source/Runtime/Engine/GameFramework/CameraActor.h" "
 SSkeletalMeshViewerWindow::SSkeletalMeshViewerWindow()
 {
     CenterRect = FRect(0, 0, 0, 0);
@@ -1156,11 +1159,45 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                 bIsTimelineHovered = true;
                 FrameAtMouse = PixelToFrame(ImGui::GetIO().MousePos.x);
             }
+            static float RightClickFrame = 0.0f;
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+            {
+                RightClickFrame = PixelToFrame(ImGui::GetIO().MousePos.x);
+            }
+
+            // Context menu to add notifies
+            if (ImGui::BeginPopupContextItem("NotifyTrackContext"))
+            {
+                if (ImGui::BeginMenu("Add Notify"))
+                {
+                    if (ImGui::MenuItem("Sound Notify"))
+                    {
+                        if (bHasAnimation && State->CurrentAnimation)
+                        {
+                            float ClickFrame = RightClickFrame;
+                            float TimeSec = ImClamp(ClickFrame * FrameDuration, 0.0f, PlayLength);
+                            // Sound Notify 추가
+                            UAnimNotify_PlaySound* NewNotify = NewObject<UAnimNotify_PlaySound>();
+                            if (NewNotify)
+                            {
+                                // 기본 SoundNotify는 sound 없음  
+                                NewNotify->Sound = nullptr;
+                                State->CurrentAnimation->AddPlaySoundNotify(TimeSec, NewNotify, 0.0f); 
+                            }
+                        }
+                    }
+                    ImGui::EndMenu();
+                }
+                ImGui::EndPopup();
+            }
 
             if (bHasAnimation)
             {
-                for (const FAnimNotifyEvent& Notify : State->CurrentAnimation->GetAnimNotifyEvents())
+                // Draw and hit-test notifies
+                const TArray<FAnimNotifyEvent>& EventsConst = State->CurrentAnimation->GetAnimNotifyEvents();
+                for (int i = 0; i < EventsConst.Num(); ++i)
                 {
+                    const FAnimNotifyEvent& Notify = EventsConst[i];
                     float TriggerFrame = Notify.TriggerTime / FrameDuration;
                     float DurationFrames = (Notify.Duration > 0.0f) ? (Notify.Duration / FrameDuration) : 0.5f;
                     
@@ -1174,22 +1211,132 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
 
                     if (ViewXEnd > ViewXStart)
                     {
+                        // Hover/click detection rect
+                        ImVec2 RMin(ViewXStart, P.y);
+                        ImVec2 RMax(ViewXEnd, P.y + Size.y);
+                        bool bHover = ImGui::IsMouseHoveringRect(RMin, RMax);
+                        bool bClicked = bHover && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+                            
+                        // Styling
+                        ImU32 FillCol = IM_COL32(100, 100, 255, bHover ? 140 : 100);
+                        ImU32 LineCol = IM_COL32(200, 200, 255, 150);
                         DrawList->AddRectFilled(
-                            ImVec2(ViewXStart, P.y), 
-                            ImVec2(ViewXEnd, P.y + Size.y), 
-                            IM_COL32(100, 100, 255, 100)
+                            ImVec2(ViewXStart, P.y),
+                            ImVec2(ViewXEnd, P.y + Size.y),
+                            FillCol
                         );
                         DrawList->AddRect(
                             ImVec2(ViewXStart, P.y), 
                             ImVec2(ViewXEnd, P.y + Size.y), 
-                            IM_COL32(200, 200, 255, 150)
+                            LineCol
                         );
                         
                         ImGui::PushClipRect(ImVec2(ViewXStart, P.y), ImVec2(ViewXEnd, P.y + Size.y), true);
-                        DrawList->AddText(ImVec2(XStart + 2, P.y + 2), IM_COL32_WHITE, Notify.NotifyName.ToString().c_str());
+                        // Label: use NotifyName if set, otherwise fallback based on type
+                        FString Label = Notify.NotifyName.ToString();
+                        if (Label.empty())
+                        {
+                            Label = Notify.Notify && Notify.Notify->IsA<UAnimNotify_PlaySound>() ? "PlaySound" : "Notify";
+                        }
+                        DrawList->AddText(ImVec2(XStart + 2, P.y + 2), IM_COL32_WHITE, Label.c_str());
                         ImGui::PopClipRect();
+
+                        if (bClicked)
+                        {
+                            SelectedNotifyIndex = i;
+                            ImGui::OpenPopup("NotifyEditPopup");
+                        }
                     }
                 }
+            }
+
+            // Edit popup for a clicked notify (change sound)
+            if (ImGui::BeginPopup("NotifyEditPopup"))
+            {
+                if (!bHasAnimation || !State->CurrentAnimation)
+                {
+                    ImGui::TextDisabled("No animation.");
+                }
+                else if (SelectedNotifyIndex < 0 || SelectedNotifyIndex >= State->CurrentAnimation->GetAnimNotifyEvents().Num())
+                {
+                    ImGui::TextDisabled("No notify selected.");
+                }
+                else
+                {
+                    TArray<FAnimNotifyEvent>& Events = State->CurrentAnimation->GetAnimNotifyEvents();
+                    FAnimNotifyEvent& Evt = Events[SelectedNotifyIndex];
+
+                    if (Evt.Notify && Evt.Notify->IsA<UAnimNotify_PlaySound>())
+                    {
+                        UAnimNotify_PlaySound* PS = static_cast<UAnimNotify_PlaySound*>(Evt.Notify);
+
+                        // Simple selection combo from ResourceManager
+                        UResourceManager& ResMgr = UResourceManager::GetInstance();
+                        TArray<FString> Paths = ResMgr.GetAllFilePaths<USound>();
+
+                        FString CurrentPath = (PS->Sound) ? PS->Sound->GetFilePath() : "None";
+                        int CurrentIndex = 0; // 0 = None
+                        for (int idx = 0; idx < Paths.Num(); ++idx)
+                        {
+                            if (Paths[idx] == CurrentPath) { CurrentIndex = idx + 1; break; }
+                        }
+
+                        // Build items on the fly: "None" + all paths
+                        FString Preview = (CurrentIndex == 0) ? FString("None") : Paths[CurrentIndex - 1];
+                        if (ImGui::BeginCombo("Sound", Preview.c_str()))
+                        {
+                            // None option
+                            bool selNone = (CurrentIndex == 0);
+                            if (ImGui::Selectable("None", selNone))
+                            {
+                                PS->Sound = nullptr;
+                                Evt.NotifyName = FName("PlaySound");
+                            }
+                            if (selNone) ImGui::SetItemDefaultFocus();
+
+                            for (int i = 0; i < Paths.Num(); ++i)
+                            {
+                                bool selected = (CurrentIndex == i + 1);
+                                const FString& Item = Paths[i];
+                                if (ImGui::Selectable(Item.c_str(), selected))
+                                {
+                                    USound* NewSound = ResMgr.Load<USound>(Item);
+                                    PS->Sound = NewSound;
+                                    // Set label as filename
+                                    std::filesystem::path p(Item);
+                                    FString Base = p.filename().string();
+                                    Evt.NotifyName = FName((FString("PlaySound: ") + Base).c_str());
+                                }
+                                if (selected) ImGui::SetItemDefaultFocus();
+                            }
+                            ImGui::EndCombo();
+                        }
+
+                        // Also allow loading from file system directly
+                        if (ImGui::Button("Load .wav..."))
+                        {
+                            std::filesystem::path Sel = FPlatformProcess::OpenLoadFileDialog(UTF8ToWide(GDataDir) + L"/Audio", L"wav", L"WAV Files");
+                            if (!Sel.empty())
+                            {
+                                FString PathUtf8 = WideToUTF8(Sel.generic_wstring());
+                                USound* NewSound = UResourceManager::GetInstance().Load<USound>(PathUtf8);
+                                if (NewSound)
+                                {
+                                    PS->Sound = NewSound;
+                                    std::filesystem::path p2(PathUtf8);
+                                    FString Base = p2.filename().string();
+                                    Evt.NotifyName = FName((FString("PlaySound: ") + Base).c_str());
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        ImGui::TextDisabled("This notify type is not editable.");
+                    }
+                }
+
+                ImGui::EndPopup();
             }
 
             if (bHasAnimation)

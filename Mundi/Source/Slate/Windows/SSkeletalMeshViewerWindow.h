@@ -89,4 +89,11 @@ private:
     UTexture* IconRecordActive = nullptr;
     UTexture* IconLoop = nullptr;
     UTexture* IconNoLoop = nullptr;
+
+private:
+    // Notify editing state
+    int32 SelectedNotifyIndex = -1;
+    // Right-click capture for notify insertion
+    bool  bHasPendingNotifyAddTime = false;
+    float PendingNotifyAddTimeSec = 0.0f;
 };

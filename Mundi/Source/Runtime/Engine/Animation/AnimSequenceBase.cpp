@@ -163,7 +163,8 @@ void UAnimSequenceBase::GetAnimNotifiesFromDeltaPosition(const float& PreviousPo
         {
             if (bIsSingleShot)
             {
-                if (NotifyEndTime >= MinTime && NotifyStartTime < MaxTime)
+                //if (MinTime < NotifyStartTime && MaxTime >= NotifyStartTime) 
+                if (MinTime >=  NotifyEndTime && MaxTime < NotifyStartTime)
                 {
                     FPendingAnimNotify Pending;
                     Pending.Event = &AnimNotifyEvent;
@@ -172,6 +173,7 @@ void UAnimSequenceBase::GetAnimNotifiesFromDeltaPosition(const float& PreviousPo
                     OutNotifies.Add(Pending);
                 }
             }
+            // TODO: 역방향 Notify는 정상작동하는 지 아직 체크 못해봄
             else if (bIsState)
             {
                 const bool bNotIntersects = (MaxTime < NotifyStartTime || MinTime >= NotifyEndTime);
