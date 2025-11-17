@@ -27,6 +27,7 @@ class BVHierachy;
 class UStaticMesh;
 class FOcclusionCullingManagerCPU;
 class APlayerCameraManager;
+class AGameModeBase;
 
 struct FTransform;
 struct FSceneCompData;
@@ -137,6 +138,9 @@ public:
     void RequestHitStop(float Duration ,float Dilation = 0.0f); 
     void RequestSlomo(float Duration, float Dilation = 0.0f);
 
+    // GameMode 
+    void SetGameMode(AGameModeBase* InGameMode) { GameMode = InGameMode; }
+    AGameModeBase* GetGameMode() { return GameMode; }
 private:
     bool DestroyActor(AActor* Actor);   // 즉시 삭제
 
@@ -158,6 +162,11 @@ private:
     /** === 루아 매니저 ===*/
     std::unique_ptr<FLuaManager> LuaManager;
     
+    /** === GameMode === */
+    AGameModeBase* GameMode = nullptr;
+    UClass* GameModeClass = nullptr;
+
+
     // Object naming system
     TMap<FString, int32> ObjectTypeCounts;
 

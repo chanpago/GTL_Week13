@@ -439,13 +439,23 @@ void UInputManager::LockCursor()
 {
     if (!WindowHandle) return;
 
+    // 마우스 커서를 화면의 중점으로 고정
+    RECT rc{};
+    if (GetClientRect(WindowHandle, &rc))
+    {
+        const int centerX = rc.left + (rc.right - rc.left) / 2;
+        const int centerY = rc.top + (rc.bottom - rc.top) / 2;
+
+        LockedCursorPosition = FVector2D(static_cast<float>(centerX), static_cast<float>(centerY)); 
+    }
+
     // 현재 커서 위치를 기준점으로 저장
-    POINT currentCursor;
+   /* POINT currentCursor;
     if (GetCursorPos(&currentCursor))
     {
         ScreenToClient(WindowHandle, &currentCursor);
         LockedCursorPosition = FVector2D(static_cast<float>(currentCursor.x), static_cast<float>(currentCursor.y));
-    }
+    }*/
 
     // 잠금 상태 설정
     bIsCursorLocked = true;
@@ -470,4 +480,26 @@ void UInputManager::ReleaseCursor()
     // 마우스 위치 동기화
     MousePosition = LockedCursorPosition;
     PreviousMousePosition = LockedCursorPosition;
+}
+
+void UInputManager::LockCursorToCenter()
+{
+    if (!WindowHandle) return;
+
+    RECT rc{};
+    if (GetClientRect(WindowHandle, &rc))
+    {
+        const int centerX = rc.left + (rc.right - rc.left) / 2;
+        const int centerY = rc.top + (rc.bottom - rc.top) / 2;
+
+        LockedCursorPosition = FVector2D(static_cast<float>(centerX), static_cast<float>(centerY));
+
+        POINT screenPt{ centerX, centerY };
+        ClientToScreen(WindowHandle, &screenPt);
+        SetCursorPos(screenPt.x, screenPt.y);
+
+        // 동기화 (첫 프레임 델타 0)
+        MousePosition = LockedCursorPosition;
+        PreviousMousePosition = LockedCursorPosition;
+    }
 }

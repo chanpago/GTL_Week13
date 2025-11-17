@@ -1,0 +1,67 @@
+{
+  "ObjectName" : "폰_0",
+  "OwnedComponents" : [{
+      "AspectRatio" : 1.000000,
+      "FarClip" : 100.000000,
+      "FieldOfView" : 60.000000,
+      "Id" : 1409,
+      "NearClip" : 0.100000,
+      "ObjectName" : "UCameraComponent_7",
+      "ParentId" : 906,
+      "ProjectionMode" : 0,
+      "RelativeLocation" : [-3.839647, 0.000000, 1.001475],
+      "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
+      "RelativeScale" : [1.000000, 1.000000, 1.000000],
+      "Type" : "UCameraComponent",
+      "ZoomFactor" : 1.000000,
+      "bHiddenInGame" : false,
+      "bIsActive" : true,
+      "bIsVisible" : true,
+      "bTickEnabled" : true
+    }, {
+      "Id" : 906,
+      "ObjectName" : "USceneComponent_4",
+      "ParentId" : 0,
+      "RelativeLocation" : [2.167983, -1.532815, 1.831182],
+      "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
+      "RelativeScale" : [1.000000, 1.000000, 1.000000],
+      "Type" : "USceneComponent",
+      "bHiddenInGame" : false,
+      "bIsActive" : true,
+      "bIsVisible" : true,
+      "bTickEnabled" : true
+    }, {
+      "Id" : 908,
+      "MaterialSlots" : [{
+          "Type" : "None"
+        }, {
+          "AssetPath" : "Ch06_body",
+          "Type" : "UMaterial"
+        }, {
+          "AssetPath" : "Ch06_eyelashes",
+          "Type" : "UMaterial"
+        }, {
+          "AssetPath" : "Ch06_body1",
+          "Type" : "UMaterial"
+        }],
+      "ObjectName" : "USkeletalMeshComponent_1",
+      "ParentId" : 906,
+      "RelativeLocation" : [0.000000, 0.000000, 0.000000],
+      "RelativeRotationEuler" : [0.000000, 0.000000, 0.000000],
+      "RelativeScale" : [1.000000, 1.000000, 1.000000],
+      "SkeletalMesh" : "Data/James/James.fbx",
+      "Type" : "USkeletalMeshComponent",
+      "bBlockComponent" : false,
+      "bCastShadows" : true,
+      "bGenerateOverlapEvents" : true,
+      "bHiddenInGame" : false,
+      "bIsActive" : true,
+      "bIsVisible" : true,
+      "bTickEnabled" : true
+    }],
+  "RootComponentId" : 906,
+  "Tag" : "",
+  "Type" : "APawn",
+  "bActorHiddenInGame" : false,
+  "bActorIsActive" : true
+}

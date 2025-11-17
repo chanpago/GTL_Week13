@@ -74,6 +74,8 @@ public:
     void SetCursorVisible(bool bVisible);
     void LockCursor();
     void ReleaseCursor();
+    // Lock position helper: move lock to client center and warp cursor there
+    void LockCursorToCenter();
     bool IsCursorLocked() const { return bIsCursorLocked; }
 
 private:

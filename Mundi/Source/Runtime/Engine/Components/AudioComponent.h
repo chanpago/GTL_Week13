@@ -25,7 +25,7 @@ class UAudioComponent : public USceneComponent
 
     UFUNCTION(LuaBind, DisplayName="PlayOneShot", Tooltip="Play audio from specific slot index")
     void PlaySlot(uint32 SlotIndex);
-
+        
     // Convenience: set first slot
     UFUNCTION(LuaBind, DisplayName="SetSound", Tooltip="Set sound for the first slot")
     void SetSound(USound* NewSound) { if (Sounds.IsEmpty()) Sounds.Add(NewSound); else Sounds[0] = NewSound; }

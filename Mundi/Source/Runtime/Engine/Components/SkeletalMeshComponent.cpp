@@ -13,9 +13,8 @@
 #include "PlatformTime.h"
 
 USkeletalMeshComponent::USkeletalMeshComponent()
-{
-    // 테스트용 기본 메시 설정 - 애니메이션과 동일한 FBX 사용
-    //SetSkeletalMesh("Data/James/James.fbx");
+{ 
+    SetSkeletalMesh("Data/James/James.fbx");
 }
 
 

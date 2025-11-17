@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <ItemGroup>
     <FxCompile Include="Shaders\PostProcess\GammaCorrection_PS.hlsl">
@@ -709,12 +709,29 @@
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimSingleNodeInstance.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\Team2AnimInstance.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimInstance.cpp" />
-    <ClCompile Include="Source\Slate\Windows\SAnimGraphEditorWindow.cpp" />
     <ClCompile Include="ThirdParty\imgui-node-editor\crude_json.cpp" />
     <ClCompile Include="ThirdParty\imgui-node-editor\imgui_canvas.cpp" />
     <ClCompile Include="ThirdParty\imgui-node-editor\imgui_node_editor_api.cpp" />
     <ClCompile Include="ThirdParty\imgui-node-editor\imgui_node_editor.cpp" />
-  </ItemGroup>
+    <ClCompile Include="Source\Editor\BlueprintGraph\BlueprintActionDatabase.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\EdGraph.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\EdGraphNode.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\EdGraphTypes.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\K2Node.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\K2Node_Animation.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\K2Node_Literal.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\K2Node_Math.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\K2Node_Misc.cpp" />
+    <ClCompile Include="Source\Slate\Windows\AnimGraph\SAnimGraphEditorWindow.cpp" />
+    <ClCompile Include="Source\Slate\Windows\SGraphEditorWindow.cpp" />
+    <ClCompile Include="ThirdParty\ImGui\imgui_stdlib.cpp" />
+    <ClCompile Include="ThirdParty\imgui-node-editor\utilities\builders.cpp" />
+    <ClCompile Include="ThirdParty\imgui-node-editor\utilities\drawing.cpp" />
+    <ClCompile Include="ThirdParty\imgui-node-editor\utilities\widgets.cpp" />
+    <ClCompile Include="Source\Runtime\Core\Object\Pawn.cpp">
+      <Filter>Source\Runtime\Core\Object</Filter>
+    </ClCompile>
+  <ClCompile Include="Generated\APawn.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\AController.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\APlayerController.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\GameModeBase.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\AGameModeBase.generated.cpp"><Filter>Generated</Filter></ClCompile></ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="Source\Editor\FbxLoader.h">
@@ -1515,8 +1532,22 @@
     <ClInclude Include="Source\Runtime\Engine\Animation\AnimTypes.h" />
     <ClInclude Include="Source\Runtime\Engine\Animation\Team2AnimInstance.h" />
     <ClInclude Include="Source\Runtime\Renderer\SkinningStats.h" />
-    <ClInclude Include="Source\Slate\Windows\SAnimGraphEditorWindow.h" />
-  </ItemGroup>
+    <ClInclude Include="Source\Editor\BlueprintGraph\BlueprintActionDatabase.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\EdGraph.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\EdGraphNode.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\EdGraphPin.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\EdGraphTypes.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\K2Node.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\K2Node_Animation.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\K2Node_Literal.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\K2Node_Math.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\K2Node_Misc.h" />
+    <ClInclude Include="Source\Slate\Windows\AnimGraph\SAnimGraphEditorWindow.h" />
+    <ClInclude Include="Source\Slate\Windows\SGraphEditorWindow.h" />
+    <ClInclude Include="Source\Runtime\Core\Object\Pawn.h">
+      <Filter>Source\Runtime\Core\Object</Filter>
+    </ClInclude>
+  <ClInclude Include="Generated\APawn.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\AController.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\APlayerController.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\GameModeBase.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\AGameModeBase.generated.h"><Filter>Generated</Filter></ClInclude></ItemGroup>
   <ItemGroup>
     <None Include="Tools\CodeGenerator\generate.py">
       <Filter>Tools\CodeGenerator</Filter>
