@@ -265,10 +265,10 @@
       <Optimization>Disabled</Optimization>
       <SupportJustMyCode>true</SupportJustMyCode>
       <AssemblerOutput>NoListing</AssemblerOutput>
-      <AssemblerListingLocation>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</AssemblerListingLocation>
+      <AssemblerListingLocation>$(SolutionDir)Intermediate\Mundi\Debug\</AssemblerListingLocation>
       <UndefineAllPreprocessorDefinitions>false</UndefineAllPreprocessorDefinitions>
       <BrowseInformation>false</BrowseInformation>
-      <BrowseInformationFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</BrowseInformationFile>
+      <BrowseInformationFile>$(SolutionDir)Intermediate\Mundi\Debug\</BrowseInformationFile>
       <CompileAs>Default</CompileAs>
       <UseDynamicDebugging>false</UseDynamicDebugging>
       <ConformanceMode>true</ConformanceMode>
@@ -293,37 +293,37 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>Default</LanguageStandard_C>
       <MinimalRebuild>false</MinimalRebuild>
-      <ModuleDependenciesFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ModuleDependenciesFile>
-      <ModuleOutputFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ModuleOutputFile>
+      <ModuleDependenciesFile>$(SolutionDir)Intermediate\Mundi\Debug\</ModuleDependenciesFile>
+      <ModuleOutputFile>$(SolutionDir)Intermediate\Mundi\Debug\</ModuleOutputFile>
       <OmitDefaultLibName>false</OmitDefaultLibName>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <ObjectFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ObjectFileName>
+      <ObjectFileName>$(SolutionDir)Intermediate\Mundi\Debug\</ObjectFileName>
       <CallingConvention>Cdecl</CallingConvention>
-      <ProgramDataBaseFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\vc143.pdb</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(SolutionDir)Intermediate\Mundi\Debug\vc143.pdb</ProgramDataBaseFileName>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\Mundi.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)Intermediate\Mundi\Debug\Mundi.pch</PrecompiledHeaderOutputFile>
       <PreprocessToFile>false</PreprocessToFile>
       <PreprocessKeepComments>false</PreprocessKeepComments>
       <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
       <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
       <ShowIncludes>false</ShowIncludes>
-      <SourceDependenciesFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</SourceDependenciesFile>
+      <SourceDependenciesFile>$(SolutionDir)Intermediate\Mundi\Debug\</SourceDependenciesFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <SmallerTypeCheck>false</SmallerTypeCheck>
       <SpectreMitigation>false</SpectreMitigation>
       <StructMemberAlignment>Default</StructMemberAlignment>
-      <TrackerLogDirectory>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\Mundi.tlog\</TrackerLogDirectory>
+      <TrackerLogDirectory>$(SolutionDir)Intermediate\Mundi\Debug\Mundi.tlog\</TrackerLogDirectory>
       <TranslateIncludes>false</TranslateIncludes>
       <MinimalRebuildFromTracking>true</MinimalRebuildFromTracking>
       <TreatWarningAsError>false</TreatWarningAsError>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <UseFullPaths>true</UseFullPaths>
       <WarningLevel>Level3</WarningLevel>
-      <XMLDocumentationFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</XMLDocumentationFileName>
+      <XMLDocumentationFileName>$(SolutionDir)Intermediate\Mundi\Debug\</XMLDocumentationFileName>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <IntelJCCErratum>false</IntelJCCErratum>
       <BuildStlModules>false</BuildStlModules>
@@ -333,7 +333,7 @@
       <DisableAnalyzeExternal>false</DisableAnalyzeExternal>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_EDITOR;_UNICODE;UNICODE;</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Generated;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Object;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Math;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Containers;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Misc;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Memory;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\GameFramework;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Scripting;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Components;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Collision;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Spatial;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\RHI;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Renderer;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\AssetManagement;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\InputCore;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Editor;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Mundi\;$(SolutionDir)Mundi\Generated;$(SolutionDir)Mundi\Source\Runtime\Core\Object;$(SolutionDir)Mundi\Source\Runtime\Core\Math;$(SolutionDir)Mundi\Source\Runtime\Core\Containers;$(SolutionDir)Mundi\Source\Runtime\Core\Misc;$(SolutionDir)Mundi\Source\Runtime\Core\Memory;$(SolutionDir)Mundi\Source\Runtime\Engine\GameFramework;$(SolutionDir)Mundi\Source\Runtime\Engine\Scripting;$(SolutionDir)Mundi\Source\Runtime\Engine\Components;$(SolutionDir)Mundi\Source\Runtime\Engine\Collision;$(SolutionDir)Mundi\Source\Runtime\Engine\Spatial;$(SolutionDir)Mundi\Source\Runtime\RHI;$(SolutionDir)Mundi\Source\Runtime\Renderer;$(SolutionDir)Mundi\Source\Runtime\AssetManagement;$(SolutionDir)Mundi\Source\Runtime\InputCore;$(SolutionDir)Mundi\Source\Editor;$(SolutionDir)Mundi\Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP </AdditionalOptions>
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
@@ -343,10 +343,10 @@
       <Optimization>Disabled</Optimization>
       <SupportJustMyCode>true</SupportJustMyCode>
       <AssemblerOutput>NoListing</AssemblerOutput>
-      <AssemblerListingLocation>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</AssemblerListingLocation>
+      <AssemblerListingLocation>$(SolutionDir)Intermediate\Mundi\Debug\</AssemblerListingLocation>
       <UndefineAllPreprocessorDefinitions>false</UndefineAllPreprocessorDefinitions>
       <BrowseInformation>false</BrowseInformation>
-      <BrowseInformationFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</BrowseInformationFile>
+      <BrowseInformationFile>$(SolutionDir)Intermediate\Mundi\Debug\</BrowseInformationFile>
       <CompileAs>Default</CompileAs>
       <UseDynamicDebugging>false</UseDynamicDebugging>
       <ConformanceMode>true</ConformanceMode>
@@ -371,37 +371,37 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>Default</LanguageStandard_C>
       <MinimalRebuild>false</MinimalRebuild>
-      <ModuleDependenciesFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ModuleDependenciesFile>
-      <ModuleOutputFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ModuleOutputFile>
+      <ModuleDependenciesFile>$(SolutionDir)Intermediate\Mundi\Debug\</ModuleDependenciesFile>
+      <ModuleOutputFile>$(SolutionDir)Intermediate\Mundi\Debug\</ModuleOutputFile>
       <OmitDefaultLibName>false</OmitDefaultLibName>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <ObjectFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ObjectFileName>
+      <ObjectFileName>$(SolutionDir)Intermediate\Mundi\Debug\</ObjectFileName>
       <CallingConvention>Cdecl</CallingConvention>
-      <ProgramDataBaseFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\vc143.pdb</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(SolutionDir)Intermediate\Mundi\Debug\vc143.pdb</ProgramDataBaseFileName>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\Mundi.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)Intermediate\Mundi\Debug\Mundi.pch</PrecompiledHeaderOutputFile>
       <PreprocessToFile>false</PreprocessToFile>
       <PreprocessKeepComments>false</PreprocessKeepComments>
       <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
       <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
       <ShowIncludes>false</ShowIncludes>
-      <SourceDependenciesFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</SourceDependenciesFile>
+      <SourceDependenciesFile>$(SolutionDir)Intermediate\Mundi\Debug\</SourceDependenciesFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <SmallerTypeCheck>false</SmallerTypeCheck>
       <SpectreMitigation>false</SpectreMitigation>
       <StructMemberAlignment>Default</StructMemberAlignment>
-      <TrackerLogDirectory>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\Mundi.tlog\</TrackerLogDirectory>
+      <TrackerLogDirectory>$(SolutionDir)Intermediate\Mundi\Debug\Mundi.tlog\</TrackerLogDirectory>
       <TranslateIncludes>false</TranslateIncludes>
       <MinimalRebuildFromTracking>true</MinimalRebuildFromTracking>
       <TreatWarningAsError>false</TreatWarningAsError>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <UseFullPaths>true</UseFullPaths>
       <WarningLevel>Level3</WarningLevel>
-      <XMLDocumentationFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</XMLDocumentationFileName>
+      <XMLDocumentationFileName>$(SolutionDir)Intermediate\Mundi\Debug\</XMLDocumentationFileName>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <IntelJCCErratum>false</IntelJCCErratum>
       <BuildStlModules>false</BuildStlModules>
@@ -411,7 +411,7 @@
       <DisableAnalyzeExternal>false</DisableAnalyzeExternal>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_EDITOR;_UNICODE;UNICODE;</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Generated;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Object;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Math;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Containers;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Misc;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Memory;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\GameFramework;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Scripting;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Components;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Collision;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Spatial;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\RHI;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Renderer;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\AssetManagement;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\InputCore;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Editor;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Mundi\;$(SolutionDir)Mundi\Generated;$(SolutionDir)Mundi\Source\Runtime\Core\Object;$(SolutionDir)Mundi\Source\Runtime\Core\Math;$(SolutionDir)Mundi\Source\Runtime\Core\Containers;$(SolutionDir)Mundi\Source\Runtime\Core\Misc;$(SolutionDir)Mundi\Source\Runtime\Core\Memory;$(SolutionDir)Mundi\Source\Runtime\Engine\GameFramework;$(SolutionDir)Mundi\Source\Runtime\Engine\Scripting;$(SolutionDir)Mundi\Source\Runtime\Engine\Components;$(SolutionDir)Mundi\Source\Runtime\Engine\Collision;$(SolutionDir)Mundi\Source\Runtime\Engine\Spatial;$(SolutionDir)Mundi\Source\Runtime\RHI;$(SolutionDir)Mundi\Source\Runtime\Renderer;$(SolutionDir)Mundi\Source\Runtime\AssetManagement;$(SolutionDir)Mundi\Source\Runtime\InputCore;$(SolutionDir)Mundi\Source\Editor;$(SolutionDir)Mundi\Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP </AdditionalOptions>
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
@@ -421,10 +421,10 @@
       <Optimization>Disabled</Optimization>
       <SupportJustMyCode>true</SupportJustMyCode>
       <AssemblerOutput>NoListing</AssemblerOutput>
-      <AssemblerListingLocation>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</AssemblerListingLocation>
+      <AssemblerListingLocation>$(SolutionDir)Intermediate\Mundi\Debug\</AssemblerListingLocation>
       <UndefineAllPreprocessorDefinitions>false</UndefineAllPreprocessorDefinitions>
       <BrowseInformation>false</BrowseInformation>
-      <BrowseInformationFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</BrowseInformationFile>
+      <BrowseInformationFile>$(SolutionDir)Intermediate\Mundi\Debug\</BrowseInformationFile>
       <CompileAs>Default</CompileAs>
       <UseDynamicDebugging>false</UseDynamicDebugging>
       <ConformanceMode>true</ConformanceMode>
@@ -449,37 +449,37 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>Default</LanguageStandard_C>
       <MinimalRebuild>false</MinimalRebuild>
-      <ModuleDependenciesFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ModuleDependenciesFile>
-      <ModuleOutputFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ModuleOutputFile>
+      <ModuleDependenciesFile>$(SolutionDir)Intermediate\Mundi\Debug\</ModuleDependenciesFile>
+      <ModuleOutputFile>$(SolutionDir)Intermediate\Mundi\Debug\</ModuleOutputFile>
       <OmitDefaultLibName>false</OmitDefaultLibName>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <ObjectFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ObjectFileName>
+      <ObjectFileName>$(SolutionDir)Intermediate\Mundi\Debug\</ObjectFileName>
       <CallingConvention>Cdecl</CallingConvention>
-      <ProgramDataBaseFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\vc143.pdb</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(SolutionDir)Intermediate\Mundi\Debug\vc143.pdb</ProgramDataBaseFileName>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\Mundi.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)Intermediate\Mundi\Debug\Mundi.pch</PrecompiledHeaderOutputFile>
       <PreprocessToFile>false</PreprocessToFile>
       <PreprocessKeepComments>false</PreprocessKeepComments>
       <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
       <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
       <ShowIncludes>false</ShowIncludes>
-      <SourceDependenciesFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</SourceDependenciesFile>
+      <SourceDependenciesFile>$(SolutionDir)Intermediate\Mundi\Debug\</SourceDependenciesFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <SmallerTypeCheck>false</SmallerTypeCheck>
       <SpectreMitigation>false</SpectreMitigation>
       <StructMemberAlignment>Default</StructMemberAlignment>
-      <TrackerLogDirectory>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\Mundi.tlog\</TrackerLogDirectory>
+      <TrackerLogDirectory>$(SolutionDir)Intermediate\Mundi\Debug\Mundi.tlog\</TrackerLogDirectory>
       <TranslateIncludes>false</TranslateIncludes>
       <MinimalRebuildFromTracking>true</MinimalRebuildFromTracking>
       <TreatWarningAsError>false</TreatWarningAsError>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <UseFullPaths>true</UseFullPaths>
       <WarningLevel>Level3</WarningLevel>
-      <XMLDocumentationFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</XMLDocumentationFileName>
+      <XMLDocumentationFileName>$(SolutionDir)Intermediate\Mundi\Debug\</XMLDocumentationFileName>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <IntelJCCErratum>false</IntelJCCErratum>
       <BuildStlModules>false</BuildStlModules>
@@ -489,7 +489,7 @@
       <DisableAnalyzeExternal>false</DisableAnalyzeExternal>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_EDITOR;_UNICODE;UNICODE;</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Generated;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Object;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Math;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Containers;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Misc;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Memory;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\GameFramework;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Scripting;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Components;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Collision;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Spatial;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\RHI;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Renderer;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\AssetManagement;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\InputCore;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Editor;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Mundi\;$(SolutionDir)Mundi\Generated;$(SolutionDir)Mundi\Source\Runtime\Core\Object;$(SolutionDir)Mundi\Source\Runtime\Core\Math;$(SolutionDir)Mundi\Source\Runtime\Core\Containers;$(SolutionDir)Mundi\Source\Runtime\Core\Misc;$(SolutionDir)Mundi\Source\Runtime\Core\Memory;$(SolutionDir)Mundi\Source\Runtime\Engine\GameFramework;$(SolutionDir)Mundi\Source\Runtime\Engine\Scripting;$(SolutionDir)Mundi\Source\Runtime\Engine\Components;$(SolutionDir)Mundi\Source\Runtime\Engine\Collision;$(SolutionDir)Mundi\Source\Runtime\Engine\Spatial;$(SolutionDir)Mundi\Source\Runtime\RHI;$(SolutionDir)Mundi\Source\Runtime\Renderer;$(SolutionDir)Mundi\Source\Runtime\AssetManagement;$(SolutionDir)Mundi\Source\Runtime\InputCore;$(SolutionDir)Mundi\Source\Editor;$(SolutionDir)Mundi\Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP </AdditionalOptions>
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
@@ -499,10 +499,10 @@
       <Optimization>Disabled</Optimization>
       <SupportJustMyCode>true</SupportJustMyCode>
       <AssemblerOutput>NoListing</AssemblerOutput>
-      <AssemblerListingLocation>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</AssemblerListingLocation>
+      <AssemblerListingLocation>$(SolutionDir)Intermediate\Mundi\Debug\</AssemblerListingLocation>
       <UndefineAllPreprocessorDefinitions>false</UndefineAllPreprocessorDefinitions>
       <BrowseInformation>false</BrowseInformation>
-      <BrowseInformationFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</BrowseInformationFile>
+      <BrowseInformationFile>$(SolutionDir)Intermediate\Mundi\Debug\</BrowseInformationFile>
       <CompileAs>Default</CompileAs>
       <UseDynamicDebugging>false</UseDynamicDebugging>
       <ConformanceMode>true</ConformanceMode>
@@ -527,37 +527,37 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>Default</LanguageStandard_C>
       <MinimalRebuild>false</MinimalRebuild>
-      <ModuleDependenciesFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ModuleDependenciesFile>
-      <ModuleOutputFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ModuleOutputFile>
+      <ModuleDependenciesFile>$(SolutionDir)Intermediate\Mundi\Debug\</ModuleDependenciesFile>
+      <ModuleOutputFile>$(SolutionDir)Intermediate\Mundi\Debug\</ModuleOutputFile>
       <OmitDefaultLibName>false</OmitDefaultLibName>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <ObjectFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ObjectFileName>
+      <ObjectFileName>$(SolutionDir)Intermediate\Mundi\Debug\</ObjectFileName>
       <CallingConvention>Cdecl</CallingConvention>
-      <ProgramDataBaseFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\vc143.pdb</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(SolutionDir)Intermediate\Mundi\Debug\vc143.pdb</ProgramDataBaseFileName>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\Mundi.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)Intermediate\Mundi\Debug\Mundi.pch</PrecompiledHeaderOutputFile>
       <PreprocessToFile>false</PreprocessToFile>
       <PreprocessKeepComments>false</PreprocessKeepComments>
       <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
       <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
       <ShowIncludes>false</ShowIncludes>
-      <SourceDependenciesFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</SourceDependenciesFile>
+      <SourceDependenciesFile>$(SolutionDir)Intermediate\Mundi\Debug\</SourceDependenciesFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <SmallerTypeCheck>false</SmallerTypeCheck>
       <SpectreMitigation>false</SpectreMitigation>
       <StructMemberAlignment>Default</StructMemberAlignment>
-      <TrackerLogDirectory>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\Mundi.tlog\</TrackerLogDirectory>
+      <TrackerLogDirectory>$(SolutionDir)Intermediate\Mundi\Debug\Mundi.tlog\</TrackerLogDirectory>
       <TranslateIncludes>false</TranslateIncludes>
       <MinimalRebuildFromTracking>true</MinimalRebuildFromTracking>
       <TreatWarningAsError>false</TreatWarningAsError>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <UseFullPaths>true</UseFullPaths>
       <WarningLevel>Level3</WarningLevel>
-      <XMLDocumentationFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</XMLDocumentationFileName>
+      <XMLDocumentationFileName>$(SolutionDir)Intermediate\Mundi\Debug\</XMLDocumentationFileName>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <IntelJCCErratum>false</IntelJCCErratum>
       <BuildStlModules>false</BuildStlModules>
@@ -567,7 +567,7 @@
       <DisableAnalyzeExternal>false</DisableAnalyzeExternal>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_EDITOR;_UNICODE;UNICODE;</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Generated;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Object;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Math;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Containers;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Misc;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Memory;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\GameFramework;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Scripting;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Components;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Collision;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Spatial;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\RHI;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Renderer;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\AssetManagement;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\InputCore;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Editor;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Mundi\;$(SolutionDir)Mundi\Generated;$(SolutionDir)Mundi\Source\Runtime\Core\Object;$(SolutionDir)Mundi\Source\Runtime\Core\Math;$(SolutionDir)Mundi\Source\Runtime\Core\Containers;$(SolutionDir)Mundi\Source\Runtime\Core\Misc;$(SolutionDir)Mundi\Source\Runtime\Core\Memory;$(SolutionDir)Mundi\Source\Runtime\Engine\GameFramework;$(SolutionDir)Mundi\Source\Runtime\Engine\Scripting;$(SolutionDir)Mundi\Source\Runtime\Engine\Components;$(SolutionDir)Mundi\Source\Runtime\Engine\Collision;$(SolutionDir)Mundi\Source\Runtime\Engine\Spatial;$(SolutionDir)Mundi\Source\Runtime\RHI;$(SolutionDir)Mundi\Source\Runtime\Renderer;$(SolutionDir)Mundi\Source\Runtime\AssetManagement;$(SolutionDir)Mundi\Source\Runtime\InputCore;$(SolutionDir)Mundi\Source\Editor;$(SolutionDir)Mundi\Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP </AdditionalOptions>
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
@@ -689,10 +689,10 @@
       <Optimization>Disabled</Optimization>
       <SupportJustMyCode>true</SupportJustMyCode>
       <AssemblerOutput>NoListing</AssemblerOutput>
-      <AssemblerListingLocation>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</AssemblerListingLocation>
+      <AssemblerListingLocation>$(SolutionDir)Intermediate\Mundi\Debug\</AssemblerListingLocation>
       <UndefineAllPreprocessorDefinitions>false</UndefineAllPreprocessorDefinitions>
       <BrowseInformation>false</BrowseInformation>
-      <BrowseInformationFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</BrowseInformationFile>
+      <BrowseInformationFile>$(SolutionDir)Intermediate\Mundi\Debug\</BrowseInformationFile>
       <CompileAs>Default</CompileAs>
       <UseDynamicDebugging>false</UseDynamicDebugging>
       <ConformanceMode>true</ConformanceMode>
@@ -717,37 +717,37 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>Default</LanguageStandard_C>
       <MinimalRebuild>false</MinimalRebuild>
-      <ModuleDependenciesFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ModuleDependenciesFile>
-      <ModuleOutputFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ModuleOutputFile>
+      <ModuleDependenciesFile>$(SolutionDir)Intermediate\Mundi\Debug\</ModuleDependenciesFile>
+      <ModuleOutputFile>$(SolutionDir)Intermediate\Mundi\Debug\</ModuleOutputFile>
       <OmitDefaultLibName>false</OmitDefaultLibName>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <ObjectFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</ObjectFileName>
+      <ObjectFileName>$(SolutionDir)Intermediate\Mundi\Debug\</ObjectFileName>
       <CallingConvention>Cdecl</CallingConvention>
-      <ProgramDataBaseFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\vc143.pdb</ProgramDataBaseFileName>
+      <ProgramDataBaseFileName>$(SolutionDir)Intermediate\Mundi\Debug\vc143.pdb</ProgramDataBaseFileName>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderOutputFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\Mundi.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile>$(SolutionDir)Intermediate\Mundi\Debug\Mundi.pch</PrecompiledHeaderOutputFile>
       <PreprocessToFile>false</PreprocessToFile>
       <PreprocessKeepComments>false</PreprocessKeepComments>
       <PreprocessSuppressLineNumbers>false</PreprocessSuppressLineNumbers>
       <RemoveUnreferencedCodeData>true</RemoveUnreferencedCodeData>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
       <ShowIncludes>false</ShowIncludes>
-      <SourceDependenciesFile>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</SourceDependenciesFile>
+      <SourceDependenciesFile>$(SolutionDir)Intermediate\Mundi\Debug\</SourceDependenciesFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <SmallerTypeCheck>false</SmallerTypeCheck>
       <SpectreMitigation>false</SpectreMitigation>
       <StructMemberAlignment>Default</StructMemberAlignment>
-      <TrackerLogDirectory>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\Mundi.tlog\</TrackerLogDirectory>
+      <TrackerLogDirectory>$(SolutionDir)Intermediate\Mundi\Debug\Mundi.tlog\</TrackerLogDirectory>
       <TranslateIncludes>false</TranslateIncludes>
       <MinimalRebuildFromTracking>true</MinimalRebuildFromTracking>
       <TreatWarningAsError>false</TreatWarningAsError>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <UseFullPaths>true</UseFullPaths>
       <WarningLevel>Level3</WarningLevel>
-      <XMLDocumentationFileName>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Intermediate\Mundi\Debug\</XMLDocumentationFileName>
+      <XMLDocumentationFileName>$(SolutionDir)Intermediate\Mundi\Debug\</XMLDocumentationFileName>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <IntelJCCErratum>false</IntelJCCErratum>
       <BuildStlModules>false</BuildStlModules>
@@ -757,7 +757,7 @@
       <DisableAnalyzeExternal>false</DisableAnalyzeExternal>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_EDITOR;_UNICODE;UNICODE;</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Generated;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Object;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Math;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Containers;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Misc;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Core\Memory;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\GameFramework;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Scripting;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Components;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Collision;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Engine\Spatial;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\RHI;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\Renderer;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\AssetManagement;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Runtime\InputCore;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Editor;C:\Users\Jungle\Desktop\Projects\Jungle\Week11\GTL_Week11\Mundi\Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Mundi\;$(SolutionDir)Mundi\Generated;$(SolutionDir)Mundi\Source\Runtime\Core\Object;$(SolutionDir)Mundi\Source\Runtime\Core\Math;$(SolutionDir)Mundi\Source\Runtime\Core\Containers;$(SolutionDir)Mundi\Source\Runtime\Core\Misc;$(SolutionDir)Mundi\Source\Runtime\Core\Memory;$(SolutionDir)Mundi\Source\Runtime\Engine\GameFramework;$(SolutionDir)Mundi\Source\Runtime\Engine\Scripting;$(SolutionDir)Mundi\Source\Runtime\Engine\Components;$(SolutionDir)Mundi\Source\Runtime\Engine\Collision;$(SolutionDir)Mundi\Source\Runtime\Engine\Spatial;$(SolutionDir)Mundi\Source\Runtime\RHI;$(SolutionDir)Mundi\Source\Runtime\Renderer;$(SolutionDir)Mundi\Source\Runtime\AssetManagement;$(SolutionDir)Mundi\Source\Runtime\InputCore;$(SolutionDir)Mundi\Source\Editor;$(SolutionDir)Mundi\Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP </AdditionalOptions>
       <LinkCompiled>true</LinkCompiled>
     </ClCompile>
