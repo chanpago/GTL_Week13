@@ -5,10 +5,12 @@
 #include "World.h"
 #include "CameraComponent.h"
 #include "PlayerCameraManager.h"
+#include "Character.h"
 
 AGameModeBase::AGameModeBase()
 {
-	DefaultPawnClass = APawn::StaticClass();
+	//DefaultPawnClass = APawn::StaticClass();
+	DefaultPawnClass = ACharacter::StaticClass();
 	PlayerControllerClass = APlayerController::StaticClass();
 }
 
@@ -19,29 +21,7 @@ AGameModeBase::~AGameModeBase()
 void AGameModeBase::StartPlay()
 {
 	//TODO 
-	//GameState 세팅
-
-	// Test Code
-	//APawn* P = GWorld->SpawnActor<APawn>();
-	//P->SetActorLocation(FVector(0,0,0));
-	//APlayerController* PC = GWorld->SpawnActor<APlayerController>();
-	//PC->Possess(P); 
-	// Attach a camera to the Pawn for PIE testing and set as active view
-	//if (P)
-	//{
-	//    if (UCameraComponent* Cam = Cast<UCameraComponent>(P->AddNewComponent(UCameraComponent::StaticClass(), P->GetRootComponent())))
-	//    {
-	//        // Position the camera slightly behind and above the pawn, looking forward
-	//        Cam->SetRelativeLocation(FVector(-3.0f, 0.0f, 1.5f));
-	//        Cam->SetRelativeRotation(FQuat::MakeFromEulerZYX(FVector(0.0f, 0.0f, 0.0f))); 
-	//        if (APlayerCameraManager* PCM = GWorld->GetPlayerCameraManager())
-	//        {
-	//            PCM->SetViewCamera(Cam);
-	//        }
-	//    }
-	//}
-
-
+	//GameState 세팅 
 	Login();
 	PostLogin(PlayerController);
 }
@@ -127,6 +107,7 @@ AActor* AGameModeBase::FindPlayerStart(AController* Player)
 	// TODO:
 	// PlayerStart Actor를 찾아서, 그 위치를 가져와야 함
 	// 현재는 0,0,0에 임시로 생성 중 
+
 	AActor* Spot = GWorld->SpawnActor<AActor>();
 	Spot->SetActorLocation(FVector(0, 0, 0));
 

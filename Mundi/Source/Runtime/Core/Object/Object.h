@@ -69,7 +69,7 @@ struct UClass
     }
 
     // 리플렉션 시스템 메서드
-    // 주의: 프로퍼티는 static 초기화 시점에만 등록되며, 런타임 중 추가/삭제 불가
+    // 주의: 프로퍼티는 static 초기화 시점에만 등  록되며, 런타임 중 추가/삭제 불가
     void AddProperty(const FProperty& Property)
     {
         Properties.Add(Property);

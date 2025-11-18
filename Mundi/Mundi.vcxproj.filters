@@ -731,7 +731,29 @@
     <ClCompile Include="Source\Runtime\Core\Object\Pawn.cpp">
       <Filter>Source\Runtime\Core\Object</Filter>
     </ClCompile>
-  <ClCompile Include="Generated\APawn.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\AController.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\APlayerController.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\GameModeBase.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\AGameModeBase.generated.cpp"><Filter>Generated</Filter></ClCompile></ItemGroup>
+    <ClCompile Include="Generated\APawn.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
+    <ClCompile Include="Generated\AController.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
+    <ClCompile Include="Generated\APlayerController.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
+    <ClCompile Include="Generated\AGameModeBase.generated.cpp">
+      <Filter>Generated</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\BlueprintGraph\AnimationGraph.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\AnimBlueprintCompiler.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\BlueprintEvaluator.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\BlueprintTypes.cpp" />
+    <ClCompile Include="Source\Runtime\Core\Object\Controller.cpp" />
+    <ClCompile Include="Source\Runtime\Core\Object\PlayerController.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\GameFramework\GameModeBase.cpp" />
+    <ClCompile Include="Source\Runtime\Core\Object\Character.cpp">
+      <Filter>Source\Runtime\Core\Object</Filter>
+    </ClCompile>
+  <ClCompile Include="Generated\ACharacter.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\UCharacterMovementComponent.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\UPawnMovementComponent.generated.cpp"><Filter>Generated</Filter></ClCompile></ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="Source\Editor\FbxLoader.h">
@@ -1547,7 +1569,29 @@
     <ClInclude Include="Source\Runtime\Core\Object\Pawn.h">
       <Filter>Source\Runtime\Core\Object</Filter>
     </ClInclude>
-  <ClInclude Include="Generated\APawn.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\AController.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\APlayerController.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\GameModeBase.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\AGameModeBase.generated.h"><Filter>Generated</Filter></ClInclude></ItemGroup>
+    <ClInclude Include="Generated\APawn.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="Generated\AController.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="Generated\APlayerController.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="Generated\AGameModeBase.generated.h">
+      <Filter>Generated</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\BlueprintGraph\AnimationGraph.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\AnimBlueprintCompiler.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\BlueprintEvaluator.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\BlueprintTypes.h" />
+    <ClInclude Include="Source\Runtime\Core\Object\Controller.h" />
+    <ClInclude Include="Source\Runtime\Core\Object\PlayerController.h" />
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\GameModeBase.h" />
+    <ClInclude Include="Source\Runtime\Core\Object\Character.h">
+      <Filter>Source\Runtime\Core\Object</Filter>
+    </ClInclude>
+  <ClInclude Include="Generated\ACharacter.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\UCharacterMovementComponent.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\UPawnMovementComponent.generated.h"><Filter>Generated</Filter></ClInclude></ItemGroup>
   <ItemGroup>
     <None Include="Tools\CodeGenerator\generate.py">
       <Filter>Tools\CodeGenerator</Filter>

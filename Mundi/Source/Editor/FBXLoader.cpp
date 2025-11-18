@@ -113,6 +113,7 @@ USkeletalMesh* UFbxLoader::LoadFbxMesh(const FString& FilePath)
 FSkeletalMeshData* UFbxLoader::LoadFbxMeshAsset(const FString& FilePath)
 {
 	MaterialInfos.clear();
+	NonSkeletonParentTransforms.clear();
 	FString NormalizedPath = NormalizePath(FilePath);
 	FSkeletalMeshData* MeshData = nullptr;
 #ifdef USE_OBJ_CACHE
@@ -128,7 +129,7 @@ FSkeletalMeshData* UFbxLoader::LoadFbxMeshAsset(const FString& FilePath)
 	}
 
 	bool bLoadedFromCache = false;
-	
+
 
 	// 2. 캐시 유효성 검사
 	bool bShouldRegenerate = true;
@@ -217,14 +218,7 @@ FSkeletalMeshData* UFbxLoader::LoadFbxMeshAsset(const FString& FilePath)
 					AnimImporter->Import(AnimScene);
 					AnimImporter->Destroy();
 
-					// Convert axis and unit
-					FbxAxisSystem UnrealImportAxis(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
-					FbxSystemUnit::m.ConvertScene(AnimScene);
-					FbxAxisSystem SourceSetup = AnimScene->GetGlobalSettings().GetAxisSystem();
-					if (SourceSetup != UnrealImportAxis)
-					{
-						UnrealImportAxis.DeepConvertScene(AnimScene);
-					}
+					ConvertSceneAxisIfNeeded(AnimScene);
 
 					// Extract animations (ProcessAnimations will now save to cache)
 					TArray<UAnimSequence*> Animations;
@@ -289,9 +283,11 @@ FSkeletalMeshData* UFbxLoader::LoadFbxMeshAsset(const FString& FilePath)
 
 	FbxAxisSystem UnrealImportAxis(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
 	FbxAxisSystem SourceSetup = Scene->GetGlobalSettings().GetAxisSystem();
+	FbxSystemUnit SceneUnit = Scene->GetGlobalSettings().GetSystemUnit();
+	double SceneScaleFactor = SceneUnit.GetScaleFactor();
 
 	FbxSystemUnit::m.ConvertScene(Scene);
-	
+
 	if (SourceSetup != UnrealImportAxis)
 	{
 		UE_LOG("Fbx 축 변환 완료!\n");
@@ -339,13 +335,13 @@ FSkeletalMeshData* UFbxLoader::LoadFbxMeshAsset(const FString& FilePath)
 		// 2번의 패스로 나눠서 처음엔 뼈의 인덱스를 결정하고 2번째 패스에서 뼈가 영향을 미치는 정점들을 구하고 정점마다 뼈 인덱스를 할당해 줄 것임(동시에 TPose 역행렬도 구함)
 		for (int Index = 0; Index < RootNode->GetChildCount(); Index++)
 		{
-			LoadSkeletonFromNode(RootNode->GetChild(Index), *MeshData, -1, BoneToIndex);
+			LoadSkeletonHierarchy(RootNode->GetChild(Index), *MeshData, -1, BoneToIndex);
 		}
 		for (int Index = 0; Index < RootNode->GetChildCount(); Index++)
 		{
 			LoadMeshFromNode(RootNode->GetChild(Index), *MeshData, MaterialGroupIndexList, BoneToIndex, MaterialToIndex);
 		}
-		
+
 		// 여러 루트 본이 있으면 가상 루트 생성
 		EnsureSingleRootBone(*MeshData);
 	}
@@ -382,7 +378,7 @@ FSkeletalMeshData* UFbxLoader::LoadFbxMeshAsset(const FString& FilePath)
 
 		for (FMaterialInfo& MaterialInfo : MaterialInfos)
 		{
-			
+
 			const FString MaterialFilePath = ConvertDataPathToCachePath(MaterialInfo.MaterialName + ".mat.bin");
 			FWindowsBinWriter MatWriter(MaterialFilePath);
 			Serialization::WriteAsset<FMaterialInfo>(MatWriter, &MaterialInfo);
@@ -418,7 +414,7 @@ FSkeletalMeshData* UFbxLoader::LoadFbxMeshAsset(const FString& FilePath)
 void UFbxLoader::LoadMeshFromNode(FbxNode* InNode,
 	FSkeletalMeshData& MeshData,
 	TMap<int32, TArray<uint32>>& MaterialGroupIndexList,
-	TMap<FbxNode*, int32>& BoneToIndex, 
+	TMap<FbxNode*, int32>& BoneToIndex,
 	TMap<FbxSurfaceMaterial*, int32>& MaterialToIndex)
 {
 
@@ -439,13 +435,13 @@ void UFbxLoader::LoadMeshFromNode(FbxNode* InNode,
 		{
 			continue;
 		}
-		
+
 		if (Attribute->GetAttributeType() == FbxNodeAttribute::eMesh)
 		{
 			FbxMesh* Mesh = (FbxMesh*)Attribute;
 			// 위의 MaterialSlotToIndex는 MaterialToIndex 해싱을 안 하기 위함이고, MaterialGroupIndexList도 머티리얼이 없거나 1개만 쓰는 경우 해싱을 피할 수 있음.
 			// 이를 위한 최적화 코드를 작성함.
-			
+
 
 			// 0번이 기본 머티리얼이고 1번 이상은 블렌딩 머티리얼이라고 함. 근데 엄청 고급 기능이라서 일반적인 로더는 0번만 쓴다고 함.
 			if (Mesh->GetElementMaterialCount() > 0)
@@ -504,7 +500,7 @@ void UFbxLoader::LoadMeshFromNode(FbxNode* InNode,
 					continue;
 				}
 			}
-			
+
 			LoadMesh(Mesh, MeshData, MaterialGroupIndexList, BoneToIndex, MaterialSlotToIndex);
 		}
 	}
@@ -515,13 +511,161 @@ void UFbxLoader::LoadMeshFromNode(FbxNode* InNode,
 	}
 }
 
+// Helper: Check if scene needs axis conversion and apply it conditionally
+// Returns true if conversion was applied, false if scene was already in Unreal axis system
+bool UFbxLoader::ConvertSceneAxisIfNeeded(FbxScene* Scene)
+{
+	if (!Scene)
+		return false;
+
+	FbxAxisSystem UnrealImportAxis(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
+	FbxAxisSystem SourceSetup = Scene->GetGlobalSettings().GetAxisSystem();
+
+	// Check if scene is already in Unreal axis system
+	if (SourceSetup == UnrealImportAxis)
+	{
+		UE_LOG("Scene is already in Unreal axis system, skipping DeepConvertScene");
+
+		// Still need to check unit conversion
+		FbxSystemUnit SceneUnit = Scene->GetGlobalSettings().GetSystemUnit();
+		double SceneScaleFactor = SceneUnit.GetScaleFactor();
+		const double Tolerance = 1e-6;
+
+		// Only convert if scale factor is significantly different from 1.0 (not already in meters)
+		if ((SceneUnit != FbxSystemUnit::m) && (std::abs(SceneScaleFactor - 1.0) > Tolerance))
+		{
+			UE_LOG("Scene unit scale factor is %.6f, converting to meters", SceneScaleFactor);
+			FbxSystemUnit::m.ConvertScene(Scene);
+			UE_LOG("Converted scene unit to meters");
+			return true;
+		}
+		else
+		{
+			UE_LOG("Scene is already in meters (scale factor: %.6f), skipping unit conversion", SceneScaleFactor);
+			return false;
+		}
+	}
+
+	// Scene needs axis conversion
+	UE_LOG("Converting scene from source axis system to Unreal axis system");
+
+	// Convert unit system
+	FbxSystemUnit SceneUnit = Scene->GetGlobalSettings().GetSystemUnit();
+	double SceneScaleFactor = SceneUnit.GetScaleFactor();
+	const double Tolerance = 1e-6;
+
+	// Only convert if scale factor is significantly different from 1.0
+	if ((SceneUnit != FbxSystemUnit::m) && (std::abs(SceneScaleFactor - 1.0) > Tolerance))
+	{
+		UE_LOG("Scene unit scale factor is %.6f, converting to meters", SceneScaleFactor);
+		FbxSystemUnit::m.ConvertScene(Scene);
+		UE_LOG("Converted scene unit to meters");
+	}
+	else
+	{
+		UE_LOG("Scene already has scale factor 1.0, skipping unit conversion");
+	}
+
+	// Convert axis system
+	UnrealImportAxis.DeepConvertScene(Scene);
+	UE_LOG("Applied DeepConvertScene to convert axis system");
+
+	return true;
+}
+
+// Helper: Check if a node contains a skeleton attribute
+bool UFbxLoader::NodeContainsSkeleton(FbxNode* InNode) const
+{
+	if (!InNode)
+		return false;
+
+	for (int i = 0; i < InNode->GetNodeAttributeCount(); ++i)
+	{
+		if (FbxNodeAttribute* Attribute = InNode->GetNodeAttributeByIndex(i))
+		{
+			if (Attribute->GetAttributeType() == FbxNodeAttribute::eSkeleton)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+// Helper: Compute accumulated correction matrix from non-skeleton parent nodes (e.g., Armature)
+// Walks up the parent chain and accumulates transforms of all non-skeleton ancestors
+FbxAMatrix UFbxLoader::ComputeNonSkeletonParentCorrection(FbxNode* BoneNode) const
+{
+	FbxAMatrix AccumulatedCorrection;
+	AccumulatedCorrection.SetIdentity();
+
+	if (!BoneNode)
+		return AccumulatedCorrection;
+
+	// Walk up the parent chain
+	FbxNode* Parent = BoneNode->GetParent();
+	while (Parent)
+	{
+		// If parent is a skeleton node, stop (we only care about non-skeleton ancestors)
+		if (NodeContainsSkeleton(Parent))
+		{
+			break;
+		}
+
+		// Check if this non-skeleton parent has a stored transform
+		const FbxAMatrix* ParentTransformPtr = NonSkeletonParentTransforms.Find(Parent);
+		if (ParentTransformPtr)
+		{
+			// Accumulate the parent's transform (multiply on the right for local-to-global order)
+			AccumulatedCorrection = (*ParentTransformPtr) * AccumulatedCorrection;
+		}
+
+		// Move to next parent
+		Parent = Parent->GetParent();
+	}
+
+	return AccumulatedCorrection;
+}
+
+// Helper: Recursively traverse nodes until we find one with eSkeleton, skipping intermediate nodes (e.g., Armature)
+void UFbxLoader::LoadSkeletonHierarchy(FbxNode* InNode, FSkeletalMeshData& MeshData, int32 ParentNodeIndex, TMap<FbxNode*, int32>& BoneToIndex)
+{
+	if (!InNode)
+		return;
+
+	// If this node has a skeleton attribute, start loading from here
+	if (NodeContainsSkeleton(InNode))
+	{
+		LoadSkeletonFromNode(InNode, MeshData, ParentNodeIndex, BoneToIndex);
+		return;
+	}
+
+	// Otherwise, this is an intermediate node (e.g., Armature) - just skip to children
+	// Note: We don't need to store Armature transform anymore since DeepConvertScene
+	// converts all nodes (including Armature) to Unreal coordinate system
+	FbxString NodeName = InNode->GetName();
+
+	static bool bLoggedArmatureSkip = false;
+	if (!bLoggedArmatureSkip && NodeName.CompareNoCase("Armature") == 0)
+	{
+		UE_LOG("UFbxLoader: Detected Armature node '%s'. Skipping to skeleton children.", NodeName.Buffer());
+		bLoggedArmatureSkip = true;
+	}
+
+	// Recurse to children to find skeleton nodes
+	for (int i = 0; i < InNode->GetChildCount(); ++i)
+	{
+		LoadSkeletonHierarchy(InNode->GetChild(i), MeshData, ParentNodeIndex, BoneToIndex);
+	}
+}
+
 // Skeleton은 계층구조까지 표현해야하므로 깊이 우선 탐색, ParentNodeIndex 명시.
 void UFbxLoader::LoadSkeletonFromNode(FbxNode* InNode, FSkeletalMeshData& MeshData, int32 ParentNodeIndex, TMap<FbxNode*, int32>& BoneToIndex)
 {
 	int32 BoneIndex = ParentNodeIndex;
 	for (int Index = 0; Index < InNode->GetNodeAttributeCount(); Index++)
 	{
-		
+
 		FbxNodeAttribute* Attribute = InNode->GetNodeAttributeByIndex(Index);
 		if (!Attribute)
 		{
@@ -533,15 +677,15 @@ void UFbxLoader::LoadSkeletonFromNode(FbxNode* InNode, FSkeletalMeshData& MeshDa
 			FBone BoneInfo{};
 
 			BoneInfo.Name = FString(InNode->GetName());
-			
+
 			BoneInfo.ParentIndex = ParentNodeIndex;
 
 			// 뼈 리스트에 추가
 			MeshData.Skeleton.Bones.Add(BoneInfo);
-			
+
 			// 뼈 인덱스 우리가 정해줌(방금 추가한 마지막 원소)
 			BoneIndex = MeshData.Skeleton.Bones.Num() - 1;
-			
+
 			// 뼈 이름으로 인덱스 서치 가능하게 함.
 			MeshData.Skeleton.BoneNameToIndex.Add(BoneInfo.Name, BoneIndex);
 
@@ -612,23 +756,23 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<int
 			// 클러스터가 영향을 주는 ControlPointIndex를 구함.
 			int* Indices = Cluster->GetControlPointIndices();
 			double* Weights = Cluster->GetControlPointWeights();
-            // Bind Pose, Inverse Bind Pose 저장.
-            // Fbx 스킨 규약:
-            //  - TransformLinkMatrix: 본의 글로벌 바인드 행렬
-            //  - TransformMatrix:     메시의 글로벌 바인드 행렬
-            // 엔진 로컬(메시 기준) 바인드 행렬 = Inv(TransformMatrix) * TransformLinkMatrix
-            FbxAMatrix BoneBindGlobal;
-            Cluster->GetTransformLinkMatrix(BoneBindGlobal);
-            FbxAMatrix BoneBindGlobalInv = BoneBindGlobal.Inverse();
-            // FbxMatrix는 128바이트, FMatrix는 64바이트라서 memcpy쓰면 안 됨. 원소 단위로 복사합니다.
-            for (int Row = 0; Row < 4; Row++)
-            {
-                for (int Col = 0; Col < 4; Col++)
-                {
-                    MeshData.Skeleton.Bones[BoneToIndex[Cluster->GetLink()]].BindPose.M[Row][Col] = static_cast<float>(BoneBindGlobal[Row][Col]);
-                    MeshData.Skeleton.Bones[BoneToIndex[Cluster->GetLink()]].InverseBindPose.M[Row][Col] = static_cast<float>(BoneBindGlobalInv[Row][Col]);
-                }
-            }
+			// Bind Pose, Inverse Bind Pose 저장.
+			// Fbx 스킨 규약:
+			//  - TransformLinkMatrix: 본의 글로벌 바인드 행렬
+			//  - TransformMatrix:     메시의 글로벌 바인드 행렬
+			// 엔진 로컬(메시 기준) 바인드 행렬 = Inv(TransformMatrix) * TransformLinkMatrix
+			FbxAMatrix BoneBindGlobal;
+			Cluster->GetTransformLinkMatrix(BoneBindGlobal);
+			FbxAMatrix BoneBindGlobalInv = BoneBindGlobal.Inverse();
+			// FbxMatrix는 128바이트, FMatrix는 64바이트라서 memcpy쓰면 안 됨. 원소 단위로 복사합니다.
+			for (int Row = 0; Row < 4; Row++)
+			{
+				for (int Col = 0; Col < 4; Col++)
+				{
+					MeshData.Skeleton.Bones[BoneToIndex[Cluster->GetLink()]].BindPose.M[Row][Col] = static_cast<float>(BoneBindGlobal[Row][Col]);
+					MeshData.Skeleton.Bones[BoneToIndex[Cluster->GetLink()]].InverseBindPose.M[Row][Col] = static_cast<float>(BoneBindGlobalInv[Row][Col]);
+				}
+			}
 
 
 			for (int ControlPointIndex = 0; ControlPointIndex < IndexCount; ControlPointIndex++)
@@ -671,7 +815,7 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<int
 	{
 		// 최종적으로 사용할 머티리얼 인덱스를 구함, MaterialIndex 기본값이 0이므로 없는 경우 처리됨, 머티리얼이 하나일때 materialIndex가 1 이상이므로 처리됨.
 		// 머티리얼이 여러개일때만 처리해주면 됌.
-		
+
 		// 머티리얼이 여러개인 경우(머티리얼이 하나 이상 있는데 materialIndex가 0이면 여러개, 하나일때는 MaterialIndex를 설정해주니까)
 		// 이때는 해싱을 해줘야함
 		int32 MaterialIndex = DefaultMaterialIndex;
@@ -710,7 +854,7 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<int
 				{
 					// ControlPoint에 대응하는 뼈 인덱스, 가중치를 모두 저장
 					SkinnedVertex.BoneIndices[BoneIndex] = ControlPointToBoneWeight[ControlPointIndex][BoneIndex].BoneIndex;
-					SkinnedVertex.BoneWeights[BoneIndex] = ControlPointToBoneWeight[ControlPointIndex][BoneIndex].BoneWeight/TotalWeights;
+					SkinnedVertex.BoneWeights[BoneIndex] = ControlPointToBoneWeight[ControlPointIndex][BoneIndex].BoneWeight / TotalWeights;
 				}
 			}
 
@@ -947,106 +1091,106 @@ void UFbxLoader::LoadMesh(FbxMesh* InMesh, FSkeletalMeshData& MeshData, TMap<int
 		} // for PolygonSize
 	} // for PolygonCount
 
-	
+
 
 	// FBX에 정점의 탄젠트 벡터가 존재하지 않을 시
 	if (InMesh->GetElementTangentCount() == 0)
 	{
-        // 1. 계산된 탄젠트와 바이탄젠트(Bitangent)를 누적할 임시 저장소를 만듭니다.
-        // MeshData.Vertices에 이미 중복 제거된 유일한 정점들이 들어있습니다.
-        TArray<FVector> TempTangents(MeshData.Vertices.Num());
-        TArray<FVector> TempBitangents(MeshData.Vertices.Num());
+		// 1. 계산된 탄젠트와 바이탄젠트(Bitangent)를 누적할 임시 저장소를 만듭니다.
+		// MeshData.Vertices에 이미 중복 제거된 유일한 정점들이 들어있습니다.
+		TArray<FVector> TempTangents(MeshData.Vertices.Num());
+		TArray<FVector> TempBitangents(MeshData.Vertices.Num());
 
-        // 2. 모든 머티리얼 그룹의 인덱스 리스트를 순회합니다.
-        for (auto& Elem : MaterialGroupIndexList)
-        {
-            TArray<uint32>& GroupIndexList = Elem.second;
+		// 2. 모든 머티리얼 그룹의 인덱스 리스트를 순회합니다.
+		for (auto& Elem : MaterialGroupIndexList)
+		{
+			TArray<uint32>& GroupIndexList = Elem.second;
 
-            // 인덱스 리스트를 3개씩(트라이앵글 단위로) 순회합니다.
-            for (int32 i = 0; i < GroupIndexList.Num(); i += 3)
-            {
-                uint32 i0 = GroupIndexList[i];
-                uint32 i1 = GroupIndexList[i + 1];
-                uint32 i2 = GroupIndexList[i + 2];
+			// 인덱스 리스트를 3개씩(트라이앵글 단위로) 순회합니다.
+			for (int32 i = 0; i < GroupIndexList.Num(); i += 3)
+			{
+				uint32 i0 = GroupIndexList[i];
+				uint32 i1 = GroupIndexList[i + 1];
+				uint32 i2 = GroupIndexList[i + 2];
 
-                // 트라이앵글을 구성하는 3개의 정점 데이터를 가져옵니다.
-                // 이 정점들은 MeshData.Vertices에 있는 *유일한* 정점입니다.
-                const FSkinnedVertex& v0 = MeshData.Vertices[i0];
-                const FSkinnedVertex& v1 = MeshData.Vertices[i1];
-                const FSkinnedVertex& v2 = MeshData.Vertices[i2];
+				// 트라이앵글을 구성하는 3개의 정점 데이터를 가져옵니다.
+				// 이 정점들은 MeshData.Vertices에 있는 *유일한* 정점입니다.
+				const FSkinnedVertex& v0 = MeshData.Vertices[i0];
+				const FSkinnedVertex& v1 = MeshData.Vertices[i1];
+				const FSkinnedVertex& v2 = MeshData.Vertices[i2];
 
-                // 위치(P)와 UV(W)를 가져옵니다.
-                const FVector& P0 = v0.Position;
-                const FVector& P1 = v1.Position;
-                const FVector& P2 = v2.Position;
+				// 위치(P)와 UV(W)를 가져옵니다.
+				const FVector& P0 = v0.Position;
+				const FVector& P1 = v1.Position;
+				const FVector& P2 = v2.Position;
 
-                const FVector2D& W0 = v0.UV;
-                const FVector2D& W1 = v1.UV;
-                const FVector2D& W2 = v2.UV;
+				const FVector2D& W0 = v0.UV;
+				const FVector2D& W1 = v1.UV;
+				const FVector2D& W2 = v2.UV;
 
-                // 트라이앵글의 엣지(Edge)와 델타(Delta) UV를 계산합니다.
-                FVector Edge1 = P1 - P0;
-                FVector Edge2 = P2 - P0;
-                FVector2D DeltaUV1 = W1 - W0;
-                FVector2D DeltaUV2 = W2 - W0;
+				// 트라이앵글의 엣지(Edge)와 델타(Delta) UV를 계산합니다.
+				FVector Edge1 = P1 - P0;
+				FVector Edge2 = P2 - P0;
+				FVector2D DeltaUV1 = W1 - W0;
+				FVector2D DeltaUV2 = W2 - W0;
 
-                // Lengyel's MikkTSpace/Schwarze Formula (분모)
-                float r = 1.0f / (DeltaUV1.X * DeltaUV2.Y - DeltaUV1.Y * DeltaUV2.X);
-                
-                // r이 무한대(inf)나 NaN이 아닌지 확인 (UV가 겹치는 경우)
-                if (isinf(r) || isnan(r))
-                {
-                    r = 0.0f; // 이 트라이앵글은 계산에서 제외
-                }
+				// Lengyel's MikkTSpace/Schwarze Formula (분모)
+				float r = 1.0f / (DeltaUV1.X * DeltaUV2.Y - DeltaUV1.Y * DeltaUV2.X);
 
-                // (정규화되지 않은) 탄젠트(T)와 바이탄젠트(B) 계산
-                FVector T = (Edge1 * DeltaUV2.Y - Edge2 * DeltaUV1.Y) * r;
-                FVector B = (Edge2 * DeltaUV1.X - Edge1 * DeltaUV2.X) * r;
+				// r이 무한대(inf)나 NaN이 아닌지 확인 (UV가 겹치는 경우)
+				if (isinf(r) || isnan(r))
+				{
+					r = 0.0f; // 이 트라이앵글은 계산에서 제외
+				}
 
-                // 3개의 정점에 T와 B를 (정규화 없이) 누적합니다.
-                // 이렇게 하면 동일한 정점을 공유하는 모든 트라이앵글의 T/B가 합산됩니다.
-                TempTangents[i0] += T;
-                TempTangents[i1] += T;
-                TempTangents[i2] += T;
+				// (정규화되지 않은) 탄젠트(T)와 바이탄젠트(B) 계산
+				FVector T = (Edge1 * DeltaUV2.Y - Edge2 * DeltaUV1.Y) * r;
+				FVector B = (Edge2 * DeltaUV1.X - Edge1 * DeltaUV2.X) * r;
 
-                TempBitangents[i0] += B;
-                TempBitangents[i1] += B;
-                TempBitangents[i2] += B;
-            }
-        }
+				// 3개의 정점에 T와 B를 (정규화 없이) 누적합니다.
+				// 이렇게 하면 동일한 정점을 공유하는 모든 트라이앵글의 T/B가 합산됩니다.
+				TempTangents[i0] += T;
+				TempTangents[i1] += T;
+				TempTangents[i2] += T;
 
-        // 3. 모든 정점을 순회하며 누적된 T/B를 직교화(Gram-Schmidt)하고 저장합니다.
-        for (int32 i = 0; i < MeshData.Vertices.Num(); ++i)
-        {
-            FSkinnedVertex& V = MeshData.Vertices[i]; // 실제 정점 데이터에 접근
-            const FVector& N = V.Normal;
-            const FVector& T_accum = TempTangents[i];
-            const FVector& B_accum = TempBitangents[i];
+				TempBitangents[i0] += B;
+				TempBitangents[i1] += B;
+				TempBitangents[i2] += B;
+			}
+		}
 
-            if (T_accum.IsZero() || N.IsZero())
-            {
-                // T 또는 N이 0이면 계산 불가. 유효한 기본값 설정
-                FVector T_fallback = FVector(1.0f, 0.0f, 0.0f);
-                if (FMath::Abs(FVector::Dot(N, T_fallback)) > 0.99f) // N이 X축과 거의 평행하면
-                {
-                    T_fallback = FVector(0.0f, 1.0f, 0.0f); // Y축을 T로 사용
-                }
-                V.Tangent = FVector4(T_fallback.X, T_fallback.Y, T_fallback.Z, 1.0f);
-                continue;
-            }
+		// 3. 모든 정점을 순회하며 누적된 T/B를 직교화(Gram-Schmidt)하고 저장합니다.
+		for (int32 i = 0; i < MeshData.Vertices.Num(); ++i)
+		{
+			FSkinnedVertex& V = MeshData.Vertices[i]; // 실제 정점 데이터에 접근
+			const FVector& N = V.Normal;
+			const FVector& T_accum = TempTangents[i];
+			const FVector& B_accum = TempBitangents[i];
 
-            // Gram-Schmidt 직교화: T = T - (T dot N) * N
-            // (T를 N에 투영한 성분을 T에서 빼서, N과 수직인 벡터를 만듭니다)
-        	FVector Tangent = (T_accum - N * (FVector::Dot(T_accum, N))).GetSafeNormal();
+			if (T_accum.IsZero() || N.IsZero())
+			{
+				// T 또는 N이 0이면 계산 불가. 유효한 기본값 설정
+				FVector T_fallback = FVector(1.0f, 0.0f, 0.0f);
+				if (FMath::Abs(FVector::Dot(N, T_fallback)) > 0.99f) // N이 X축과 거의 평행하면
+				{
+					T_fallback = FVector(0.0f, 1.0f, 0.0f); // Y축을 T로 사용
+				}
+				V.Tangent = FVector4(T_fallback.X, T_fallback.Y, T_fallback.Z, 1.0f);
+				continue;
+			}
 
-            // Handedness (W 컴포넌트) 계산:
-            // 외적으로 구한 B(N x T)와 누적된 B(B_accum)의 방향을 비교합니다.
-            float Handedness = (FVector::Dot((FVector::Cross(Tangent, N)), B_accum) > 0.0f ) ? 1.0f : -1.0f;
+			// Gram-Schmidt 직교화: T = T - (T dot N) * N
+			// (T를 N에 투영한 성분을 T에서 빼서, N과 수직인 벡터를 만듭니다)
+			FVector Tangent = (T_accum - N * (FVector::Dot(T_accum, N))).GetSafeNormal();
 
-            // 최종 탄젠트(T)와 Handedness(W)를 저장합니다.
-            V.Tangent = FVector4(Tangent.X, Tangent.Y, Tangent.Z, Handedness);
-        }
-    }
+			// Handedness (W 컴포넌트) 계산:
+			// 외적으로 구한 B(N x T)와 누적된 B(B_accum)의 방향을 비교합니다.
+			float Handedness = (FVector::Dot((FVector::Cross(Tangent, N)), B_accum) > 0.0f) ? 1.0f : -1.0f;
+
+			// 최종 탄젠트(T)와 Handedness(W)를 저장합니다.
+			V.Tangent = FVector4(Tangent.X, Tangent.Y, Tangent.Z, Handedness);
+		}
+	}
 }
 
 
@@ -1128,7 +1272,7 @@ void UFbxLoader::ParseMaterial(FbxSurfaceMaterial* Material, FMaterialInfo& Mate
 
 	Property = Material->FindProperty(FbxSurfaceMaterial::sShininess);
 	MaterialInfo.SpecularExponentTextureFileName = ParseTexturePath(Property);
-	
+
 	UMaterial* Default = UResourceManager::GetInstance().GetDefaultMaterial();
 	NewMaterial->SetMaterialInfo(MaterialInfo);
 	NewMaterial->SetShader(Default->GetShader());
@@ -1381,6 +1525,64 @@ void UFbxLoader::EnsureSingleRootBone(FSkeletalMeshData& MeshData)
 
 void UFbxLoader::ProcessAnimations(FbxScene* Scene, const FSkeletalMeshData& MeshData, const FString& FilePath, TArray<UAnimSequence*>& OutAnimations)
 {
+	// Find Armature node by name and extract its transform for correction
+	FTransform ArmatureCorrection;
+	bool bFoundArmature = false;
+	FbxNode* RootNode = Scene->GetRootNode();
+	if (RootNode)
+	{
+		// Search for "Armature" node (case-insensitive)
+		for (int i = 0; i < RootNode->GetChildCount(); ++i)
+		{
+			FbxNode* ChildNode = RootNode->GetChild(i);
+			const char* NodeNameCStr = ChildNode->GetName();
+			FString NodeName(NodeNameCStr);
+
+			// Check if node name is "Armature" (case-insensitive)
+			FString NodeNameLower = NodeName;
+			std::transform(NodeNameLower.begin(), NodeNameLower.end(), NodeNameLower.begin(), ::tolower);
+
+			if (NodeNameLower == "armature")
+			{
+				// Found Armature node - extract its transform
+				FbxAMatrix LocalTransform = ChildNode->EvaluateLocalTransform(FBXSDK_TIME_ZERO);
+
+				// Convert FbxAMatrix to FTransform
+				FbxVector4 Translation = LocalTransform.GetT();
+				FbxQuaternion Rotation = LocalTransform.GetQ();
+				FbxVector4 Scale = LocalTransform.GetS();
+
+				ArmatureCorrection.Translation = FVector(
+					static_cast<float>(Translation[0]),
+					static_cast<float>(Translation[1]),
+					static_cast<float>(Translation[2])
+				);
+				ArmatureCorrection.Rotation = FQuat(
+					static_cast<float>(Rotation[0]),
+					static_cast<float>(Rotation[1]),
+					static_cast<float>(Rotation[2]),
+					static_cast<float>(Rotation[3])
+				);
+				ArmatureCorrection.Scale3D = FVector(
+					static_cast<float>(Scale[0]),
+					static_cast<float>(Scale[1]),
+					static_cast<float>(Scale[2])
+				);
+
+				UE_LOG("Found Armature node '%s', storing correction transform", NodeName.c_str());
+				bFoundArmature = true;
+				break;
+			}
+		}
+	}
+
+	// If no Armature node found, set to Identity (Mixamo case)
+	if (!bFoundArmature)
+	{
+		ArmatureCorrection = FTransform();
+		UE_LOG("No Armature node found, using Identity transform (Mixamo FBX)");
+	}
+
 	// 중요
 	// Get animation stack count
 	// FBX에 애니메이션이 있는지 확인
@@ -1418,7 +1620,10 @@ void UFbxLoader::ProcessAnimations(FbxScene* Scene, const FSkeletalMeshData& Mes
 		// 애니메이션을 저장할 AnimSequence 생성
 		UAnimSequence* AnimSequence = NewObject<UAnimSequence>();
 		AnimSequence->ObjectName = FName(AnimStackName);
-		// Note: You may need to set skeleton here if you have it available
+
+
+		// Set Armature correction transform (Identity for Mixamo, actual transform for Blender)
+		AnimSequence->SetArmatureCorrection(ArmatureCorrection);
 
 		// Get DataModel
 		UAnimDataModel* DataModel = AnimSequence->GetDataModel();
@@ -1505,7 +1710,15 @@ void UFbxLoader::ProcessAnimations(FbxScene* Scene, const FSkeletalMeshData& Mes
 		for (int32 i = 0; i < OutAnimations.Num(); ++i)
 		{
 			FString AnimStackName = OutAnimations[i]->ObjectName.ToString();
-			FString AnimCachePath = AnimCacheDir + "/" + AnimStackName + ".anim.bin";
+			FString SanitizedName = AnimStackName;
+			for (char& ch : SanitizedName)
+			{
+				if (ch == '|' || ch == ':' || ch == '*' || ch == '?' || ch == '"' || ch == '<' || ch == '>' || ch == '/' || ch == '\\')
+				{
+					ch = '_';
+				}
+			}
+			FString AnimCachePath = AnimCacheDir + "/" + SanitizedName + ".anim.bin";
 
 			if (SaveAnimationToCache(OutAnimations[i], AnimCachePath))
 			{
@@ -1760,6 +1973,22 @@ bool UFbxLoader::SaveAnimationToCache(UAnimSequence* Animation, const FString& C
 		Writer << NumberOfFrames;
 		Writer << NumberOfKeys;
 
+		// Write Armature correction transform
+		FTransform CachedArmatureCorrection = Animation->GetArmatureCorrection();
+		FVector ACTranslation = CachedArmatureCorrection.Translation;
+		FQuat ACRotation = CachedArmatureCorrection.Rotation;
+		FVector ACScale = CachedArmatureCorrection.Scale3D;
+		Writer << ACTranslation.X;
+		Writer << ACTranslation.Y;
+		Writer << ACTranslation.Z;
+		Writer << ACRotation.X;
+		Writer << ACRotation.Y;
+		Writer << ACRotation.Z;
+		Writer << ACRotation.W;
+		Writer << ACScale.X;
+		Writer << ACScale.Y;
+		Writer << ACScale.Z;
+
 		// Write bone tracks
 		TArray<FBoneAnimationTrack>& Tracks = DataModel->GetBoneAnimationTracks();
 		uint32 NumTracks = (uint32)Tracks.Num();
@@ -1832,6 +2061,20 @@ UAnimSequence* UFbxLoader::LoadAnimationFromCache(const FString& CachePath)
 		Reader << FrameRate;
 		Reader << NumberOfFrames;
 		Reader << NumberOfKeys;
+
+		FTransform ArmatureCorrection;
+		Reader << ArmatureCorrection.Translation.X;
+		Reader << ArmatureCorrection.Translation.Y;
+		Reader << ArmatureCorrection.Translation.Z;
+		Reader << ArmatureCorrection.Rotation.X;
+		Reader << ArmatureCorrection.Rotation.Y;
+		Reader << ArmatureCorrection.Rotation.Z;
+		Reader << ArmatureCorrection.Rotation.W;
+		Reader << ArmatureCorrection.Scale3D.X;
+		Reader << ArmatureCorrection.Scale3D.Y;
+		Reader << ArmatureCorrection.Scale3D.Z;
+
+		Animation->SetArmatureCorrection(ArmatureCorrection);
 
 		DataModel->SetPlayLength(PlayLength);
 		DataModel->SetFrameRate(FrameRate);

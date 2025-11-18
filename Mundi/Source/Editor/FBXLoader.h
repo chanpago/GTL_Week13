@@ -36,7 +36,16 @@ private:
 
 	void LoadMeshFromNode(FbxNode* InNode, FSkeletalMeshData& MeshData, TMap<int32, TArray<uint32>>& MaterialGroupIndexList, TMap<FbxNode*, int32>& BoneToIndex, TMap<FbxSurfaceMaterial*, int32>& MaterialToIndex);
 
+	void LoadSkeletonHierarchy(FbxNode* InNode, FSkeletalMeshData& MeshData, int32 ParentNodeIndex, TMap<FbxNode*, int32>& BoneToIndex);
+	bool NodeContainsSkeleton(FbxNode* InNode) const;
+
 	void LoadSkeletonFromNode(FbxNode* InNode, FSkeletalMeshData& MeshData, int32 ParentNodeIndex, TMap<FbxNode*, int32>& BoneToIndex);
+
+	// Axis conversion helper
+	bool ConvertSceneAxisIfNeeded(FbxScene* Scene);
+
+	// Helper to compute accumulated parent correction for non-skeleton nodes (e.g., Armature)
+	FbxAMatrix ComputeNonSkeletonParentCorrection(FbxNode* BoneNode) const;
 
 	void LoadMeshFromAttribute(FbxNodeAttribute* InAttribute, FSkeletalMeshData& MeshData);
 
@@ -61,4 +70,6 @@ private:
 	TArray<FMaterialInfo> MaterialInfos;
 	FbxManager* SdkManager = nullptr;
 
+	// Store local transforms of non-skeleton parent nodes (e.g., Armature) for animation correction
+	TMap<const FbxNode*, FbxAMatrix> NonSkeletonParentTransforms;
 };

@@ -3,6 +3,7 @@
 #include "Pawn.h"
 #include "CameraComponent.h"
 #include <windows.h>
+#include  "Character.h"
 
 APlayerController::APlayerController()
 {
@@ -40,7 +41,7 @@ void APlayerController::Tick(float DeltaSeconds)
 
 	// 입력 처리 (Move)
 	ProcessMovementInput(DeltaSeconds);
-
+	  
 	// 입력 처리 (Look/Turn)
 	ProcessRotationInput(DeltaSeconds);
 }
@@ -80,9 +81,21 @@ void APlayerController::ProcessMovementInput(float DeltaTime)
 		// controller의 회전을  inputDir에  적용시켜준다.
 		FMatrix RotMatrix = GetControlRotation().ToMatrix(); 
 		FVector WorldDir = RotMatrix.TransformVector(InputDir);
-	 
-		Pawn->AddMovementInput(WorldDir * (Pawn->GetVelocity() * DeltaTime));
+	 	
+		Pawn->AddMovementInput(WorldDir * (Pawn->GetVelocity() * DeltaTime)); 
 	}
+
+    // 점프 처리  
+    if (InputManager.IsKeyPressed(VK_SPACE)) {          // 눌린 순간 1회
+        if (auto* Character = Cast<ACharacter>(Pawn)) {
+            Character->Jump();
+        }
+    }
+    if (InputManager.IsKeyReleased(VK_SPACE)) {         // 뗀 순간 1회 (있다면)
+        if (auto* Character = Cast<ACharacter>(Pawn)) {
+            Character->StopJumping();
+        } 
+    }
 }
 
 void APlayerController::ProcessRotationInput(float DeltaTime)

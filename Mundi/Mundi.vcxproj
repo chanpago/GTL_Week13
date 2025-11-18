@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug_StandAlone|x64">
@@ -275,6 +275,8 @@
     <ClCompile Include="Source\Runtime\AssetManagement\SkeletalMesh.cpp" />
     <ClCompile Include="Source\Runtime\Core\Memory\GPUProfile.cpp" />
     <ClCompile Include="Source\Runtime\Core\Misc\VertexData.cpp" />
+    <ClCompile Include="Source\Runtime\Core\Object\Character.cpp" />
+    <ClCompile Include="Source\Runtime\Core\Object\CharacterMovementComponent.cpp" />
     <ClCompile Include="Source\Runtime\Core\Object\Controller.cpp" />
     <ClCompile Include="Source\Runtime\Core\Object\Pawn.cpp" />
     <ClCompile Include="Source\Runtime\Core\Object\PlayerController.cpp" />
@@ -294,6 +296,7 @@
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimNotifyState.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\AnimSingleNodeInstance.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Animation\Team2AnimInstance.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Components\PawnMovementComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\SkeletalMeshComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\SkinnedMeshComponent.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\GameModeBase.cpp" />
@@ -579,7 +582,9 @@
     <ClCompile Include="Generated\AController.generated.cpp" />
     <ClCompile Include="Generated\APlayerController.generated.cpp" />
     <ClCompile Include="Generated\AGameModeBase.generated.cpp" />
-  </ItemGroup>
+    <ClCompile Include="Generated\ACharacter.generated.cpp" />
+    <ClCompile Include="Generated\UCharacterMovementComponent.generated.cpp" />
+  <ClCompile Include="Generated\UPawnMovementComponent.generated.cpp" /></ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -757,6 +762,8 @@
     <ClInclude Include="Source\Runtime\Core\Misc\Delegates.h" />
     <ClInclude Include="Source\Runtime\Core\Misc\Hash.h" />
     <ClInclude Include="Source\Runtime\Core\Misc\PathUtils.h" />
+    <ClInclude Include="Source\Runtime\Core\Object\Character.h" />
+    <ClInclude Include="Source\Runtime\Core\Object\CharacterMovementComponent.h" />
     <ClInclude Include="Source\Runtime\Core\Object\Controller.h" />
     <ClInclude Include="Source\Runtime\Core\Object\FireballActor.h" />
     <ClInclude Include="Source\Runtime\Core\Object\Pawn.h" />
@@ -784,6 +791,7 @@
     <ClInclude Include="Source\Runtime\Engine\Components\CapsuleComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\LuaScriptComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\MovementComponent.h" />
+    <ClInclude Include="Source\Runtime\Engine\Components\PawnMovementComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\ProjectileMovementComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\RotatingMovementComponent.h" />
     <ClInclude Include="Source\Runtime\Engine\Components\BoxComponent.h" />
@@ -997,7 +1005,9 @@
     <ClInclude Include="Generated\AController.generated.h" />
     <ClInclude Include="Generated\APlayerController.generated.h" />
     <ClInclude Include="Generated\AGameModeBase.generated.h" />
-  </ItemGroup>
+    <ClInclude Include="Generated\ACharacter.generated.h" />
+    <ClInclude Include="Generated\UCharacterMovementComponent.generated.h" />
+  <ClInclude Include="Generated\UPawnMovementComponent.generated.h" /></ItemGroup>
   <ItemGroup>
     <None Include="Tools\CodeGenerator\generate.py" />
     <None Include="Tools\CodeGenerator\lua_generator.py" />

@@ -9,6 +9,7 @@
 #include "Source/Runtime/Engine/Animation/AnimationAsset.h"
 #include "Source/Runtime/Engine/Animation/AnimNotify_PlaySound.h"
 #include "Source/Runtime/Engine/Animation/Team2AnimInstance.h"
+#include "Source/Runtime/Core/Misc/PathUtils.h"
 #include "InputManager.h"
 
 #include "PlatformTime.h"

@@ -15,6 +15,7 @@
 #include "Source/Runtime/Engine/Animation/AnimNotify_PlaySound.h"
 #include "Source/Runtime/AssetManagement/ResourceManager.h"
 #include "Source/Editor/PlatformProcess.h"
+#include "Source/Runtime/Core/Misc/PathUtils.h"
 #include <filesystem>
 #include "Source/Runtime/Engine/GameFramework/CameraActor.h" "
 SSkeletalMeshViewerWindow::SSkeletalMeshViewerWindow()
@@ -36,6 +37,9 @@ SSkeletalMeshViewerWindow::SSkeletalMeshViewerWindow()
 
 SSkeletalMeshViewerWindow::~SSkeletalMeshViewerWindow()
 {
+    // 닫을 때, Notifies를 저장 
+    SaveAllNotifiesOnClose();
+
     // Clean up tabs if any
     for (int i = 0; i < Tabs.Num(); ++i)
     {
@@ -44,6 +48,41 @@ SSkeletalMeshViewerWindow::~SSkeletalMeshViewerWindow()
     }
     Tabs.Empty();
     ActiveState = nullptr;
+}
+
+// Compose default meta path under Data for an animation
+static FString MakeDefaultMetaPath(const UAnimSequenceBase* Anim)
+{
+    FString BaseDir = GDataDir; // e.g., "Data"
+    FString FileName = "AnimNotifies.anim.json";
+    if (Anim)
+    {
+        const FString Src = Anim->GetFilePath();
+        if (!Src.empty())
+        {
+            // Extract file name without extension
+            size_t pos = Src.find_last_of("/\\");
+            FString Just = (pos == FString::npos) ? Src : Src.substr(pos + 1);
+            size_t dot = Just.find_last_of('.') ;
+            if (dot != FString::npos) Just = Just.substr(0, dot);
+            FileName = Just + ".anim.json";
+        }
+    }
+    return NormalizePath(BaseDir + "/" + FileName);
+}
+
+void SSkeletalMeshViewerWindow::SaveAllNotifiesOnClose()
+{
+    for (int i = 0; i < Tabs.Num(); ++i)
+    {
+        ViewerState* State = Tabs[i];
+        if (!State) continue;
+        if (State->CurrentAnimation)
+        {
+            const FString OutPath = MakeDefaultMetaPath(State->CurrentAnimation);
+            State->CurrentAnimation->SaveMeta(OutPath);
+        }
+    }
 }
 
 bool SSkeletalMeshViewerWindow::Initialize(float StartX, float StartY, float Width, float Height, UWorld* InWorld, ID3D11Device* InDevice)
@@ -69,6 +108,11 @@ void SSkeletalMeshViewerWindow::OnRender()
     // If window is closed, don't render
     if (!bIsOpen)
     {
+        if (!bSavedOnClose)
+        {
+            SaveAllNotifiesOnClose();
+            bSavedOnClose = true;
+        }
         return;
     }
 
@@ -1039,7 +1083,7 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
     }
 
     float ControlHeight = ImGui::GetFrameHeightWithSpacing();
-    
+     
     // --- 1. 메인 타임라인 에디터 (테이블 기반) ---
     ImGui::BeginChild("TimelineEditor", ImVec2(0, -ControlHeight));
 
@@ -1187,6 +1231,56 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                         }
                     }
                     ImGui::EndMenu();
+                }
+
+                ImGui::Separator();
+                if (ImGui::MenuItem("Delete Notify"))
+                {
+                    if (bHasAnimation && State->CurrentAnimation)
+                    {
+                        const float ClickFrame = RightClickFrame;
+                        const float ClickTimeSec = ImClamp(ClickFrame * FrameDuration, 0.0f, PlayLength);
+
+                        TArray<FAnimNotifyEvent>& Events = State->CurrentAnimation->GetAnimNotifyEvents();
+
+                        int DeleteIndex = -1;
+                        float BestDist = 1e9f;
+                        const float Tolerance = FMath::Max(FrameDuration * 0.5f, 0.05f);
+
+                        for (int i = 0; i < Events.Num(); ++i)
+                        {
+                            const FAnimNotifyEvent& E = Events[i];
+                            float Dist = 1e9f;
+                            if (E.IsState())
+                            {
+                                const float Start = E.GetTriggerTime();
+                                const float End = E.GetEndTriggerTime();
+                                if (ClickTimeSec >= Start - Tolerance && ClickTimeSec <= End + Tolerance)
+                                {
+                                    Dist = 0.0f;
+                                }
+                                else
+                                {
+                                    Dist = (ClickTimeSec < Start) ? (Start - ClickTimeSec) : (ClickTimeSec - End);
+                                }
+                            }
+                            else
+                            {
+                                Dist = FMath::Abs(E.GetTriggerTime() - ClickTimeSec);
+                            }
+
+                            if (Dist <= Tolerance && Dist < BestDist)
+                            {
+                                BestDist = Dist;
+                                DeleteIndex = i;
+                            }
+                        }
+
+                        if (DeleteIndex >= 0)
+                        {
+                            Events.RemoveAt(DeleteIndex);
+                        }
+                    }
                 }
                 ImGui::EndPopup();
             }

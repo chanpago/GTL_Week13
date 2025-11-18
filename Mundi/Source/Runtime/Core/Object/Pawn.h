@@ -5,6 +5,7 @@
 
 class AController;
 class USkeletalMeshComponent;
+class UPawnMovementComponent;
 
 UCLASS(DisplayName = "폰", Description = "폰 액터")
 class APawn : public AActor
@@ -29,7 +30,10 @@ public:
 	FVector ConsumeMovementInputVector();
 	
 	float GetVelocity() { return Velocity; }
-	
+	AController* GetController() { return Controller; }
+
+    // Movement component access (virtual so derived types can supply their own)
+    virtual UPawnMovementComponent* GetPawnMovementComponent() const { return PawnMovementComponent; }
 protected:
 	
 	// 현재 Pawn을 컨트롤하는 컨트롤러 
@@ -39,5 +43,8 @@ protected:
 	FVector InternalMovementInputVector; 
 
 	USkeletalMeshComponent* SkeletalMeshComp = nullptr;
+	
+	UPawnMovementComponent* PawnMovementComponent = nullptr;
+
 	float Velocity = 10.0f; 
 };

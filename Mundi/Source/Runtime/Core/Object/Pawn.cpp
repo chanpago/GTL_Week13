@@ -1,21 +1,32 @@
 ﻿#include "pch.h"
 #include "Pawn.h"
 #include "SkeletalMeshComponent.h"
+#include "PawnMovementComponent.h"
 
 APawn::APawn()
 {
 	SkeletalMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>("SkeletalMeshComponent");
 	SetRootComponent(SkeletalMeshComp);
 
+
+	//PawnMovementComponent = CreateDefaultSubobject<UPawnMovementComponent>("PawnMovementComponent");
+	//if (PawnMovementComponent)
+	//{
+	//	PawnMovementComponent->SetUpdatedComponent(SkeletalMeshComp);
+	//} 
 	/*SkeletalMeshComp->SetSkeletalMesh("James.fbx");*/
 }
 
 void APawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	// 수집한 이동처리 
-	AddActorWorldLocation(ConsumeMovementInputVector());
+	 
+	//  PawnMovementComponent가 없을 때는 직접 이동 
+	if (!GetPawnMovementComponent())
+	{
+		// 수집한 이동처리 
+		AddActorWorldLocation(ConsumeMovementInputVector());
+	}
 }
 
 void APawn::BeginPlay()
@@ -35,6 +46,7 @@ void APawn::UnPossessed()
 
 void APawn::AddMovementInput(FVector Direction, float Scale)
 {
+	Direction.Z = 0.0f;
 	InternalMovementInputVector += Direction * Scale;
 }
 

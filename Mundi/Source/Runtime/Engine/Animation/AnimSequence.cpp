@@ -4,7 +4,7 @@
 
 IMPLEMENT_CLASS(UAnimSequence)
 
-UAnimSequence::UAnimSequence()
+UAnimSequence::UAnimSequence() : ArmatureCorrection(FTransform())
 {
 }
 
@@ -59,6 +59,9 @@ void UAnimSequence::GetBonePose(FPoseContext& OutPoseContext, const FAnimExtract
     // 각 본의 전체 키 배열을 그대로 담고 있는 컨테이너를 리턴
     const TArray<FBoneAnimationTrack>& BoneTracks = Model->GetBoneAnimationTracks();
 
+    // Get inverse of Armature correction (to remove Armature transform from animation keys)
+    FTransform InverseArmatureCorrection = ArmatureCorrection.Inverse();
+
     for (int32 TrackIndex = 0; TrackIndex < BoneTracks.Num(); ++TrackIndex)
     {
         const FBoneAnimationTrack& Track = BoneTracks[TrackIndex];
@@ -74,6 +77,18 @@ void UAnimSequence::GetBonePose(FPoseContext& OutPoseContext, const FAnimExtract
         // 바로 앞/뒤의 두 키(Frame0, Frame1) 값을 가져와서 Alpha 비율만큼 보간 위치·스케일은 선형 보간, 회전은 쿼터니언 Slerp을 씀
         // 애니메이션은 “어느 타이밍에 정확히 이 포즈”같이 명시된 키를 그대로 지켜야 하므로 Apporximation 대신 Interpolation을 사용해야함
         FTransform BoneTransform = Model->EvaluateBoneTrackTransform(BoneName, CurrentTime, true);
+
+        // Apply Armature correction inverse for root bone (first bone in hierarchy)
+        // This removes Armature's rotation/scale from Blender FBX, while having no effect on Mixamo (Identity)
+        if (TrackIndex == 0)
+        {
+            // Compose transforms: InverseArmatureCorrection transforms BoneTransform from Armature space to world space
+            BoneTransform = InverseArmatureCorrection.GetRelativeTransform(BoneTransform);
+
+            // 믹사모는 Armature를 사용하지 않으므로 바로 TrackIndex가 0일시에 BoneTransform을 그대로 유지한다.
+
+            // 블렌더는 Armature를 사용하므로 TrackIndex가 0일시에 
+        }
 
         // Store in pose context (you'll need to map bone name to index)
         // For now, we'll just use track index

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "SWindow.h"
 #include "Source/Runtime/Engine/SkeletalViewer/ViewerState.h"
 
@@ -35,6 +35,9 @@ private:
     // Tabs
     void OpenNewTab(const char* Name = "Viewer");
     void CloseTab(int Index);
+    
+    // viwer를 닫을 때 자동으로 Notifies 정보 저장
+    void SaveAllNotifiesOnClose();
 
 private:
     // Per-tab state
@@ -62,6 +65,7 @@ private:
 
     // Window open state
     bool bIsOpen = true;
+    bool bSavedOnClose = false;
 
 public:
     bool IsOpen() const { return bIsOpen; }
