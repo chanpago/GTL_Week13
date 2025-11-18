@@ -6,6 +6,13 @@
 #include "AnimNotify_PlaySound.h"
 
 #include "AnimTypes.h"
+#include "JsonSerializer.h"
+#include "ObjectFactory.h"
+#include "Source/Runtime/AssetManagement/ResourceManager.h"
+#include "Source/Runtime/Engine/Audio/Sound.h"
+#include "Source/Runtime/Core/Misc/PathUtils.h"
+#include "AnimNotify_PlaySound.h"
+#include <filesystem>
 
 
 IMPLEMENT_CLASS(UAnimSequenceBase)
@@ -26,16 +33,47 @@ UAnimDataModel* UAnimSequenceBase::GetDataModel() const
 
 bool UAnimSequenceBase::IsNotifyAvailable() const
 {
+    if (Notifies.Num() == 0)
+    {
+        UAnimSequenceBase* Self = const_cast<UAnimSequenceBase*>(this);
+        (void)Self->GetAnimNotifyEvents();
+    }
     return (Notifies.Num() != 0) && (GetPlayLength() > 0.f);
 }
 
 TArray<FAnimNotifyEvent>& UAnimSequenceBase::GetAnimNotifyEvents()
 {
+    // Lazy-load meta if empty and sidecar exists
+    if (Notifies.Num() == 0)
+    {
+        FString FileName = "AnimNotifies";
+        const FString Src = GetFilePath();
+        if (!Src.empty())
+        {
+            size_t pos = Src.find_last_of("/\\");
+            FString Just = (pos == FString::npos) ? Src : Src.substr(pos + 1);
+            size_t dot = Just.find_last_of('.');
+            if (dot != FString::npos) Just = Just.substr(0, dot);
+            if (!Just.empty()) FileName = Just;
+        }
+        const FString MetaPathUtf8 = NormalizePath(GDataDir + "/" + FileName + ".anim.json");
+        std::filesystem::path MetaPath(UTF8ToWide(MetaPathUtf8));
+        std::error_code ec; if (std::filesystem::exists(MetaPath, ec))
+        {
+            LoadMeta(MetaPathUtf8);
+        }
+    }
     return Notifies;
 }
 
 const TArray<FAnimNotifyEvent>& UAnimSequenceBase::GetAnimNotifyEvents() const
 {
+    if (Notifies.Num() == 0)
+    {
+        // const-correctness workaround
+        UAnimSequenceBase* Self = const_cast<UAnimSequenceBase*>(this);
+        (void)Self->GetAnimNotifyEvents();
+    }
     return Notifies;
 }
 
@@ -225,4 +263,175 @@ void UAnimSequenceBase::AddPlaySoundNotify(float Time, UAnimNotify* Notify, floa
     NewEvent.NotifyState = nullptr;
 
     Notifies.Add(NewEvent); 
+}
+
+bool UAnimSequenceBase::SaveMeta(const FString& MetaPathUTF8) const
+{
+    if (MetaPathUTF8.empty())
+    {
+        return false;
+    }
+     
+
+    JSON Root = JSON::Make(JSON::Class::Object);
+    Root["Type"] = "AnimSequenceMeta";
+    Root["Version"] = 1;
+
+    JSON NotifyArray = JSON::Make(JSON::Class::Array);
+    for (const FAnimNotifyEvent& Evt : Notifies)
+    {
+        JSON Item = JSON::Make(JSON::Class::Object);
+        Item["TriggerTime"] = Evt.TriggerTime;
+        Item["Duration"] = Evt.Duration;
+        Item["NotifyName"] = Evt.NotifyName.ToString().c_str();
+
+        if (Evt.IsSingleShot())
+        {
+            Item["Kind"] = "Single";
+        }
+        else if (Evt.IsState())
+        {
+            Item["Kind"] = "State";
+        }
+        else
+        {
+            Item["Kind"] = "Unknown";
+        }
+
+        FString ClassName;
+        if (Evt.Notify)
+        {
+            ClassName = Evt.Notify->GetClass()->Name; // e.g., UAnimNotify_PlaySound
+        }
+        else if (Evt.NotifyState)
+        {
+            ClassName = Evt.NotifyState->GetClass()->Name;
+        }
+        else
+        {
+            ClassName = "";
+        }
+        Item["Class"] = ClassName.c_str();
+
+        JSON Data = JSON::Make(JSON::Class::Object);
+        // Class-specific data
+        if (Evt.Notify && Evt.Notify->IsA<UAnimNotify_PlaySound>())
+        {
+            const UAnimNotify_PlaySound* PS = static_cast<const UAnimNotify_PlaySound*>(Evt.Notify);
+            FString Path = (PS && PS->Sound) ? PS->Sound->GetFilePath() : "";
+            Data["SoundPath"] = Path.c_str();
+        }
+        Item["Data"] = Data;
+
+        NotifyArray.append(Item);
+    }
+
+    Root["Notifies"] = NotifyArray;
+
+    FWideString WPath = UTF8ToWide(MetaPathUTF8);
+    return FJsonSerializer::SaveJsonToFile(Root, WPath);
+}
+
+bool UAnimSequenceBase::LoadMeta(const FString& MetaPathUTF8)
+{
+    if (MetaPathUTF8.empty())
+    {
+        return false;
+    }
+
+    JSON Root;
+    FWideString WPath = UTF8ToWide(MetaPathUTF8);
+    if (!FJsonSerializer::LoadJsonFromFile(Root, WPath))
+    {
+        return false;
+    }
+
+    if (!Root.hasKey("Notifies"))
+    {
+        return false;
+    }
+
+    const JSON& Arr = Root.at("Notifies");
+    if (Arr.JSONType() != JSON::Class::Array)
+    {
+        return false;
+    }
+
+    Notifies.Empty();
+
+    for (size_t i = 0; i < Arr.size(); ++i)
+    {
+        const JSON& Item = Arr.at(i);
+        if (Item.JSONType() != JSON::Class::Object)
+        {
+            continue;
+        }
+
+        FAnimNotifyEvent Evt;
+
+        // TriggerTime, Duration, NotifyName
+        float TriggerTime = 0.0f;
+        float Duration = 0.0f;
+        FJsonSerializer::ReadFloat(Item, "TriggerTime", TriggerTime, 0.0f, false);
+        FJsonSerializer::ReadFloat(Item, "Duration", Duration, 0.0f, false);
+        FString NameStr;
+        if (Item.hasKey("NotifyName"))
+        {
+            NameStr = Item.at("NotifyName").ToString();
+        }
+        Evt.TriggerTime = TriggerTime;
+        Evt.Duration = Duration;
+        Evt.NotifyName = FName(NameStr);
+
+        // Class-specific reconstruction
+        FString ClassStr;
+        if (Item.hasKey("Class"))
+        {
+            ClassStr = Item.at("Class").ToString();
+        }
+        const JSON* DataPtr = nullptr;
+        if (Item.hasKey("Data"))
+        {
+            DataPtr = &Item.at("Data");
+        }
+
+        if (ClassStr == "UAnimNotify_PlaySound" || ClassStr == "PlaySound")
+        {
+            UAnimNotify_PlaySound* PS = NewObject<UAnimNotify_PlaySound>();
+            if (PS && DataPtr)
+            {
+                if (DataPtr->hasKey("SoundPath"))
+                {
+                    FString SP = DataPtr->at("SoundPath").ToString();
+                    if (!SP.empty())
+                    {
+                        USound* Loaded = UResourceManager::GetInstance().Load<USound>(SP);
+                        PS->Sound = Loaded;
+                    }
+                }
+            }
+            Evt.Notify = PS;
+            Evt.NotifyState = nullptr;
+        }
+        else
+        {
+            // Fallback: generic notify
+            if (!ClassStr.empty())
+            {
+                if (UClass* Cls = UClass::FindClass(FName(ClassStr)))
+                {
+                    UObject* Obj = ObjectFactory::NewObject(Cls);
+                    Evt.Notify = Cast<UAnimNotify>(Obj);
+                }
+            }
+            if (!Evt.Notify)
+            {
+                Evt.Notify = NewObject<UAnimNotify>();
+            }
+        }
+
+        Notifies.Add(Evt);
+    }
+
+    return true;
 }
