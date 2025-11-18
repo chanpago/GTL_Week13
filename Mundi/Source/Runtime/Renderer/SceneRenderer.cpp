@@ -46,7 +46,7 @@
 #include "ShadowStats.h"
 #include "PlatformTime.h"
 #include "PostProcessing/VignettePass.h"
-#include "FbxLoader.h"
+#include "Source/Editor/FBX/FbxLoader.h"
 #include "SkinnedMeshComponent.h"
 #include "SkinningStats.h"
 #include "StatsOverlayD2D.h"

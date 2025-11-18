@@ -2,7 +2,7 @@
 #include "SkeletalMesh.h"
 
 
-#include "FbxLoader.h"
+#include "Source/Editor/FBX/FbxLoader.h"
 #include "WindowsBinReader.h"
 #include "WindowsBinWriter.h"
 #include "PathUtils.h"

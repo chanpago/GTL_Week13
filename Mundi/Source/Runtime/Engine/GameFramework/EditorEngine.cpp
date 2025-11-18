@@ -2,7 +2,7 @@
 #include "BlueprintGraph/BlueprintActionDatabase.h"
 #include "EditorEngine.h"
 #include "FAudioDevice.h"
-#include "FbxLoader.h"
+#include "Source/Editor/FBX/FbxLoader.h"
 #include "GameModeBase.h"
 #include "InputManager.h"
 #include "Pawn.h"

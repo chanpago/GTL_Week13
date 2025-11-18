@@ -3,7 +3,7 @@
 #include "StaticMeshComponent.h"
 #include "ObjManager.h"
 #include "ResourceManager.h"
-#include "FBXLoader.h"
+#include "Source/Editor/FBX/FbxLoader.h"
 #include <filesystem>
 
 IMPLEMENT_CLASS(UStaticMesh)
