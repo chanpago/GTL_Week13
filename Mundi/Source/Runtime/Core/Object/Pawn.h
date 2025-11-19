@@ -33,7 +33,7 @@ public:
 	AController* GetController() { return Controller; }
 
     // Movement component access (virtual so derived types can supply their own)
-    virtual UPawnMovementComponent* GetPawnMovementComponent() const { return PawnMovementComponent; }
+    virtual UPawnMovementComponent* GetMovementComponent() const { return PawnMovementComponent; }
 protected:
 	
 	// 현재 Pawn을 컨트롤하는 컨트롤러 

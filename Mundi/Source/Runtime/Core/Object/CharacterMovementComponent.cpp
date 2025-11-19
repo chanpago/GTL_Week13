@@ -20,7 +20,7 @@ void UCharacterMovementComponent::InitializeComponent()
 
 void UCharacterMovementComponent::TickComponent(float DeltaSeconds)
 {
-	Super::TickComponent(DeltaSeconds);
+	//Super::TickComponent(DeltaSeconds);
 
 	if (!UpdatedComponent || !CharacterOwner) return;
 
@@ -150,5 +150,6 @@ void UCharacterMovementComponent::CalcVelocity(const FVector& Input, float Delta
 	Velocity.X = CurrentVelocity.X;
 	Velocity.Y = CurrentVelocity.Y;
 
+	std::cout << "V: " << Velocity.X << ", " << Velocity.Y << ", " << Velocity.Z << std::endl;
 
 }

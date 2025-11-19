@@ -20,7 +20,7 @@ void UPawnMovementComponent::InitializeComponent()
 
 void UPawnMovementComponent::TickComponent(float DeltaSeconds)
 {
-	Super::TickComponent(DeltaSeconds); 
+	//Super::TickComponent(DeltaSeconds); 
 
 	UpdatedComponent->AddRelativeLocation(PawnOwner->ConsumeMovementInputVector());
 }

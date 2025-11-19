@@ -23,7 +23,7 @@ void APawn::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	 
 	//  PawnMovementComponent가 없을 때는 직접 이동 
-	if (!GetPawnMovementComponent())
+	if (!GetMovementComponent())
 	{
 		// 수집한 이동처리 
 		AddActorWorldLocation(ConsumeMovementInputVector());
