@@ -326,92 +326,242 @@ void UK2Node_BlendSpace1D::AllocateDefaultPins()
 
 void UK2Node_BlendSpace1D::RenderBody()
 {
-    ImGui::PushItemWidth(200.0f);
-
-    // 샘플 개수 조정
-    int32 NumSamples = SampleAnimations.Num();
-    if (ImGui::InputInt("Samples", &NumSamples))
+    // -------------------------------------------------------------------------
+    // 0. 데이터 및 객체 무결성 검사
+    // -------------------------------------------------------------------------
+    if (!BlendSpace)
     {
-        NumSamples = FMath::Clamp(NumSamples, 1, 10);
-        SampleAnimations.SetNum(NumSamples);
-        SamplePositions.SetNum(NumSamples);
-
-        // 새 샘플의 기본 Position 설정
-        for (int32 i = 0; i < NumSamples; ++i)
-        {
-            if (SamplePositions[i] == 0.0f && i > 0)
-            {
-                SamplePositions[i] = i * 100.0f;
-            }
-        }
+        BlendSpace = NewObject<UBlendSpace1D>();
     }
 
-    ImGui::Separator();
+    if (SamplePositions.Num() == 0 || SamplePositions.Num() != SampleAnimations.Num())
+    {
+        SamplePositions = { 0.0f, 100.0f };
+        SampleAnimations.SetNum(2); 
+        SampleAnimations[0] = nullptr; SampleAnimations[1] = nullptr;
+    }
 
-    // 각 샘플 편집
+    ImDrawList* DrawList = ImGui::GetWindowDrawList();
+    
+    // -------------------------------------------------------------------------
+    // 1. Range (Min/Max) 설정 UI
+    // -------------------------------------------------------------------------
+    // BlendSpace 객체에서 현재 범위를 가져옵니다.
+    float CurrentMin = BlendSpace->GetMinParameter();
+    float CurrentMax = BlendSpace->GetMaxParameter();
+    bool bRangeChanged = false;
+
+    ImGui::PushItemWidth(60.0f); // 입력 필드 너비 고정
+    
+    ImGui::Text("Min"); ImGui::SameLine();
+    if (ImGui::DragFloat("##MinRange", &CurrentMin, 1.0f)) bRangeChanged = true;
+    
+    ImGui::SameLine(); 
+    ImGui::Text("Max"); ImGui::SameLine();
+    if (ImGui::DragFloat("##MaxRange", &CurrentMax, 1.0f)) bRangeChanged = true;
+
+    ImGui::PopItemWidth();
+
+    // 값이 변경되었다면 BlendSpace에 적용하고, Max가 Min보다 작아지지 않도록 방어
+    if (bRangeChanged)
+    {
+        if (CurrentMax < CurrentMin) CurrentMax = CurrentMin + 10.0f;
+        BlendSpace->SetParameterRange(CurrentMin, CurrentMax);
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. 상단 컨트롤 (Add 버튼)
+    // -------------------------------------------------------------------------
+    float CanvasWidth = ImGui::GetContentRegionAvail().x;
+    if (CanvasWidth < 200.0f) CanvasWidth = 200.0f;
+
+    // Add 버튼 (현재 범위의 중간값에 추가)
+    if (ImGui::Button("+ Add Sample", ImVec2(CanvasWidth, 0)))
+    {
+        float MidPos = CurrentMin + (CurrentMax - CurrentMin) * 0.5f;
+        SamplePositions.Add(MidPos);
+        SampleAnimations.Add(nullptr);
+        RebuildBlendSpace();
+    }
+    
+    ImGui::Dummy(ImVec2(0, 4.0f)); // 간격
+
+    // -------------------------------------------------------------------------
+    // 3. 타임라인 바 그리기
+    // -------------------------------------------------------------------------
+    ImVec2 CursorPos = ImGui::GetCursorScreenPos();
+    float BarHeight = 24.0f;
+    
+    ImVec2 BarMin = CursorPos;
+    ImVec2 BarMax = ImVec2(BarMin.x + CanvasWidth, BarMin.y + BarHeight);
+    
+    // 바 배경 (어두운 회색)
+    DrawList->AddRectFilled(BarMin, BarMax, IM_COL32(30, 30, 30, 255), 4.0f);
+    DrawList->AddRect(BarMin, BarMax, IM_COL32(100, 100, 100, 255), 4.0f);
+
+    // 공간 확보 (다음 위젯이 겹치지 않도록)
+    ImGui::Dummy(ImVec2(CanvasWidth, BarHeight));
+
     bool bNeedRebuild = false;
+    float RangeLength = CurrentMax - CurrentMin;
+    if (RangeLength <= 0.0f) RangeLength = 1.0f; // 0 나누기 방지
 
-    for (int32 i = 0; i < SampleAnimations.Num(); ++i)
+    // -------------------------------------------------------------------------
+    // 4. 샘플 포인트 루프
+    // -------------------------------------------------------------------------
+    for (int32 i = 0; i < SamplePositions.Num(); ++i)
     {
         ImGui::PushID(i);
 
-        // Position 슬라이더
-        FString PosLabel = "Pos " + std::to_string(i);
-        if (ImGui::DragFloat(PosLabel.c_str(), &SamplePositions[i], 1.0f, 0.0f, 500.0f))
+        // [위치 정규화] 현재 Min/Max 범위에 맞춰 X 좌표 계산
+        // 범위 밖으로 나간 샘플도 그릴 것인지, 클램핑할 것인지 결정 (여기선 클램핑)
+        float ClampedPos = FMath::Clamp(SamplePositions[i], CurrentMin, CurrentMax);
+        float NormalizedPos = (ClampedPos - CurrentMin) / RangeLength;
+        
+        float X = BarMin.x + (NormalizedPos * CanvasWidth);
+        float Y_Center = BarMin.y + (BarHeight * 0.5f);
+
+        float MarkerSize = 6.0f;
+        // 마름모 좌표
+        ImVec2 P1(X, BarMin.y + 2);
+        ImVec2 P2(X + MarkerSize, Y_Center);
+        ImVec2 P3(X, BarMax.y - 2);
+        ImVec2 P4(X - MarkerSize, Y_Center);
+
+        // ---------------------------------------------------------------------
+        // 인터랙션 영역 (InvisibleButton)
+        // ---------------------------------------------------------------------
+        ImGui::SetCursorScreenPos(ImVec2(X - MarkerSize, BarMin.y));
+        FString BtnID = "##MarkerBtn" + std::to_string(i);
+        
+        ImGui::InvisibleButton(BtnID.c_str(), ImVec2(MarkerSize * 2, BarHeight));
+        
+        bool bIsHovered = ImGui::IsItemHovered();
+        bool bIsActive = ImGui::IsItemActive();
+
+        // ---------------------------------------------------------------------
+        // [드래그 로직]
+        // ---------------------------------------------------------------------
+        if (bIsActive && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.0f))
         {
-            bNeedRebuild = true;
+            float DragDelta = ImGui::GetIO().MouseDelta.x;
+            if (FMath::Abs(DragDelta) > 0.0f)
+            {
+                // 픽셀 -> 값 변환
+                float ValueDelta = (DragDelta / CanvasWidth) * RangeLength;
+                SamplePositions[i] += ValueDelta;
+                
+                // 현재 범위 내로 제한
+                SamplePositions[i] = FMath::Clamp(SamplePositions[i], CurrentMin, CurrentMax);
+                bNeedRebuild = true;
+            }
         }
 
-        // 애니메이션 선택 버튼
-        FString AnimName = SampleAnimations[i] ? SampleAnimations[i]->GetFilePath() : "None";
-        FString ButtonLabel = AnimName + "##Anim" + std::to_string(i);
+        // ---------------------------------------------------------------------
+        // [팝업 로직] (클릭 시)
+        // ---------------------------------------------------------------------
+        FString PopupID = "AnimSelectPopup_" + std::to_string(NodeID) + "_" + std::to_string(i);
 
-        if (ImGui::Button(ButtonLabel.c_str(), ImVec2(180, 0)))
+        if (ImGui::IsItemDeactivated())
         {
-            FString PopupID = "##AnimPopup_" + std::to_string(NodeID) + "_" + std::to_string(i);
-            ed::Suspend();
-            ImGui::OpenPopup(PopupID.c_str());
-            ed::Resume();
+            // 드래그 거리가 짧을 때만 클릭으로 인정
+            if (ImGui::GetIO().MouseDragMaxDistanceSqr[0] < 25.0f) 
+            {
+                ed::Suspend(); // [좌표계 전환]
+                ImGui::OpenPopup(PopupID.c_str());
+                ed::Resume();
+            }
+        }
+        
+        // 우클릭 삭제
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+        {
+            if (SamplePositions.Num() > 1)
+            {
+                SamplePositions.RemoveAt(i);
+                SampleAnimations.RemoveAt(i);
+                bNeedRebuild = true;
+                ImGui::PopID();
+                break; 
+            }
         }
 
-        // 애니메이션 선택 팝업
-        FString PopupID = "##AnimPopup_" + std::to_string(NodeID) + "_" + std::to_string(i);
+        // ---------------------------------------------------------------------
+        // [팝업 렌더링]
+        // ---------------------------------------------------------------------
         if (ImGui::IsPopupOpen(PopupID.c_str()))
         {
-            ed::Suspend();
+            ed::Suspend(); // [좌표계 전환]
             if (ImGui::BeginPopup(PopupID.c_str()))
             {
-                TArray<UAnimSequence*> AnimSequences = RESOURCE.GetAll<UAnimSequence>();
+                ImGui::Text("Select Animation");
+                ImGui::Separator();
 
-                for (UAnimSequence* Anim : AnimSequences)
+                TArray<UAnimSequence*> AllAnims = RESOURCE.GetAll<UAnimSequence>();
+                for (UAnimSequence* Anim : AllAnims)
                 {
                     if (!Anim) continue;
-
-                    const FString AssetName = Anim->GetFilePath();
-                    bool bIsSelected = (SampleAnimations[i] == Anim);
-
-                    if (ImGui::Selectable(AssetName.c_str(), bIsSelected))
+                    bool bSelected = (SampleAnimations[i] == Anim);
+                    if (ImGui::Selectable(Anim->GetFilePath().c_str(), bSelected))
                     {
                         SampleAnimations[i] = Anim;
                         bNeedRebuild = true;
                         ImGui::CloseCurrentPopup();
                     }
+                    if (bSelected) ImGui::SetItemDefaultFocus();
                 }
-
                 ImGui::EndPopup();
             }
+            ed::Resume(); // [복구]
+        }
+
+        // ---------------------------------------------------------------------
+        // 시각적 피드백 (마커 & 텍스트)
+        // ---------------------------------------------------------------------
+        ImU32 MarkerColor = IM_COL32(200, 200, 200, 255);
+        if (bIsActive) MarkerColor = IM_COL32(255, 200, 50, 255);
+        else if (bIsHovered) MarkerColor = IM_COL32(255, 255, 100, 255);
+        
+        if (SampleAnimations[i] == nullptr) MarkerColor = IM_COL32(255, 50, 50, 255);
+
+        DrawList->AddQuadFilled(P1, P2, P3, P4, MarkerColor);
+        DrawList->AddQuad(P1, P2, P3, P4, IM_COL32(0, 0, 0, 255));
+
+        if (SampleAnimations[i])
+        {
+            std::string PathStr = SampleAnimations[i]->GetFilePath().c_str();
+            size_t LastSlash = PathStr.find_last_of("/\\");
+            std::string FileName = (LastSlash == std::string::npos) ? PathStr : PathStr.substr(LastSlash + 1);
+            if (FileName.length() > 8) FileName = FileName.substr(0, 6) + "..";
+
+            ImVec2 TextPos = ImVec2(X - (ImGui::CalcTextSize(FileName.c_str()).x * 0.5f), BarMax.y + 2);
+            DrawList->AddText(TextPos, IM_COL32(255, 255, 255, 200), FileName.c_str());
+        }
+
+        // ---------------------------------------------------------------------
+        // [툴팁 로직] (위치 수정됨)
+        // ---------------------------------------------------------------------
+        if (bIsHovered)
+        {
+            ed::Suspend(); 
+            ImGui::BeginTooltip();
+            ImGui::Text("Index: %d", i);
+            ImGui::Text("Pos: %.1f", SamplePositions[i]);
+            ImGui::Text("Anim: %s", SampleAnimations[i] ? SampleAnimations[i]->GetFilePath().c_str() : "None");
+            ImGui::TextDisabled("(Drag to move, Click to edit)");
+            ImGui::EndTooltip();
             ed::Resume();
         }
 
         ImGui::PopID();
     }
+    
+    ImGui::Dummy(ImVec2(0, 15.0f));
 
     if (bNeedRebuild)
     {
         RebuildBlendSpace();
     }
-
-    ImGui::PopItemWidth();
 }
 
 FBlueprintValue UK2Node_BlendSpace1D::EvaluatePin(const UEdGraphPin* OutputPin, FBlueprintContext* Context)
