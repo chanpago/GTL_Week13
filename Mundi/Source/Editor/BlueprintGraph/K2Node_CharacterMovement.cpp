@@ -67,7 +67,7 @@ FBlueprintValue UK2Node_GetIsFalling::EvaluatePin(const UEdGraphPin* OutputPin, 
         {
             return FBlueprintValue(false); 
         }
-        
+        std::cout << MoveComp->IsFalling()<< std::endl;
         return FBlueprintValue(MoveComp->IsFalling());
     }
 
@@ -111,7 +111,7 @@ FBlueprintValue UK2Node_GetVelocity::EvaluatePin(const UEdGraphPin* OutputPin, F
 
     FVector Velocity = MoveComp->GetVelocity();
 
-    std::cout << "Velocity: " << Velocity.X << " " << Velocity.Y << " " << Velocity.Z << "\n";
+    //std::cout << "Velocity: " << Velocity.X << " " << Velocity.Y << " " << Velocity.Z << "\n";
 
     if (OutputPin->PinName == "X")
     {

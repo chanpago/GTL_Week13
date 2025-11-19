@@ -47,7 +47,7 @@ void UAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     // 현재 상태 시간 갱신
     AdvancePlayState(CurrentPlayState, DeltaSeconds);
 
-    const bool bIsBlending = (BlendTimeRemaining > 0.0f && BlendTargetState.Sequence != nullptr);
+    const bool bIsBlending = (BlendTimeRemaining > 0.0f && (BlendTargetState.Sequence != nullptr || BlendTargetState.PoseProvider != nullptr));
 
     if (bIsBlending)
     {
@@ -520,7 +520,7 @@ void UAnimInstance::GetPoseForLayer(int32 LayerIndex, TArray<FTransform>& OutPos
     // 시간 갱신
     AdvancePlayState(Layers[LayerIndex], DeltaSeconds);
 
-    const bool bIsBlending = (BlendTimeRemaining > 0.0f && BlendTargetState.Sequence != nullptr);
+    const bool bIsBlending = (BlendTimeRemaining > 0.0f && (BlendTargetState.Sequence != nullptr || BlendTargetState.PoseProvider != nullptr));
 
     if (bIsBlending)
     {
