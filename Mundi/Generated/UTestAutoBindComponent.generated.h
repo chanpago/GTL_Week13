@@ -5,7 +5,14 @@
 
 // Macro expansion for GENERATED_REFLECTION_BODY()
 // This file must be included BEFORE the class definition
-#define CURRENT_CLASS_GENERATED_BODY \
+
+// Undefine previous class's macro if exists
+#ifdef CURRENT_CLASS_GENERATED_BODY
+#undef CURRENT_CLASS_GENERATED_BODY
+#endif
+
+// Define class-specific body macro
+#define U_TEST_AUTO_BIND_COMPONENT_BODY \
 public: \
     using Super = USceneComponent; \
     using ThisClass_t = UTestAutoBindComponent; \
@@ -28,3 +35,6 @@ private: \
     static void StaticRegisterProperties(); \
     static const bool bPropertiesRegistered; \
 public:
+
+// Redirect generic macro to class-specific one
+#define CURRENT_CLASS_GENERATED_BODY U_TEST_AUTO_BIND_COMPONENT_BODY

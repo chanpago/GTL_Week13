@@ -2,6 +2,7 @@
 #include "Pawn.h"
 #include "SkeletalMeshComponent.h"
 #include "PawnMovementComponent.h"
+IMPLEMENT_CLASS(APawn)
 
 APawn::APawn()
 {

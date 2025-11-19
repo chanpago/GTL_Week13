@@ -18,6 +18,9 @@ public:
     USkeletalMeshComponent();
     ~USkeletalMeshComponent() override = default;
 
+    // Serialize to persist AnimGraphPath and reuse base behavior
+    void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+
 public:
     void BeginPlay() override;
     void TickComponent(float DeltaTime) override;
@@ -135,6 +138,9 @@ public:
      */
     void SetAnimInstance(UAnimInstance* InAnimInstance);
 
+    FString GetAnimGraphPath() { return AnimGraphPath; }
+    void SetAnimGraphPath(FString InAnimGraphPath) { AnimGraphPath = InAnimGraphPath; }
+
 protected:
     /**
      * @brief 애니메이션 업데이트 (TickComponent에서 호출)
@@ -180,6 +186,10 @@ protected:
     /** 애니메이션 블루프린트 */
     UAnimationGraph* AnimGraph = nullptr;
 
+    // Animation graph asset path (.graph). Saved into prefab and used to reload graph.
+    UPROPERTY(EditAnywhere, Category = "Animation")
+    FString AnimGraphPath;
+      
 // Editor Section
 public:
     /**

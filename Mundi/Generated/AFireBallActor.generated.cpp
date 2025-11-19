@@ -34,7 +34,7 @@ const bool AFireBallActor::bPropertiesRegistered = []() {
 // ===== Property Reflection =====
 
 BEGIN_PROPERTIES(AFireBallActor)
-    MARK_AS_COMPONENT("파이어볼", "파이어볼 이펙트 액터입니다")
+    MARK_AS_SPAWNABLE("파이어볼", "파이어볼 이펙트 액터입니다")
 END_PROPERTIES()
 
 

@@ -138,7 +138,7 @@ public:
      * @brief 상태 머신 초기화
      * @param InOwner 소유 AnimInstance
      */
-    void Initialize(UAnimInstance* InOwner);
+    void Initialize(UAnimInstance* InOwner, EAnimLayer InLayer = EAnimLayer::Base);
 
     /**
      * @brief 상태 추가
@@ -204,4 +204,7 @@ protected:
 
     /** 현재 상태 */
     FName CurrentStateName;
+
+    /** 애니메이션을 적용시킬 layer */
+    EAnimLayer TargetLayer = EAnimLayer::Base;
 };

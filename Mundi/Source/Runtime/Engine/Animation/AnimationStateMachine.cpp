@@ -5,9 +5,11 @@
 
 IMPLEMENT_CLASS(UAnimationStateMachine, UObject)
 
-void UAnimationStateMachine::Initialize(UAnimInstance* InOwner)
+void UAnimationStateMachine::Initialize(UAnimInstance* InOwner, EAnimLayer InLayer)
 {
     Owner = InOwner;
+    TargetLayer = InLayer;
+    
     UE_LOG("AnimationStateMachine initialized");
 }
 

@@ -21,6 +21,18 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from header_parser import HeaderParser
 from property_generator import PropertyGenerator
 from lua_generator import LuaBindingGenerator
+import re
+
+
+def pascal_case_to_upper_snake(name: str) -> str:
+    """
+    PascalCase를 UPPER_SNAKE_CASE로 변환
+    AActor -> A_ACTOR
+    UActorComponent -> U_ACTOR_COMPONENT
+    """
+    # 대문자 앞에 언더스코어 삽입 (첫 글자 제외)
+    result = re.sub(r'(?<!^)(?=[A-Z])', '_', name)
+    return result.upper()
 
 
 GENERATED_HEADER_TEMPLATE = """// Auto-generated file - DO NOT EDIT!
@@ -30,7 +42,14 @@ GENERATED_HEADER_TEMPLATE = """// Auto-generated file - DO NOT EDIT!
 
 // Macro expansion for GENERATED_REFLECTION_BODY()
 // This file must be included BEFORE the class definition
-#define CURRENT_CLASS_GENERATED_BODY \\
+
+// Undefine previous class's macro if exists
+#ifdef CURRENT_CLASS_GENERATED_BODY
+#undef CURRENT_CLASS_GENERATED_BODY
+#endif
+
+// Define class-specific body macro
+#define {macro_name}_BODY \\
 public: \\
     using Super = {parent_class}; \\
     using ThisClass_t = {class_name}; \\
@@ -53,6 +72,9 @@ private: \\
     static void StaticRegisterProperties(); \\
     static const bool bPropertiesRegistered; \\
 public:
+
+// Redirect generic macro to class-specific one
+#define CURRENT_CLASS_GENERATED_BODY {macro_name}_BODY
 """
 
 GENERATED_CPP_TEMPLATE = """// Auto-generated file - DO NOT EDIT!
@@ -62,7 +84,7 @@ GENERATED_CPP_TEMPLATE = """// Auto-generated file - DO NOT EDIT!
 #include "{header_include}"
 #include "Source/Runtime/Core/Object/ObjectMacros.h"
 #include "Source/Runtime/Engine/Scripting/LuaBindHelpers.h"
-
+{additional_includes}
 // ===== Class Factory Registration (IMPLEMENT_CLASS) =====
 {implement_class_code}
 
@@ -95,9 +117,11 @@ def write_file_if_different(file_path: Path, new_content: str) -> bool:
 
 def generate_header_file(class_info):
     """.generated.h 파일 생성"""
+    macro_name = pascal_case_to_upper_snake(class_info.name)
     return GENERATED_HEADER_TEMPLATE.format(
         class_name=class_info.name,
-        parent_class=class_info.parent
+        parent_class=class_info.parent,
+        macro_name=macro_name
     )
 
 
@@ -129,7 +153,65 @@ const bool {class_name}::bPropertiesRegistered = []() {{
 """
 
 
-def generate_cpp_file(class_info, prop_gen, lua_gen):
+def find_header_file(source_dir, header_name):
+    """소스 디렉토리에서 헤더 파일이 존재하는지 확인"""
+    if not source_dir:
+        return False
+
+    # 소스 디렉토리 전체에서 헤더 파일 검색
+    for header_path in Path(source_dir).rglob(header_name):
+        if header_path.is_file():
+            return True
+    return False
+
+
+def extract_additional_includes(class_info, all_classes, source_dir=None):
+    """UFUNCTION에서 사용되는 타입의 헤더 파일을 자동으로 추출"""
+    # 모든 클래스의 타입명 -> 헤더 파일명 매핑 생성
+    type_to_header = {}
+    # all_classes가 리스트인 경우 처리
+    class_list = all_classes.values() if isinstance(all_classes, dict) else all_classes
+    for cls in class_list:
+        # 헤더 파일명만 사용 (상대 경로, 절대 경로 모두 처리)
+        header_path = Path(cls.header_file)
+        type_to_header[cls.name] = header_path.name  # 파일명만 추출
+
+    required_includes = set()
+
+    # UFUNCTION의 반환 타입과 파라미터 타입 검사
+    for func in class_info.functions:
+        if func.metadata.get('lua_bind', False):
+            # 반환 타입 체크
+            return_type = func.return_type.replace('*', '').replace('const', '').strip()
+            if return_type in type_to_header and return_type != class_info.name:
+                required_includes.add(type_to_header[return_type])
+            elif return_type.startswith('U') or return_type.startswith('A') or return_type.startswith('F'):
+                # U, A, F 접두사 제거하여 헤더 파일명 생성
+                header_name = return_type[1:] + '.h'
+                # 헤더 파일이 실제로 존재하는지 확인
+                if source_dir and find_header_file(source_dir, header_name):
+                    required_includes.add(header_name)
+
+            # 파라미터 타입 체크
+            for param in func.parameters:
+                param_type = param.type.replace('*', '').replace('const', '').replace('&', '').strip()
+                if param_type in type_to_header and param_type != class_info.name:
+                    required_includes.add(type_to_header[param_type])
+                elif param_type.startswith('U') or param_type.startswith('A') or param_type.startswith('F'):
+                    # U, A, F 접두사 제거하여 헤더 파일명 생성
+                    header_name = param_type[1:] + '.h'
+                    # 헤더 파일이 실제로 존재하는지 확인
+                    if source_dir and find_header_file(source_dir, header_name):
+                        required_includes.add(header_name)
+
+    # include 문자열 생성
+    if required_includes:
+        include_lines = '\n'.join(f'#include "{header}"' for header in sorted(required_includes))
+        return '\n' + include_lines + '\n'
+    return ''
+
+
+def generate_cpp_file(class_info, prop_gen, lua_gen, all_classes, source_dir=None):
     """.generated.cpp 파일 생성"""
     # 헤더 파일 상대 경로 계산
     header_include = class_info.header_file.name
@@ -143,12 +225,16 @@ def generate_cpp_file(class_info, prop_gen, lua_gen):
     # Lua 바인딩 코드 생성
     lua_code = lua_gen.generate(class_info)
 
+    # 추가 include 생성 (all_classes와 source_dir 전달)
+    additional_includes = extract_additional_includes(class_info, all_classes, source_dir)
+
     # 최종 파일 내용
     return GENERATED_CPP_TEMPLATE.format(
         header_include=header_include,
         implement_class_code=implement_class_code,
         property_code=property_code,
-        lua_code=lua_code
+        lua_code=lua_code,
+        additional_includes=additional_includes
     )
 
 
@@ -207,6 +293,9 @@ def main():
 
     print(f"\n Found {len(classes)} reflection class(es)\n")
 
+    # PropertyGenerator에 모든 클래스 정보 전달 (상속 체인 추적용)
+    prop_gen.set_all_classes(classes)
+
     # 각 클래스에 대해 .generated.h와 .generated.cpp 생성
     generated_files = []
     updated_count = 0
@@ -223,7 +312,7 @@ def main():
 
         # .generated.cpp 파일 생성
         cpp_output = args.output_dir / f"{class_info.name}.generated.cpp"
-        cpp_code = generate_cpp_file(class_info, prop_gen, lua_gen)
+        cpp_code = generate_cpp_file(class_info, prop_gen, lua_gen, classes, args.source_dir)
         cpp_updated = write_file_if_different(cpp_output, cpp_code)
         if cpp_updated:
             updated_count += 1
@@ -238,11 +327,11 @@ def main():
 
         print(f"{status}: {class_info.name}")
         if header_updated:
-            print(f"  ├─ {header_output.name} (modified)")
+            print(f"  - {header_output.name} (modified)")
         if cpp_updated:
-            print(f"  ├─ {cpp_output.name} (modified)")
-        print(f"  ├─ Properties: {len(class_info.properties)}")
-        print(f"  └─ Functions:  {len([f for f in class_info.functions if f.metadata.get('lua_bind')])}")
+            print(f"  - {cpp_output.name} (modified)")
+        print(f"  - Properties: {len(class_info.properties)}")
+        print(f"  - Functions:  {len([f for f in class_info.functions if f.metadata.get('lua_bind')])}")
 
     print()
     print("=" * 60)

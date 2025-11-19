@@ -5,7 +5,7 @@
 class ACharacter;
  
 class UCharacterMovementComponent : public UPawnMovementComponent
-{
+{	
 public:
 	GENERATED_REFLECTION_BODY()
 

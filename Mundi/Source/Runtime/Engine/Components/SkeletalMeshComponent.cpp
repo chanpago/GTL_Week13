@@ -10,6 +10,8 @@
 #include "Source/Runtime/Engine/Animation/AnimNotify_PlaySound.h"
 #include "Source/Runtime/Engine/Animation/Team2AnimInstance.h"
 #include "Source/Runtime/Core/Misc/PathUtils.h"
+#include "Source/Runtime/Core/Misc/JsonSerializer.h"
+#include "Source/Editor/BlueprintGraph/AnimationGraph.h"
 #include "InputManager.h"
 
 #include "PlatformTime.h"
@@ -700,3 +702,49 @@ void USkeletalMeshComponent::SetAnimInstance(UAnimInstance* InAnimInstance)
     }
 }
 
+void USkeletalMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+{
+    Super::Serialize(bInIsLoading, InOutHandle);
+
+    if (bInIsLoading)
+    {
+        // Read AnimGraphPath explicitly (bypass codegen dependency)
+        FString LoadedGraphPath;
+        FJsonSerializer::ReadString(InOutHandle, "AnimGraphPath", LoadedGraphPath, "", false);
+        if (!LoadedGraphPath.empty())
+        {
+            AnimGraphPath = LoadedGraphPath;
+        }
+
+        // Base (USkinnedMeshComponent) already restores SkeletalMesh; ensure internal state is initialized
+        if (SkeletalMesh)
+        {
+            SetSkeletalMesh(SkeletalMesh->GetPathFileName());
+        }
+
+        // Load animation graph from saved path if available
+        if (!AnimGraphPath.empty())
+        {
+            JSON GraphJson;
+            if (FJsonSerializer::LoadJsonFromFile(GraphJson, UTF8ToWide(AnimGraphPath)))
+            {
+                UAnimationGraph* NewGraph = NewObject<UAnimationGraph>();
+                NewGraph->Serialize(true, GraphJson);
+                SetAnimGraph(NewGraph);
+            }
+        }
+    }
+    else
+    {
+        // Persist AnimGraphPath explicitly to ensure presence in prefab JSON
+        if (!AnimGraphPath.empty())
+        {
+            InOutHandle["AnimGraphPath"] = AnimGraphPath.c_str();
+        }
+        else
+        {
+            // Ensure key exists for clarity (optional)
+            InOutHandle["AnimGraphPath"] = "";
+        }
+    }
+}

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Object.h"
+#include "AnimTypes.h"
 
 // Forward declarations
 class UAnimationStateMachine;
@@ -138,6 +139,10 @@ public:
     void PlaySequence(UAnimSequence* Sequence, bool bLoop = true, float InPlayRate = 1.0f);
 
     /**
+    * @brief 애니메이션 시퀀스 재생 + Bone 기준으로 서로 다른 애니메이션을 위한 함수
+    */
+    void PlaySequence(UAnimSequence* Sequence, EAnimLayer Layer, bool bLoop = true, float InPlayRate = 1.0f);
+    /**
      * @brief 현재 재생 중인 시퀀스 정지
      */
     void StopSequence();
@@ -152,6 +157,11 @@ public:
     void BlendTo(UAnimSequence* Sequence, bool bLoop, float InPlayRate, float BlendTime);
 
     /**
+    * @brief 다른 시퀀스로 블렌드 + 다른 애니메이션 사용하기 위한 함수
+    */
+    void BlendTo(UAnimSequence* Sequence, EAnimLayer Layer, bool bLoop, float InPlayRate, float BlendTime);
+
+    /**
      * @brief 재생 중인지 확인
      */
     bool IsPlaying() const { return CurrentPlayState.bIsPlaying; }
@@ -160,6 +170,9 @@ public:
      * @brief 현재 재생 중인 시퀀스 반환
      */
     UAnimSequence* GetCurrentSequence() const { return CurrentPlayState.Sequence; }
+
+    // 상/하체 분리 설정
+    void EnableUpperBodySplit(FName BoneName);
 
     // ============================================================
     // Notify & Curve Processing
@@ -210,6 +223,7 @@ public:
      */
     bool GetIsMoving() const { return bIsMoving; }
 
+
     // ============================================================
     // Getters
     // ============================================================
@@ -221,6 +235,7 @@ protected:
     void EvaluatePoseForState(const FAnimationPlayState& PlayState, TArray<FTransform>& OutPose) const;
     void AdvancePlayState(FAnimationPlayState& PlayState, float DeltaSeconds);
     void BlendPoseArrays(const TArray<FTransform>& FromPose, const TArray<FTransform>& ToPose, float Alpha, TArray<FTransform>& OutPose) const;
+    void GetPoseForLayer(int32 LayerIndex, TArray<FTransform>& OutPose, float DeltaSeconds);
 
     // 소유 컴포넌트
     USkeletalMeshComponent* OwningComponent = nullptr;
@@ -245,5 +260,18 @@ protected:
     // 애니메이션 파라미터 (상태머신 전이 조건용)
     float MovementSpeed = 0.0f;
     bool bIsMoving = false;
+
+    // 레이어별 상태 관리
+    // Layer[0] = Base, Layer[1] = Upper
+    FAnimationPlayState Layers[(int32)EAnimLayer::Count];
+    FAnimationPlayState BlendTargets[(int32)EAnimLayer::Count];
+
+    // 각 레이어 별 블렌딩 목표 상태
+    float LayerBlendTimeRemaining[(int32)EAnimLayer::Count] = { 0.0f };
+    float LayerBlendTotalTime[(int32)EAnimLayer::Count] = { 0.0f };
+
+    //마스킹 데이터
+    bool bUseUpperBody = false;
+    TArray<bool> UpperBodyMask; // true면 상체 
 };
 

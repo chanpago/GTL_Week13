@@ -34,7 +34,7 @@ const bool APlayerController::bPropertiesRegistered = []() {
 // ===== Property Reflection =====
 
 BEGIN_PROPERTIES(APlayerController)
-    MARK_AS_COMPONENT("APlayerController", "Auto-generated APlayerController")
+    MARK_AS_SPAWNABLE("APlayerController", "Auto-generated APlayerController")
 END_PROPERTIES()
 
 

@@ -43,7 +43,6 @@ protected:
 
 	// 기본 폰 스폰
 	APawn* SpawnDefaultPawnFor(AController* NewPlayer, AActor* StartSpot);
-	  
 	// 시작 지점 찾기
 	AActor* FindPlayerStart(AController* Player); 
 };

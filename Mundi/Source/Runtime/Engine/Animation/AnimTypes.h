@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "pch.h"
 #include "AnimNotify.h"
 #include "AnimNotifyState.h"
@@ -46,4 +46,11 @@ struct FPendingAnimNotify
 {
 	const FAnimNotifyEvent* Event;
     EPendingNotifyType Type = EPendingNotifyType::Trigger; 
+};
+
+enum class EAnimLayer
+{
+    Base = 0,   // 하체
+    Upper = 1,  // 상체 
+    Count
 };

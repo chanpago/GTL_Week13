@@ -2,7 +2,8 @@
 #include "Character.h"
 #include "CapsuleComponent.h"
 #include "SkeletalMeshComponent.h"
-#include "CharacterMovementComponent.h"
+#include "CharacterMovementComponent.h" 
+#include "ObjectMacros.h" 
 ACharacter::ACharacter()
 {
 	CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>("CapsuleComponent");
@@ -25,9 +26,9 @@ ACharacter::ACharacter()
 	} 
 }
 
-
 ACharacter::~ACharacter()
 {
+
 }
 
 void ACharacter::Tick(float DeltaSecond)

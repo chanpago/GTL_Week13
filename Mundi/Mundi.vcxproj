@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug_StandAlone|x64">
@@ -100,7 +100,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Generated;$(ProjectDir)Source\Runtime\Core\Object;$(ProjectDir)Source\Runtime\Core\Math;$(ProjectDir)Source\Runtime\Core\Containers;$(ProjectDir)Source\Runtime\Core\Misc;$(ProjectDir)Source\Runtime\Core\Memory;$(ProjectDir)Source\Runtime\Engine\GameFramework;$(ProjectDir)Source\Runtime\Engine\Scripting;$(ProjectDir)Source\Runtime\Engine\Components;$(ProjectDir)Source\Runtime\Engine\Collision;$(ProjectDir)Source\Runtime\Engine\Spatial;$(ProjectDir)Source\Runtime\RHI;$(ProjectDir)Source\Runtime\Renderer;$(ProjectDir)Source\Runtime\AssetManagement;$(ProjectDir)Source\Runtime\InputCore;$(ProjectDir)Source\Editor;$(ProjectDir)Source\Slate;ThirdParty\DirectXTex\include;ThirdParty\DirectXTK\include;ThirdParty\Lua\include;ThirdParty\sol;ThirdParty;ThirdParty\FBXSDK\include;ThirdParty\ImGui;ThirdParty\imgui-node-editor;$(ProjectDir)Source\Runtime\Engine\Audio</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /bigobj /MP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -268,6 +268,8 @@
     <ClCompile Include="Source\Editor\BlueprintGraph\EdGraphTypes.cpp" />
     <ClCompile Include="Source\Editor\BlueprintGraph\K2Node.cpp" />
     <ClCompile Include="Source\Editor\BlueprintGraph\K2Node_Animation.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\K2Node_CharacterMovement.cpp" />
+    <ClCompile Include="Source\Editor\BlueprintGraph\K2Node_Expression.cpp" />
     <ClCompile Include="Source\Editor\BlueprintGraph\K2Node_Literal.cpp" />
     <ClCompile Include="Source\Editor\BlueprintGraph\K2Node_Math.cpp" />
     <ClCompile Include="Source\Editor\BlueprintGraph\K2Node_Misc.cpp" />
@@ -591,7 +593,8 @@
     <ClCompile Include="Generated\AGameModeBase.generated.cpp" />
     <ClCompile Include="Generated\ACharacter.generated.cpp" />
     <ClCompile Include="Generated\UCharacterMovementComponent.generated.cpp" />
-  <ClCompile Include="Generated\UPawnMovementComponent.generated.cpp" /></ItemGroup>
+    <ClCompile Include="Generated\UPawnMovementComponent.generated.cpp" />
+  </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -758,6 +761,8 @@
     <ClInclude Include="Source\Editor\BlueprintGraph\EdGraphTypes.h" />
     <ClInclude Include="Source\Editor\BlueprintGraph\K2Node.h" />
     <ClInclude Include="Source\Editor\BlueprintGraph\K2Node_Animation.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\K2Node_CharacterMovement.h" />
+    <ClInclude Include="Source\Editor\BlueprintGraph\K2Node_Expression.h" />
     <ClInclude Include="Source\Editor\BlueprintGraph\K2Node_Literal.h" />
     <ClInclude Include="Source\Editor\BlueprintGraph\K2Node_Math.h" />
     <ClInclude Include="Source\Editor\BlueprintGraph\K2Node_Misc.h" />
@@ -1021,7 +1026,8 @@
     <ClInclude Include="Generated\AGameModeBase.generated.h" />
     <ClInclude Include="Generated\ACharacter.generated.h" />
     <ClInclude Include="Generated\UCharacterMovementComponent.generated.h" />
-  <ClInclude Include="Generated\UPawnMovementComponent.generated.h" /></ItemGroup>
+    <ClInclude Include="Generated\UPawnMovementComponent.generated.h" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="Tools\CodeGenerator\generate.py" />
     <None Include="Tools\CodeGenerator\lua_generator.py" />

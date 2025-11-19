@@ -128,6 +128,26 @@ void UAnimInstance::PlaySequence(UAnimSequence* Sequence, bool bLoop, float InPl
         Sequence->ObjectName.ToString().c_str(), bLoop, InPlayRate);
 }
 
+void UAnimInstance::PlaySequence(UAnimSequence* Sequence, EAnimLayer Layer, bool bLoop, float InPlayRate)
+{
+    if (!Sequence)
+    {
+        UE_LOG("UAnimInstance::PlaySequence - Invalid sequence"); 
+        return;
+    }
+
+    int32 LayerIndex = (int32)Layer;
+
+    // 해당 레이어의 상태를 덮어쓴다. 
+    Layers[LayerIndex].Sequence = Sequence;
+    Layers[LayerIndex].CurrentTime = 0.0f;
+    Layers[LayerIndex].PlayRate = bLoop; 
+    Layers[LayerIndex].bIsPlaying = true;
+    Layers[LayerIndex].BlendWeight = 1.0f;
+     
+    LayerBlendTimeRemaining[LayerIndex] = 0.0f;
+}
+
 void UAnimInstance::StopSequence()
 {
     CurrentPlayState.bIsPlaying = false;
@@ -166,10 +186,57 @@ void UAnimInstance::BlendTo(UAnimSequence* Sequence, bool bLoop, float InPlayRat
         Sequence->ObjectName.ToString().c_str(), BlendTime);
 }
 
+void UAnimInstance::BlendTo(UAnimSequence* Sequence, EAnimLayer Layer, bool bLoop, float InPlayRate, float BlendTime)
+{
+    int32 LayerIndex = (int32)Layer;
+
+    BlendTargets[LayerIndex].Sequence = Sequence;
+    BlendTargets[LayerIndex].CurrentTime = 0.0f;
+    BlendTargets[LayerIndex].PlayRate = InPlayRate;
+    BlendTargets[LayerIndex].bIsLooping = bLoop;
+    BlendTargets[LayerIndex].bIsPlaying = true;
+    BlendTargets[LayerIndex].BlendWeight = 0.0f;
+
+    LayerBlendTimeRemaining[LayerIndex] = FMath::Max(BlendTime, 0.0f);
+    LayerBlendTotalTime[LayerIndex] = LayerBlendTimeRemaining[LayerIndex];
+}
+
 
 // ============================================================
 // Notify & Curve Processing
 // ============================================================
+
+void UAnimInstance::EnableUpperBodySplit(FName BoneName)
+{
+    if (!CurrentSkeleton) return;
+    int32 RootBoneIdx = CurrentSkeleton->FindBoneIndex(BoneName);
+    if (RootBoneIdx == INDEX_NONE) return;
+
+    const int32 NumBones = CurrentSkeleton->GetNumBones();
+    UpperBodyMask = { false };
+
+    // BFS로 자식 bone을 모두 True로 변경
+
+    TArray<int32> BoneQueue;
+    BoneQueue.Add(RootBoneIdx);
+     
+    while (BoneQueue.Num() > 0)
+    {
+        int32 CurrentIdx = BoneQueue.Pop();
+
+        UpperBodyMask[CurrentIdx] = true;
+            
+        //// TODO: 자식 본 찾기
+        //for (int32 i = CurrentIdx + 1; i < NumBones; ++i)
+        //{
+        //    if (CurrentSkeleton->GetParentIndex(i) == CurrentIdx)
+        //    {
+        //        BoneQueue.Add(i);
+        //    }
+        //}
+    }
+    bUseUpperBody = true; 
+}
 
 void UAnimInstance::TriggerAnimNotifies(float DeltaSeconds)
 {
@@ -355,4 +422,58 @@ void UAnimInstance::BlendPoseArrays(const TArray<FTransform>& FromPose, const TA
 
         OutPose[BoneIndex] = Result;
     }
+}
+
+void UAnimInstance::GetPoseForLayer(int32 LayerIndex, TArray<FTransform>& OutPose,float DeltaSeconds)
+{
+    if (!Layers[LayerIndex].Sequence) return;
+
+    // 시간 갱신
+    AdvancePlayState(Layers[LayerIndex], DeltaSeconds);
+
+    const bool bIsBlending = (BlendTimeRemaining > 0.0f && BlendTargetState.Sequence != nullptr);
+
+    if (bIsBlending)
+    {
+        AdvancePlayState(BlendTargetState, DeltaSeconds);
+
+        const float SafeTotalTime = FMath::Max(BlendTotalTime, 1e-6f);
+        float BlendAlpha = 1.0f - (BlendTimeRemaining / SafeTotalTime);
+        BlendAlpha = FMath::Clamp(BlendAlpha, 0.0f, 1.0f);
+
+        TArray<FTransform> FromPose;
+        TArray<FTransform> TargetPose;
+        EvaluatePoseForState(CurrentPlayState, FromPose);
+        EvaluatePoseForState(BlendTargetState, TargetPose);
+
+        TArray<FTransform> BlendedPose;
+        BlendPoseArrays(FromPose, TargetPose, BlendAlpha, BlendedPose);
+
+        if (OwningComponent && BlendedPose.Num() > 0)
+        {
+            OwningComponent->SetAnimationPose(BlendedPose);
+        }
+
+        BlendTimeRemaining = FMath::Max(BlendTimeRemaining - DeltaSeconds, 0.0f);
+        if (BlendTimeRemaining <= 1e-4f)
+        {
+            CurrentPlayState = BlendTargetState;
+            CurrentPlayState.BlendWeight = 1.0f;
+
+            BlendTargetState = FAnimationPlayState();
+            BlendTimeRemaining = 0.0f;
+            BlendTotalTime = 0.0f;
+        }
+    }
+    else if (OwningComponent)
+    {
+        TArray<FTransform> Pose;
+        EvaluatePoseForState(CurrentPlayState, Pose);
+
+        if (Pose.Num() > 0)
+        {
+            OwningComponent->SetAnimationPose(Pose);
+        }
+    }
+
 }

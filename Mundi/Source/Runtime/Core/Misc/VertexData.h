@@ -335,6 +335,26 @@ struct FSkeleton
         }
         return Ar;
     }
+
+    /**
+    * @brief 전체 본 개수 반환 
+    */
+    int32 GetNumBones() const
+    {
+        return static_cast<int32>(Bones.size());
+    }
+
+    /**
+    * @brief 특정 본의 부모 인덱스 반환
+    */
+    int32 GetParentIndex(int32 BoneIndex) const
+    {
+        if (BoneIndex >= 0 && BoneIndex < static_cast<int32>(Bones.size()))
+        {
+            return Bones[BoneIndex].ParentIndex;
+        }
+       return INDEX_NONE;
+    }
 };
 
 struct FVertexWeight

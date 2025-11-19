@@ -32,19 +32,41 @@ class PropertyGenerator:
 
     def __init__(self):
         self.template = Template(PROPERTY_TEMPLATE)
+        self.all_classes = {}  # 모든 클래스 정보 저장 (name -> ClassInfo)
+
+    def set_all_classes(self, classes):
+        """모든 클래스 정보를 설정 (상속 체인 추적용)"""
+        self.all_classes = {cls.name: cls for cls in classes}
+
+    def _is_derived_from(self, class_name: str, base_class: str) -> bool:
+        """class_name이 base_class를 상속받는지 확인 (재귀적으로 부모 추적)"""
+        if class_name == base_class:
+            return True
+
+        # 클래스 정보가 없으면 False
+        if class_name not in self.all_classes:
+            return False
+
+        # 부모 클래스 확인
+        parent = self.all_classes[class_name].parent
+        if not parent:
+            return False
+
+        # 재귀적으로 부모의 부모까지 확인
+        return self._is_derived_from(parent, base_class)
 
     def generate(self, class_info: ClassInfo) -> str:
         """ClassInfo로부터 BEGIN_PROPERTIES 블록 생성"""
 
         # mark_type 결정:
         # 1. AActor 자체는 MARK 없음
-        # 2. AActor를 상속받은 클래스는 MARK_AS_SPAWNABLE
+        # 2. AActor를 상속받은 클래스 (직간접 포함)는 MARK_AS_SPAWNABLE
         # 3. 나머지는 MARK_AS_COMPONENT
         mark_type = None
         if class_info.name == 'AActor':
             mark_type = None  # AActor는 MARK 없음
-        elif class_info.parent == 'AActor':
-            mark_type = 'SPAWNABLE'  # AActor 직접 상속
+        elif self._is_derived_from(class_info.name, 'AActor'):
+            mark_type = 'SPAWNABLE'  # AActor를 상속받은 클래스 (직간접)
         else:
             mark_type = 'COMPONENT'  # 그 외 (컴포넌트 등)
 

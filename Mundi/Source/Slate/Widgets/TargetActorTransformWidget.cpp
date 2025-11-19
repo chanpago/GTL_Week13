@@ -31,6 +31,9 @@
 #include "Color.h"
 #include "PlatformProcess.h"
 #include "JsonSerializer.h"
+#include "SkeletalMeshComponent.h"
+#include "Source/Editor/BlueprintGraph/AnimationGraph.h"
+#include "Source/Runtime/Core/Misc/PathUtils.h"
 
 using namespace std;
 
@@ -335,14 +338,45 @@ void UTargetActorTransformWidget::RenderHeader(AActor* SelectedActor, UActorComp
 	ImGui::Text(SelectedActor->GetName().c_str());
 	ImGui::SameLine();
 
-	if (ImGui::Button("to Prefab", ImVec2(80, 25)))
-	{
-		std::filesystem::path PrefabPath = FPlatformProcess::OpenSaveFileDialog(UTF8ToWide(GDataDir) + L"/Prefabs", L"prefab", L"Prefab Files", UTF8ToWide(SelectedActor->ObjectName.ToString()));
-		JSON ActorJson;
-		ActorJson["Type"] = SelectedActor->GetClass()->Name;
-		SelectedActor->Serialize(false, ActorJson);
-		bool bSuccess = FJsonSerializer::SaveJsonToFile(ActorJson, PrefabPath);
-	}
+    if (ImGui::Button("to Prefab", ImVec2(80, 25)))
+    {
+        std::filesystem::path PrefabPath = FPlatformProcess::OpenSaveFileDialog(UTF8ToWide(GDataDir) + L"/Prefabs", L"prefab", L"Prefab Files", UTF8ToWide(SelectedActor->ObjectName.ToString()));
+        if (!PrefabPath.empty())
+        {
+            // If the actor has a skeletal mesh component with an animation graph,
+            // save the graph alongside the prefab using the same stem name.
+            if (UActorComponent* Comp = SelectedActor->GetComponent(USkeletalMeshComponent::StaticClass()))
+            {
+                if (USkeletalMeshComponent* SkelComp = Cast<USkeletalMeshComponent>(Comp))
+                {
+                    if (SkelComp->GetAnimGraph())
+                    {
+                        // Build graph path: Data/Graphs/<PrefabStem>.graph
+                        std::filesystem::path GraphDir = UTF8ToWide(GDataDir) + L"/Graphs";
+                        std::error_code ec;
+                        std::filesystem::create_directories(GraphDir, ec);
+
+                        std::filesystem::path GraphPath = GraphDir / PrefabPath.stem();
+                        GraphPath.replace_extension(L".graph");
+
+                        JSON GraphJson = JSON::Make(JSON::Class::Object);
+                        SkelComp->GetAnimGraph()->Serialize(false, GraphJson);
+                        FJsonSerializer::SaveJsonToFile(GraphJson, GraphPath.wstring());
+
+                        // Set AnimGraphPath relative under Data
+                        FString Stem = WideToUTF8(PrefabPath.stem().wstring());
+                        SkelComp->SetAnimGraphPath(FString("Data/Graphs/") + Stem + ".graph");
+                    }
+                }
+            }
+
+            // Save the actor prefab (includes AnimGraphPath via component serialization)
+            JSON ActorJson;
+            ActorJson["Type"] = SelectedActor->GetClass()->Name;
+            SelectedActor->Serialize(false, ActorJson);
+            bool bSuccess = FJsonSerializer::SaveJsonToFile(ActorJson, PrefabPath);
+        }
+    }
 
 	ImGui::SameLine();
 	const float ButtonWidth = 60.0f;

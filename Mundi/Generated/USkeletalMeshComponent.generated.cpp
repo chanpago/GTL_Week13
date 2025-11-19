@@ -37,6 +37,7 @@ BEGIN_PROPERTIES(USkeletalMeshComponent)
     MARK_AS_COMPONENT("스켈레탈 메시 컴포넌트", "스켈레탈 메시를 렌더링하는 컴포넌트입니다")
     ADD_PROPERTY(UAnimSequence*, CurrentAnimation, "", false)
     ADD_PROPERTY(UAnimInstance*, AnimInstance, "", false)
+    ADD_PROPERTY(FString, AnimGraphPath, "Animation", true)
 END_PROPERTIES()
 
 // ===== Lua Binding =====

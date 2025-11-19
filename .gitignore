@@ -450,6 +450,9 @@ GEMINI.md
 /Mundi/DerivedDataCache/**
 /Mundi/ThirdParty/**
 
+# imgui-node-editor는 수정이 필요하므로 제외
+!/Mundi/ThirdParty/imgui-node-editor
+
 # Python Embedded (임베디드 Python을 포함하여 팀원들이 바로 사용 가능)
 # Python 캐시 파일만 제외
 /Mundi/Tools/Python/__pycache__/

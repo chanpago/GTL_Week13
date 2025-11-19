@@ -1,0 +1,104 @@
+{
+  "Links" : [{
+      "FromNodeID" : 2,
+      "FromPinName" : "Entry",
+      "ToNodeID" : 1,
+      "ToPinName" : "Enter"
+    }, {
+      "FromNodeID" : 3,
+      "FromPinName" : "Value",
+      "ToNodeID" : 1,
+      "ToPinName" : "PlayRate"
+    }, {
+      "FromNodeID" : 4,
+      "FromPinName" : "Value",
+      "ToNodeID" : 1,
+      "ToPinName" : "Looping"
+    }, {
+      "FromNodeID" : 5,
+      "FromPinName" : "Value",
+      "ToNodeID" : 1,
+      "ToPinName" : "Animation"
+    }],
+  "Nodes" : [{
+      "ClassName" : "UK2Node_AnimState",
+      "NodeID" : 1,
+      "NodePosX" : -39394.000000,
+      "NodePosY" : 58720.000000,
+      "Pins" : [{
+          "DefaultValue" : "",
+          "Direction" : 0,
+          "PinCategory" : "exec",
+          "PinName" : "Enter"
+        }, {
+          "DefaultValue" : "",
+          "Direction" : 1,
+          "PinCategory" : "exec",
+          "PinName" : "Exit"
+        }, {
+          "DefaultValue" : "",
+          "Direction" : 0,
+          "PinCategory" : "UAnimSequence",
+          "PinName" : "Animation"
+        }, {
+          "DefaultValue" : "false",
+          "Direction" : 0,
+          "PinCategory" : "bool",
+          "PinName" : "Looping"
+        }, {
+          "DefaultValue" : "1.0",
+          "Direction" : 0,
+          "PinCategory" : "float",
+          "PinName" : "PlayRate"
+        }],
+      "StateName" : "NewState"
+    }, {
+      "ClassName" : "UK2Node_AnimStateEntry",
+      "NodeID" : 2,
+      "NodePosX" : -39639.000000,
+      "NodePosY" : 58736.000000,
+      "Pins" : [{
+          "DefaultValue" : "",
+          "Direction" : 1,
+          "PinCategory" : "exec",
+          "PinName" : "Entry"
+        }]
+    }, {
+      "ClassName" : "UK2Node_Literal_Float",
+      "NodeID" : 3,
+      "NodePosX" : -39647.000000,
+      "NodePosY" : 59088.000000,
+      "Pins" : [{
+          "DefaultValue" : "",
+          "Direction" : 1,
+          "PinCategory" : "float",
+          "PinName" : "Value"
+        }],
+      "Value" : 1.000000
+    }, {
+      "ClassName" : "UK2Node_Literal_Bool",
+      "NodeID" : 4,
+      "NodePosX" : -39671.000000,
+      "NodePosY" : 58960.000000,
+      "Pins" : [{
+          "DefaultValue" : "",
+          "Direction" : 1,
+          "PinCategory" : "bool",
+          "PinName" : "Value"
+        }],
+      "Value" : true
+    }, {
+      "AnimPath" : "Data/JamesWalking.fbx_mixamo.com",
+      "ClassName" : "UK2Node_AnimSequence",
+      "NodeID" : 5,
+      "NodePosX" : -39797.000000,
+      "NodePosY" : 58816.000000,
+      "Pins" : [{
+          "DefaultValue" : "",
+          "Direction" : 1,
+          "PinCategory" : "UAnimSequence",
+          "PinName" : "Value"
+        }]
+    }],
+  "UniqueIDCounter" : 6
+}

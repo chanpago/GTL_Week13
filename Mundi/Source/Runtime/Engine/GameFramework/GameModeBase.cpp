@@ -6,6 +6,7 @@
 #include "CameraComponent.h"
 #include "PlayerCameraManager.h"
 #include "Character.h"
+#include "Source/Runtime/Core/Misc/PathUtils.h"
 
 AGameModeBase::AGameModeBase()
 {
@@ -47,15 +48,32 @@ void AGameModeBase::PostLogin(APlayerController* NewPlayer)
 	APawn* NewPawn = NewPlayer->GetPawn();
 
 	// Pawn이 없으면 생성
-	if (!NewPawn && NewPlayer)
-	{
-		NewPawn = SpawnDefaultPawnFor(NewPlayer, StartSpot);
-		if (NewPawn)
-		{
-			NewPlayer->Possess(NewPawn);
-		}	
-	
-	}
+    if (!NewPawn && NewPlayer)
+    {
+        // Try spawning a default prefab as the player's pawn first
+        {
+            FWideString PrefabPath = UTF8ToWide(GDataDir) + L"/Prefabs/Future.prefab";
+            if (AActor* PrefabActor = GWorld->SpawnPrefabActor(PrefabPath))
+            {
+                if (APawn* PrefabPawn = Cast<APawn>(PrefabActor))
+                {
+                    NewPawn = PrefabPawn;
+                }
+            }
+        }
+
+        // Fallback to default pawn class if prefab did not yield a pawn
+        if (!NewPawn)
+        {
+            NewPawn = SpawnDefaultPawnFor(NewPlayer, StartSpot);
+        }
+
+        if (NewPawn)
+        {
+            NewPlayer->Possess(NewPawn);
+        }
+
+    }
 
 	// 카메라가 없으면 카메라 부착
 	if (NewPawn && !NewPawn->GetComponent(UCameraComponent::StaticClass()))
