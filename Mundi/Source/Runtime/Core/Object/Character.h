@@ -16,7 +16,9 @@ public:
 	virtual ~ACharacter() override;
 
 	virtual void Tick(float DeltaSecond) override;
-	virtual void BeginPlay() override;
+    virtual void BeginPlay() override;
+    void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+	void DuplicateSubObjects() override;
 
 	// 캐릭터 고유 기능
 	virtual void Jump();
@@ -32,7 +34,7 @@ public:
 	USkeletalMeshComponent* GetMesh() const { return SkeletalMeshComp; }
 
 protected:
-	UCapsuleComponent* CapsuleComponent;
-	UCharacterMovementComponent* CharacterMovement;
+    UCapsuleComponent* CapsuleComponent;
+    UCharacterMovementComponent* CharacterMovement;
 
 };

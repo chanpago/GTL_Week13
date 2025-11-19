@@ -5,6 +5,13 @@
 
 UCharacterMovementComponent::UCharacterMovementComponent()
 {
+	// 캐릭터 전용 설정 값
+ 	MaxWalkSpeed = 6.0f;
+	MaxAcceleration = 20.0f;
+	JumpZVelocity = 4.0;
+
+	BrackingDeceleration = 20.0f; // 입력이 없을 때 감속도
+	GroundFriction = 8.0f; //바닥 마찰 계수 
 }
 
 UCharacterMovementComponent::~UCharacterMovementComponent()
@@ -38,7 +45,7 @@ void UCharacterMovementComponent::DoJump()
 {
 	if (!bIsFalling)
 	{
-		Velocity.Z = JumpZVelocity;
+			Velocity.Z = JumpZVelocity;
 		bIsFalling = true;
 	}
 }
@@ -149,7 +156,4 @@ void UCharacterMovementComponent::CalcVelocity(const FVector& Input, float Delta
 
 	Velocity.X = CurrentVelocity.X;
 	Velocity.Y = CurrentVelocity.Y;
-
-	std::cout << "V: " << Velocity.X << ", " << Velocity.Y << ", " << Velocity.Z << std::endl;
-
 }

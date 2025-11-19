@@ -18,7 +18,7 @@ ACharacter::ACharacter()
 		//SkeletalMeshComp->SetRelativeLocation(FVector());
 		//SkeletalMeshComp->SetRelativeScale(FVector());
 	}
-
+	 
 	CharacterMovement = CreateDefaultSubobject<UCharacterMovementComponent>("CharacterMovement");
 	if (CharacterMovement)
 	{
@@ -38,7 +38,66 @@ void ACharacter::Tick(float DeltaSecond)
 
 void ACharacter::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
+}
+
+void ACharacter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+{
+    Super::Serialize(bInIsLoading, InOutHandle);
+
+    if (bInIsLoading)
+    {
+        // Rebind important component pointers after load (prefab/scene)
+        CapsuleComponent = nullptr;
+        CharacterMovement = nullptr;
+
+        for (UActorComponent* Comp : GetOwnedComponents())
+        {
+            if (auto* Cap = Cast<UCapsuleComponent>(Comp))
+            {
+                CapsuleComponent = Cap;
+            }
+            else if (auto* Move = Cast<UCharacterMovementComponent>(Comp))
+            {
+                CharacterMovement = Move;
+            }
+        }
+
+        if (CharacterMovement)
+        {
+            USceneComponent* Updated = CapsuleComponent ? reinterpret_cast<USceneComponent*>(CapsuleComponent)
+                                                        : GetRootComponent();
+            CharacterMovement->SetUpdatedComponent(Updated);
+        }
+    }
+}
+
+void ACharacter::DuplicateSubObjects()
+{ 
+    Super::DuplicateSubObjects();
+     
+    CapsuleComponent = nullptr;
+    CharacterMovement = nullptr;
+
+    for (UActorComponent* Comp : GetOwnedComponents())
+    {
+        if (auto* Cap = Cast<UCapsuleComponent>(Comp))
+        {
+            CapsuleComponent = Cap;
+        }
+        else if (auto* Move = Cast<UCharacterMovementComponent>(Comp))
+        {
+            CharacterMovement = Move;
+        }
+    }
+
+    // Ensure movement component tracks the correct updated component
+    if (CharacterMovement)
+    {
+        USceneComponent* Updated = CapsuleComponent ? reinterpret_cast<USceneComponent*>(CapsuleComponent)
+                                                    : GetRootComponent();
+        CharacterMovement->SetUpdatedComponent(Updated);
+    }
 }
 
 void ACharacter::Jump()

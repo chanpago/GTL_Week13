@@ -16,12 +16,12 @@ public:
 	virtual void TickComponent(float DeltaSeconds) override;
 
 	// 캐릭터 전용 설정 값
-	float MaxWalkSpeed = 6.0f;
-	float MaxAcceleration = 20.0f;
-	float JumpZVelocity = 4.0; 
+	float MaxWalkSpeed;
+	float MaxAcceleration;
+	float JumpZVelocity; 
 
-	float BrackingDeceleration = 20.0f; // 입력이 없을 때 감속도
-	float GroundFriction = 8.0f; //바닥 마찰 계수 
+	float BrackingDeceleration; // 입력이 없을 때 감속도
+	float GroundFriction; //바닥 마찰 계수 
 
 	//TODO
 	//float MaxWalkSpeedCrouched = 6.0f;
