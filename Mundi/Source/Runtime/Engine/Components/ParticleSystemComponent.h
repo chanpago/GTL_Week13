@@ -4,7 +4,6 @@
 #include "Source/Runtime/Engine/Particle/ParticleSystem.h"
 #include "UParticleSystemComponent.generated.h"
 
-
 UCLASS(DisplayName = "파티클 컴포넌트", Description = "파티클을 생성하는 컴포넌트")
 class UParticleSystemComponent : public UPrimitiveComponent
 {
@@ -31,7 +30,8 @@ public:
 	void DeactivateSystem() { bAutoActivate = false; }
 
 	// 렌더링을 위한 MeshBatch 수집 함수 
-	// void CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View) override;
+	void CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View) override;
+
 private:	
 	/** 파티클 시스템 에셋 */
 	UParticleSystem* Template = nullptr;
@@ -44,9 +44,6 @@ private:
 
 	/** 자동 시작 여부 */
 	bool bAutoActivate = true;
-
-	/** 현재 활성화 여부 */
-	bool bIsActive = false;
 	
 	/** 자동 삭제 여부 */
 	bool bAutoDestroy = false;

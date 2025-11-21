@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding='utf-8'?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug_StandAlone|x64">
@@ -378,6 +378,7 @@
     <ClCompile Include="Source\Runtime\Engine\GameFramework\Info.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\PointLightActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\SpotLightActor.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Particle\DynamicEmitterDataBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModule.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleColor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleLifetime.cpp" />
@@ -387,6 +388,7 @@
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleSpawn.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleTypeDataBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleVelocity.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Particle\ParticleDataContainer.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\ParticleEmitter.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\ParticleLODLevel.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\ParticleSystem.cpp" />
@@ -607,7 +609,8 @@
     <ClCompile Include="Generated\ACharacter.generated.cpp" />
     <ClCompile Include="Generated\UCharacterMovementComponent.generated.cpp" />
     <ClCompile Include="Generated\UPawnMovementComponent.generated.cpp" />
-  <ClCompile Include="Generated\UParticleSystemComponent.generated.cpp" /></ItemGroup>
+    <ClCompile Include="Generated\UParticleSystemComponent.generated.cpp" />
+  </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\LightingBuffers.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -763,6 +766,7 @@
     <ClInclude Include="Generated\UTestAutoBindComponent.generated.h" />
     <ClInclude Include="Generated\UTextRenderComponent.generated.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="Source\Editor\BlueprintGraph\AnimationGraph.h" />
     <ClInclude Include="Source\Editor\BlueprintGraph\AnimBlueprintCompiler.h" />
     <ClInclude Include="Source\Editor\BlueprintGraph\BlueprintActionDatabase.h" />
@@ -850,6 +854,7 @@
     <ClInclude Include="Source\Runtime\Engine\GameFramework\PointLightActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\SkeletalMeshActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\SpotLightActor.h" />
+    <ClInclude Include="Source\Runtime\Engine\Particle\DynamicEmitterDataBase.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModule.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleColor.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleLifetime.h" />
@@ -859,6 +864,7 @@
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleSpawn.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleTypeDataBase.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleVelocity.h" />
+    <ClInclude Include="Source\Runtime\Engine\Particle\ParticleDataContainer.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\ParticleEmitter.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\ParticleHelper.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\ParticleLODLevel.h" />
@@ -1054,7 +1060,8 @@
     <ClInclude Include="Generated\ACharacter.generated.h" />
     <ClInclude Include="Generated\UCharacterMovementComponent.generated.h" />
     <ClInclude Include="Generated\UPawnMovementComponent.generated.h" />
-  <ClInclude Include="Generated\UParticleSystemComponent.generated.h" /></ItemGroup>
+    <ClInclude Include="Generated\UParticleSystemComponent.generated.h" />
+  </ItemGroup>
   <ItemGroup>
     <None Include="Tools\CodeGenerator\generate.py" />
     <None Include="Tools\CodeGenerator\lua_generator.py" />

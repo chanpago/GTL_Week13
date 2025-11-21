@@ -942,7 +942,40 @@ void FSceneRenderer::RenderParticlePass()
 	RHIDevice->OMSetBlendState(true);
 	
 	// PS에서 SceneDepthSampling
-	// SoftParticle 적용
+	ID3D11ShaderResourceView* SceneDepthSRV = RHIDevice->GetSRV(RHI_SRV_Index::SceneDepth);
+	if (SceneDepthSRV)
+	{
+		RHIDevice->GetDeviceContext()->PSSetShaderResources(2, 1, &SceneDepthSRV);
+
+		ID3D11SamplerState* DepthSmaller = RHIDevice->GetSamplerState(RHI_Sampler_Index::LinearClamp);
+		if (DepthSmaller)
+		{
+			RHIDevice->GetDeviceContext()->PSSetSamplers(2, 1, &DepthSmaller);
+		}
+	}
+	
+	MeshBatchElements.Empty();
+	for (UParticleSystemComponent* ParticleComp : Proxies.Particles)
+	{
+		if (!ParticleComp || !ParticleComp->IsActive() || !ParticleComp->IsVisible())
+			continue;
+
+		ParticleComp->CollectMeshBatches(MeshBatchElements, View);
+	}
+
+	MeshBatchElements.Sort();
+
+	DrawMeshBatches(MeshBatchElements, true);
+
+	// Renderer 복구
+	ID3D11ShaderResourceView* NullSRV[1] = { nullptr };
+	RHIDevice->GetDeviceContext()->PSSetShaderResources(2, 1, NullSRV);
+
+	ID3D11SamplerState* NullSampler[1] = { nullptr };
+	RHIDevice->GetDeviceContext()->PSSetSamplers(2, 1, NullSampler);
+
+	RHIDevice->OMSetDepthStencilState(EComparisonFunc::LessEqual);
+	RHIDevice->OMSetBlendState(false);
 }
 
 void FSceneRenderer::RenderDecalPass()

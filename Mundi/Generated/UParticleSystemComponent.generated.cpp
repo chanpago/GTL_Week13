@@ -34,7 +34,7 @@ const bool UParticleSystemComponent::bPropertiesRegistered = []() {
 // ===== Property Reflection =====
 
 BEGIN_PROPERTIES(UParticleSystemComponent)
-    MARK_AS_COMPONENT("파티클 컴포넌트", "드라이버")
+    MARK_AS_COMPONENT("파티클 컴포넌트", "파티클을 생성하는 컴포넌트")
 END_PROPERTIES()
 
 

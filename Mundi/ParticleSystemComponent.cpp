@@ -75,3 +75,8 @@ void UParticleSystemComponent::DestroyParticles()
     EmitterInstances.Empty();
     bIsActive = false;
 }
+
+void UParticleSystemComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
+{
+
+}

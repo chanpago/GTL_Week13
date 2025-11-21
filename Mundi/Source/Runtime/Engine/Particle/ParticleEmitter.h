@@ -79,6 +79,8 @@ struct FParticleEmitterInstance
      */
     void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation, const FVector& InitialVelocity);
 
+    /** 파티클 제거됐는지 확인 */
+    bool IsComplete() const;
     /** 파티클 제거 */
     void KillParticle(int32 Index);
 
