@@ -209,10 +209,11 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
         {
             SpawnFraction -= static_cast<float>(NumToSpawn);
 
+            // @TODO - 바꿔야함 로직 이상함
             float RateDivisor = (SpawnRate > 0.0f) ? SpawnRate : 1.0f;
-            float StartTime = -(OldSpawnFraction / RateDivisor);
-            float Increment = 1.0f / RateDivisor;
-
+            float Increment = 1.0f / RateDivisor; // 파티클 1개당 걸리는 시간
+            float StartTime = (1.0f - OldSpawnFraction) * Increment; // 첫 번째 파티클이 태어날 시간
+            
             SpawnParticles(NumToSpawn, StartTime, Increment, Component->GetWorldLocation(), FVector::Zero());
         }
 
