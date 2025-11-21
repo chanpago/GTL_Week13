@@ -10,9 +10,6 @@ public:
     void RebuildModuleCaches();
     
 public:
-    int32 LODIndex = 0;
-    bool  bEnabled = true;
-
     UParticleModuleRequired* RequiredModule = nullptr;
     UParticleModuleTypeDataBase* TypeDataModule = nullptr;
 
@@ -21,4 +18,8 @@ public:
 
     // (선택) 전체 접근용 캐시
     TArray<UParticleModule*> AllModulesCache;
+
+    int32 LODIndex = 0;
+    bool  bEnabled = true;
+
 };

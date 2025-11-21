@@ -384,6 +384,7 @@
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleRequired.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleSize.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleSpawn.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleTypeDataBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleVelocity.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\ParticleEmitter.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\ParticleLODLevel.cpp" />
@@ -854,8 +855,10 @@
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleRequired.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleSize.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleSpawn.h" />
+    <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleTypeDataBase.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleVelocity.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\ParticleEmitter.h" />
+    <ClInclude Include="Source\Runtime\Engine\Particle\ParticleHelper.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\ParticleLODLevel.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\ParticleSystem.h" />
     <ClInclude Include="Source\Runtime\Engine\Scripting\GameObject.h" />

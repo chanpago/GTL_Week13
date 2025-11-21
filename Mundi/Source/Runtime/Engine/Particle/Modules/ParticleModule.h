@@ -1,5 +1,64 @@
 ﻿#pragma once
 
+// Forward declarations
+struct FParticleEmitterInstance;
+struct FBaseParticle;
+
+// Distribution 타입들 - 파티클 파라미터의 랜덤/커브 값을 표현
+template<typename T>
+struct FRawDistribution
+{
+    T MinValue;
+    T MaxValue;
+    bool bUseRange = false;  // true면 MinValue~MaxValue 범위, false면 MinValue 고정값
+
+    FRawDistribution() : MinValue(T()), MaxValue(T()), bUseRange(false) {}
+    FRawDistribution(const T& value) : MinValue(value), MaxValue(value), bUseRange(false) {}
+    FRawDistribution(const T& min, const T& max) : MinValue(min), MaxValue(max), bUseRange(true) {}
+
+    T GetValue(float randomSeed = 0.0f) const
+    {
+        if (bUseRange)
+        {
+            // MinValue와 MaxValue 사이를 보간
+            return MinValue + (MaxValue - MinValue) * randomSeed;
+        }
+        return MinValue;
+    }
+};
+
+using FRawDistributionFloat = FRawDistribution<float>;
+using FRawDistributionVector = FRawDistribution<FVector>;
+using FRawDistributionColor = FRawDistribution<FLinearColor>;
+
+// 기본 파티클 구조체 (언리얼 스타일)
+// 모든 파티클이 공통으로 가지는 데이터
+struct FBaseParticle
+{
+    FVector    Location;
+    FVector    OldLocation;
+    FVector    Velocity;
+    FVector    BaseVelocity;
+
+    FVector    Size;
+    FVector    BaseSize;
+
+    FLinearColor Color;
+    FLinearColor BaseColor;
+
+    float      Rotation;
+    float      BaseRotation;
+    float      RotationRate;
+    float      BaseRotationRate;
+
+    float      RelativeTime;    // 0~1
+    float      OneOverMaxLifetime;
+
+    uint32     Flags;
+
+    // 이 뒤에 모듈별 Payload 데이터가 이어짐
+};
+
 
 enum class EParticleModuleType : uint8
 {
@@ -8,6 +67,17 @@ enum class EParticleModuleType : uint8
 
 class UParticleModule : public UObject
 {
+public:
+    // ============================================================
+    // 언리얼 스타일 인터페이스
+    // ============================================================
+
+    // 파티클 생성 시 호출 (단일 파티클)
+    virtual void Spawn(FParticleEmitterInstance* Owner, int32 Offset, int32 ParticleIndex, int32 InstancePayloadOffset) {}
+
+    // 매 프레임 업데이트 시 호출 (모든 파티클)
+    virtual void Update(FParticleEmitterInstance* Owner, int32 Offset, float DeltaTime) {}
+
 public:
     EParticleModuleType ModuleType;
     bool  bEnabled = true;

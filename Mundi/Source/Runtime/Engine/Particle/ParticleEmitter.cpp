@@ -2,8 +2,10 @@
 #include "ParticleEmitter.h"
 #include "Modules/ParticleModule.h"
 #include "ParticleLODLevel.h"
+#include "Modules/ParticleModuleRequired.h"
+#include "Modules/ParticleModuleTypeDataBase.h"
 
-void CacheEmitterModuleInfo()
+void UParticleEmitter::CacheEmitterModuleInfo()
 {
     // 보통 LOD0 기준으로 캐시 (또는 LOD별 따로 캐시)
     UParticleLODLevel* LOD0 = (LODLevels.Num() > 0) ? LODLevels[0] : nullptr;
@@ -21,7 +23,8 @@ void CacheEmitterModuleInfo()
         if (Bytes > 0)
         {
             M->PayloadOffset = Offset;
-            Offset += Align(Bytes, 16);
+            // 16바이트 정렬 (SIMD 최적화)
+            Offset += (Bytes + 15) & ~15;
         }
 
         if (M->ModuleType == EParticleModuleType::Required)
@@ -33,8 +36,12 @@ void CacheEmitterModuleInfo()
     }
 
     // TypeData가 파티클 구조 확장 요구하면 반영
+    // ✅ TypeDataModule이 nullptr일 수 있으므로 체크만 하고 사용 안함
     if (LOD0->TypeDataModule)
+    {
+        // TypeDataModule 관련 처리는 나중에 구현
         Offset = FMath::Max(Offset, LOD0->TypeDataModule->GetRequiredParticleBytes());
+    }
 
     ParticleSizeBytes = Offset;
 }

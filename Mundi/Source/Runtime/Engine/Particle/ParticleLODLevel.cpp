@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "ParticleLODLevel.h"
-
+#include "Modules/ParticleModuleRequired.h"
+#include "Modules/ParticleModuleTypeDataBase.h"
 
 void UParticleLODLevel::RebuildModuleCaches()
 {
