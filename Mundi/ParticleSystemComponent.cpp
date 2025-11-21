@@ -39,9 +39,26 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
 
     if (!bIsActive || !Template) return;
 
+    bool bAllEmittersComplete = true;
     for (FParticleEmitterInstance* Inst : EmitterInstances)
     {
         Inst->Tick(DeltaTime);
+
+        if (!Inst->IsComplete())
+        {
+            bAllEmittersComplete = false;
+        }
+    }
+
+    if (bAllEmittersComplete)
+    {
+        OnParticleSystemFinished.Broadcast(this);
+        DeactivateSystem();
+        
+        if (bAutoDestroy)
+        {
+            GetOwner()->Destroy();
+        }
     }
 }
 
