@@ -31,35 +31,6 @@ using FRawDistributionFloat = FRawDistribution<float>;
 using FRawDistributionVector = FRawDistribution<FVector>;
 using FRawDistributionColor = FRawDistribution<FLinearColor>;
 
-// 기본 파티클 구조체 (언리얼 스타일)
-// 모든 파티클이 공통으로 가지는 데이터
-struct FBaseParticle
-{
-    FVector    Location;
-    FVector    OldLocation;
-    FVector    Velocity;
-    FVector    BaseVelocity;
-
-    FVector    Size;
-    FVector    BaseSize;
-
-    FLinearColor Color;
-    FLinearColor BaseColor;
-
-    float      Rotation;
-    float      BaseRotation;
-    float      RotationRate;
-    float      BaseRotationRate;
-
-    float      RelativeTime;    // 0~1
-    float      OneOverMaxLifetime;
-
-    uint32     Flags;
-
-    // 이 뒤에 모듈별 Payload 데이터가 이어짐
-};
-
-
 enum class EParticleModuleType : uint8
 {
     Required, Spawn, Update, TypeData
@@ -73,7 +44,7 @@ public:
     // ============================================================
 
     // 파티클 생성 시 호출 (단일 파티클)
-    virtual void Spawn(FParticleEmitterInstance* Owner, int32 Offset, int32 ParticleIndex, int32 InstancePayloadOffset) {}
+    virtual void Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase) {}
 
     // 매 프레임 업데이트 시 호출 (모든 파티클)
     virtual void Update(FParticleEmitterInstance* Owner, int32 Offset, float DeltaTime) {}

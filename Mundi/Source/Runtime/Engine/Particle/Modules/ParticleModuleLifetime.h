@@ -11,6 +11,6 @@ public:
     // 언리얼 스타일 구현
     // ============================================================
 
-    virtual void Spawn(FParticleEmitterInstance* Owner, int32 Offset, int32 ParticleIndex, int32 InstancePayloadOffset) override;
+    virtual void Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase) override;
     virtual void Update(FParticleEmitterInstance* Owner, int32 Offset, float DeltaTime) override;
 };

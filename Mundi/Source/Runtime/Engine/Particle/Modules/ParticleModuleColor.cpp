@@ -3,21 +3,20 @@
 #include "../ParticleEmitter.h"
 #include "../ParticleHelper.h"
 
-void UParticleModuleColor::Spawn(FParticleEmitterInstance* Owner, int32 Offset, int32 ParticleIndex, int32 InstancePayloadOffset)
+void UParticleModuleColor::Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase)
 {
-    FBaseParticle* Particle = Owner->GetParticle(ParticleIndex);
-    if (!Particle)
+    if (!ParticleBase)
         return;
 
     // 랜덤 시드 생성 (파티클 카운터 기반)
     float RandomSeed = (float)(Owner->ParticleCounter % 1000) / 1000.0f;
 
     // 초기 색상 설정
-    Particle->Color = StartColor.GetValue(RandomSeed);
-    Particle->Color.A = StartAlpha.GetValue(RandomSeed);
+    ParticleBase->Color = StartColor.GetValue(RandomSeed);
+    ParticleBase->Color.A = StartAlpha.GetValue(RandomSeed);
 
     // Base 색상도 저장 (나중에 참조용)
-    Particle->BaseColor = Particle->Color;
+    ParticleBase->BaseColor = ParticleBase->Color;
 }
 
 void UParticleModuleColor::Update(FParticleEmitterInstance* Owner, int32 Offset, float DeltaTime)

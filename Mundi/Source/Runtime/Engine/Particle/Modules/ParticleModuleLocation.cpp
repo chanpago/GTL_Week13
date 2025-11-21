@@ -1,11 +1,11 @@
 ﻿#include "pch.h"
 #include "ParticleModuleLocation.h"
 #include "../ParticleEmitter.h"
+#include "Source/Runtime/Engine/Particle/ParticleHelper.h"
 
-void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, int32 Offset, int32 ParticleIndex, int32 InstancePayloadOffset)
+void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase)
 {
-    FBaseParticle* Particle = Owner->GetParticle(ParticleIndex);
-    if (!Particle)
+    if (!ParticleBase)
         return;
 
     // 랜덤 시드 생성
@@ -56,6 +56,6 @@ void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, int32 Offse
         break;
     }
 
-    Particle->Location = SpawnLocation;
-    Particle->OldLocation = SpawnLocation;
+    ParticleBase->Location = SpawnLocation;
+    ParticleBase->OldLocation = SpawnLocation;
 }

@@ -3,10 +3,9 @@
 #include "../ParticleEmitter.h"
 #include "../ParticleHelper.h"
 
-void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, int32 Offset, int32 ParticleIndex, int32 InstancePayloadOffset)
+void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase)
 {
-    FBaseParticle* Particle = Owner->GetParticle(ParticleIndex);
-    if (!Particle)
+    if (!ParticleBase)
         return;
 
     // 랜덤 시드 생성
@@ -16,8 +15,8 @@ void UParticleModuleVelocity::Spawn(FParticleEmitterInstance* Owner, int32 Offse
     FVector Velocity = StartVelocity.GetValue(RandomSeed);
     float Multiplier = VelocityMultiplier.GetValue(RandomSeed);
 
-    Particle->Velocity = Velocity * Multiplier;
-    Particle->BaseVelocity = Particle->Velocity;
+    ParticleBase->Velocity = Velocity * Multiplier;
+    ParticleBase->BaseVelocity = ParticleBase->Velocity;
 }
 
 void UParticleModuleVelocity::Update(FParticleEmitterInstance* Owner, int32 Offset, float DeltaTime)

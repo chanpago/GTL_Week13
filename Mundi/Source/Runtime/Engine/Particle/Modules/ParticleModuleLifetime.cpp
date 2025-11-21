@@ -1,11 +1,11 @@
 ﻿#include "pch.h"
 #include "ParticleModuleLifetime.h"
 #include "../ParticleEmitter.h"
+#include "Source/Runtime/Engine/Particle/ParticleHelper.h"
 
-void UParticleModuleLifetime::Spawn(FParticleEmitterInstance* Owner, int32 Offset, int32 ParticleIndex, int32 InstancePayloadOffset)
+void UParticleModuleLifetime::Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase)
 {
-    FBaseParticle* Particle = Owner->GetParticle(ParticleIndex);
-    if (!Particle)
+    if (!ParticleBase)
         return;
 
     // 랜덤 시드 생성
@@ -15,14 +15,14 @@ void UParticleModuleLifetime::Spawn(FParticleEmitterInstance* Owner, int32 Offse
     float MaxLifetime = Lifetime.GetValue(RandomSeed);
     if (MaxLifetime > 0.0f)
     {
-        Particle->OneOverMaxLifetime = 1.0f / MaxLifetime;
+        ParticleBase->OneOverMaxLifetime = 1.0f / MaxLifetime;
     }
     else
     {
-        Particle->OneOverMaxLifetime = 0.0f;
+        ParticleBase->OneOverMaxLifetime = 0.0f;
     }
 
-    Particle->RelativeTime = 0.0f;
+    ParticleBase->RelativeTime = 0.0f;
 }
 
 void UParticleModuleLifetime::Update(FParticleEmitterInstance* Owner, int32 Offset, float DeltaTime)

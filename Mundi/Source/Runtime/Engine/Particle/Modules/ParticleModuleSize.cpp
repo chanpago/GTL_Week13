@@ -3,10 +3,9 @@
 #include "../ParticleEmitter.h"
 #include "../ParticleHelper.h"
 
-void UParticleModuleSize::Spawn(FParticleEmitterInstance* Owner, int32 Offset, int32 ParticleIndex, int32 InstancePayloadOffset)
+void UParticleModuleSize::Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase)
 {
-    FBaseParticle* Particle = Owner->GetParticle(ParticleIndex);
-    if (!Particle)
+    if (!ParticleBase)
         return;
 
     // 랜덤 시드 생성
@@ -22,8 +21,8 @@ void UParticleModuleSize::Spawn(FParticleEmitterInstance* Owner, int32 Offset, i
         Size.Z = Size.X;
     }
 
-    Particle->Size = Size;
-    Particle->BaseSize = Size;
+    ParticleBase->Size = Size;
+    ParticleBase->BaseSize = Size;
 }
 
 void UParticleModuleSize::Update(FParticleEmitterInstance* Owner, int32 Offset, float DeltaTime)
