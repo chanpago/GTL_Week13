@@ -68,3 +68,13 @@ const FBaseParticle& Name = *((const FBaseParticle*)( (uint8*)(BaseAddress) + ((
 #define PARTICLE_ELEMENT(Type, Offset) \
 (*((Type*)((uint8*)&Particle + (Offset))))
 
+inline float FloatHash(uint32 Seed)
+{
+    // 비트 섞기 (Avalanche Effect)
+    Seed ^= Seed << 13;
+    Seed ^= Seed >> 17;
+    Seed ^= Seed << 5;
+    
+    // 0 ~ 1 사이 실수로 변환 (맨티사 이용)
+    return static_cast<float>(Seed * 16807 & 0x007FFFFF) / static_cast<float>(0x00800000);
+}

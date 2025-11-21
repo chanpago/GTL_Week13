@@ -192,11 +192,13 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
     bool bEmitterFinished = CachedRequiredModule && CachedRequiredModule->EmitterLoops > 0
                                 && LoopCount >= CachedRequiredModule->EmitterLoops;
 
+    float RandomValue = FloatHash(ParticleCounter);
+    
     // 아직 안 끝났을 때만 스폰 시도
     if (!bEmitterFinished)
     {
         // [A] Continuous Spawn
-        float SpawnRate = CachedSpawnModule ? CachedSpawnModule->GetSpawnRate(EmitterTime, 0.0f)
+        float SpawnRate = CachedSpawnModule ? CachedSpawnModule->GetSpawnRate(EmitterTime, RandomValue)
                             : (CachedSpawnModule ? CachedRequiredModule->SpawnRateBase : 0.0f);
         
         float OldSpawnFraction = SpawnFraction;
@@ -214,12 +216,17 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
             SpawnParticles(NumToSpawn, StartTime, Increment, Component->GetWorldLocation(), FVector::Zero());
         }
 
-        // [B] Burst Spawn
+        // [B] 버스트 스폰 (Burst)
         if (CachedSpawnModule)
         {
-            int32 BurstCount = CachedSpawnModule->GetBurstCount(EmitterTime, 0.0f);
+            float OldTime = EmitterTime;
+            float NewTime = EmitterTime + DeltaTime;
+
+            int32 BurstCount = CachedSpawnModule->GetBurstCount(OldTime, NewTime, RandomValue);
+
             if (BurstCount > 0)
             {
+                // 버스트는 시간차 없이(0.0f) 한 번에 생성
                 SpawnParticles(BurstCount, 0.0f, 0.0f, Component->GetWorldLocation(), FVector::Zero());
             }
         }
@@ -230,7 +237,7 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
     // ============================================================
     for (int32 i = 0; i < ActiveParticles; i++)
     {
-        DECLARE_PARTICLE_PTR(Particle, ParticleData, ParticleStride, i);
+        DECLARE_PARTICLE_PTR(Particle, ParticleData, ParticleStride, i)
 
         Particle->OldLocation = Particle->Location;
         Particle->Location += Particle->Velocity * DeltaTime;

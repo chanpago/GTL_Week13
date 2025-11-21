@@ -35,16 +35,16 @@ public:
     TArray<FBurstEntry> BurstList;
 
     // Process Spawn Rate - Emitter에서 이 값을 읽어서 스폰 처리
-    float GetSpawnRate(float emitterTime, float randomSeed) const
+    float GetSpawnRate(float EmitterTime, float RandomSeed) const
     {
         switch (SpawnRateType)
         {
         case ESpawnRateType::Constant:
-            return SpawnRate.GetValue(randomSeed);
+            return SpawnRate.GetValue(RandomSeed);
 
         case ESpawnRateType::OverTime:
             // emitterTime을 0~1 범위로 정규화해서 사용 (emitter의 수명 기준)
-            return SpawnRateOverTime.GetValue(emitterTime);
+            return SpawnRateOverTime.GetValue(EmitterTime);
 
         case ESpawnRateType::Burst:
             // Burst는 GetSpawnRate가 아닌 별도 처리
@@ -56,27 +56,36 @@ public:
     }
 
     // Burst 처리 - 특정 시간에 생성할 파티클 수 반환
-    int32 GetBurstCount(float emitterTime, float randomSeed) const
+    int32 GetBurstCount(float OldTime, float NewTime, float RandomSeed) const
     {
+        // SpawnRateType이 Burst가 아니어도, BurstList에 값이 있으면 터뜨리는 게 일반적입니다.
+        // 하지만 님 규칙(Enum이 Burst일 때만 동작)을 따른다면 아래 코드를 유지하세요.
         if (SpawnRateType != ESpawnRateType::Burst)
             return 0;
 
-        int32 totalCount = 0;
-        for (const FBurstEntry& burst : BurstList)
+        int32 TotalCount = 0;
+
+        for (const FBurstEntry& Burst : BurstList)
         {
-            // emitterTime이 버스트 시간과 거의 일치하면 생성
-            // (실제로는 이전 프레임과 현재 프레임 사이에 버스트 시간이 있는지 체크)
-            if (FMath::Abs(emitterTime - burst.Time) < 0.016f) // ~60fps 기준
+            // [핵심 로직]
+            // "버스트 시간이 지난 프레임(Old)보다는 크고, 현재 시간(New)보다는 작거나 같은가?"
+            // 즉, 이번 프레임의 시간 간격(DeltaTime) 사이에 버스트 타이밍이 끼어있었는지 확인
+            if (OldTime < Burst.Time && Burst.Time <= NewTime)
             {
-                int32 count = burst.Count;
-                if (burst.CountRange > 0)
+                int32 Count = Burst.Count;
+            
+                // 랜덤 범위 적용
+                if (Burst.CountRange > 0)
                 {
-                    count += static_cast<int32>(randomSeed * burst.CountRange);
+                    // RandomSeed는 0.0~1.0 사이의 값이어야 함
+                    Count += static_cast<int32>(RandomSeed * Burst.CountRange);
                 }
-                totalCount += count;
+            
+                TotalCount += Count;
             }
         }
-        return totalCount;
+
+        return TotalCount;
     }
 
     // 이 모듈은 개별 파티클에 대해서는 특별한 동작이 없음
