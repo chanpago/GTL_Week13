@@ -12,6 +12,8 @@
 #include "JsonSerializer.h"
 #include <fstream>
 
+IMPLEMENT_CLASS(UParticleSystem)
+
 void UParticleSystem::BuildRuntimeCache()
 {
     MaxActiveParticles = 0;

@@ -464,10 +464,8 @@ void UContentBrowserWindow::CreateNewParticleSystem()
     UParticleSystem* NewSystem = NewObject<UParticleSystem>();
     NewSystem->ObjectName = FName("NewParticleSystem");
 
-    // 파일 경로 생성
+    // 저장 경로 생성 (중복 이름 체크)
     std::filesystem::path ParticlePath = CurrentPath / "NewParticleSystem.particle";
-
-    // 동일한 이름이 있으면 번호 붙이기
     int Counter = 1;
     while (std::filesystem::exists(ParticlePath))
     {
@@ -476,16 +474,7 @@ void UContentBrowserWindow::CreateNewParticleSystem()
         Counter++;
     }
 
-    // 파일 저장
-    if (NewSystem->SaveToFile(WideToUTF8(ParticlePath.wstring())))
-    {
-        UE_LOG("Created new particle system: %s", WideToUTF8(ParticlePath.wstring()).c_str());
-        RefreshCurrentDirectory();
-    }
-    else
-    {
-        UE_LOG("Failed to create particle system");
-    }
-
-    delete NewSystem;
+    // ParticleViewerWindow를 열고 저장 경로 전달
+    FString SavePath = WideToUTF8(ParticlePath.wstring());
+    USlateManager::GetInstance().OpenParticleViewerWithSystem(NewSystem, SavePath);
 }

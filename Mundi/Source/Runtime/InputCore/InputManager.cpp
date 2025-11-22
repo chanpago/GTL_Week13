@@ -118,35 +118,33 @@ void UInputManager::ProcessMessage(HWND hWnd, UINT message, WPARAM wParam, LPARA
 {
     bool IsUIHover = false;
     bool IsKeyBoardCapture = false;
-    
+
     if (ImGui::GetCurrentContext() != nullptr)
     {
         // ImGui가 입력을 사용 중인지 확인
         ImGuiIO& io = ImGui::GetIO();
         static bool once = false;
         if (!once) { io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; once = true; }
-        
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        bool bAnyItemHovered = ImGui::IsAnyItemHovered();
-        // WantCaptureMouse는 마우스가 UI 위에 있거나 UI가 마우스를 사용 중일 때 true
-        IsUIHover = io.WantCaptureMouse || io.WantCaptureMouseUnlessPopupClose || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
-        IsKeyBoardCapture = io.WantTextInput;
 
-        // skeletal mesh 뷰어도 ImGui로 만들어져서 뷰포트에 인풋이 안먹히는 현상이 일어남. 일단은 이렇게 박아놓음.
-        if (IsUIHover && !bAnyItemHovered)
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+        // skeletal mesh 뷰어와 파티클 뷰어도 ImGui로 만들어져서 뷰포트에 인풋이 안먹히는 현상이 일어남.
+        // 콜백을 통해 마우스 위치가 뷰포트 윈도우 안에 있는지 체크
+        bool bIsViewportWindow = false;
+        if (ViewportChecker)
         {
-            #include "ImGui/imgui_internal.h"
-            ImGuiContext* Ctx = ImGui::GetCurrentContext();
-            ImGuiWindow* Hovered = Ctx ? Ctx->HoveredWindow : nullptr;
-            if (Hovered && Hovered->Name)
-            {
-                const char* Name = Hovered->Name;
-                if (strcmp(Name, "SkeletalMeshViewport") == 0)
-                {
-                    IsUIHover = false;
-                }
-            }
+            bIsViewportWindow = ViewportChecker(MousePosition);
         }
+
+        // 뷰포트 윈도우가 아닐 때만 UI hover 체크
+        if (!bIsViewportWindow)
+        {
+            bool bAnyItemHovered = ImGui::IsAnyItemHovered();
+            // WantCaptureMouse는 마우스가 UI 위에 있거나 UI가 마우스를 사용 중일 때 true
+            IsUIHover = io.WantCaptureMouse || io.WantCaptureMouseUnlessPopupClose || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
+        }
+
+        IsKeyBoardCapture = io.WantTextInput;
         
         // 디버그 출력 (마우스 클릭 시만)
         if (bEnableDebugLogging && message == WM_LBUTTONDOWN)

@@ -199,12 +199,6 @@ void FViewportClient::SetupCameraMode()
 
 void FViewportClient::MouseMove(FViewport* Viewport, int32 X, int32 Y)
 {
-	// Check if ImGui wants the mouse (e.g., hovering over UI elements)
-	if (ImGui::GetIO().WantCaptureMouse ||
-	    ImGui::GetIO().WantCaptureMouseUnlessPopupClose ||
-	    ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
-		return;
-
 	if (World->GetGizmoActor())
 		World->GetGizmoActor()->ProcessGizmoInteraction(Camera, Viewport, static_cast<float>(X), static_cast<float>(Y));
 
@@ -249,14 +243,7 @@ void FViewportClient::MouseMove(FViewport* Viewport, int32 X, int32 Y)
 
 void FViewportClient::MouseButtonDown(FViewport* Viewport, int32 X, int32 Y, int32 Button)
 {
-	// Check if ImGui wants the mouse (e.g., clicking on UI elements)
-	// WantCaptureMouse: UI가 마우스를 캡처 중
-	// WantCaptureMouseUnlessPopupClose: 팝업이 열려있거나 열리려는 중
-	// IsAnyItemHovered: 어떤 UI 요소 위에 마우스가 있음
-	if (ImGui::GetIO().WantCaptureMouse ||
-	    ImGui::GetIO().WantCaptureMouseUnlessPopupClose ||
-	    ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
-		return;
+
 
 	if (!Viewport || !World) // Only handle left mouse button
 		return;
@@ -310,11 +297,8 @@ void FViewportClient::MouseButtonDown(FViewport* Viewport, int32 X, int32 Y, int
 
 void FViewportClient::MouseButtonUp(FViewport* Viewport, int32 X, int32 Y, int32 Button)
 {
-	// Check if ImGui wants the mouse (e.g., releasing mouse over UI elements)
-	if (ImGui::GetIO().WantCaptureMouse ||
-	    ImGui::GetIO().WantCaptureMouseUnlessPopupClose ||
-	    ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
-		return;
+
+
 
 	if (Button == 0) // Left mouse button
 	{

@@ -28,10 +28,16 @@ public:
     FViewport* GetViewport() const { return Viewport; }                                            
     FViewportClient* GetViewportClient() const { return ViewportClient; }                          
                                                                                                    
-    // Load a particle system                                                                      
-    void LoadParticleSystem(const FString& Path);                                                  
-    void LoadParticleSystem(UParticleSystem* ParticleSystem);                                      
-                                                                                                   
+    // Load a particle system
+    void LoadParticleSystem(const FString& Path);
+    void LoadParticleSystem(UParticleSystem* ParticleSystem);
+
+    // Set save path for new particle systems
+    void SetSavePath(const FString& InSavePath) { SavePath = InSavePath; }
+
+    // Save current particle system
+    void SaveParticleSystem();
+
 private:
     ID3D11Device* Device = nullptr;
 
@@ -43,8 +49,11 @@ private:
     FViewportClient* ViewportClient = nullptr;
 
     // Current particle system
-    UParticleSystem* CurrentParticleSystem = nullptr;                                              
-                                                                                                   
+    UParticleSystem* CurrentParticleSystem = nullptr;
+
+    // Save path (for new particle systems created from content browser)
+    FString SavePath;
+
     // Layout state                                                                                
     float LeftPanelRatio = 0.25f;   // 25% of width                                                
     float RightPanelRatio = 0.25f;  // 25% of width                                                
@@ -58,7 +67,8 @@ private:
     bool bInitialPlacementDone = false;                                                            
     bool bRequestFocus = false;                                                                    
                                                                                                    
-public:                                                                                            
-    bool IsOpen() const { return bIsOpen; }                                                        
-    void Close() { bIsOpen = false; }                                                              
+public:
+    bool IsOpen() const { return bIsOpen; }
+    void Close() { bIsOpen = false; }
+    const FRect& GetViewportRect() const { return CenterRect; }                                                              
 };                                

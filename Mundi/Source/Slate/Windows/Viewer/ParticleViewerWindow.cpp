@@ -133,7 +133,10 @@ void SParticleViewerWindow::OnRender()
     const float toolbarHeight = 40.0f;
     ImGui::BeginChild("Toolbar", ImVec2(0, toolbarHeight), true);
     {
-        if (ImGui::Button("Save")) {}
+        if (ImGui::Button("Save"))
+        {
+            SaveParticleSystem();
+        }
         ImGui::SameLine();
         if (ImGui::Button("Restart Sim")) {}
         ImGui::SameLine();
@@ -177,6 +180,12 @@ void SParticleViewerWindow::OnRender()
             // 뷰포트 렌더링 영역
             ImGui::BeginChild("Viewport", ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar);
             {
+                
+             // 뷰포트에서 마우스 입력을 허용하도록 설정
+             if (ImGui::IsWindowHovered())
+             {
+                 ImGui::GetIO().WantCaptureMouse = false;
+             }
                 // 뷰포트 영역 계산 (전체 Child 윈도우 영역)
                 ImVec2 childPos = ImGui::GetWindowPos();
                 ImVec2 childSize = ImGui::GetWindowSize();
@@ -200,20 +209,18 @@ void SParticleViewerWindow::OnRender()
 
             if (CurrentParticleSystem)
             {
-                ImGui::Text("Particle System: %s", CurrentParticleSystem->GetName());
+                //ImGui::Text("Particle System: %s", CurrentParticleSystem->GetName());
                 ImGui::Spacing();
 
-                // System properties
-                if (ImGui::CollapsingHeader("System Properties", ImGuiTreeNodeFlags_DefaultOpen))
+                // Particle System
+                if (ImGui::CollapsingHeader("파티클 시스템", ImGuiTreeNodeFlags_DefaultOpen))
                 {
-                    ImGui::Text("System Update Mode: EPSUM_RealTime");
-                    ImGui::Text("Update Time FPS: 60.000000");
-                    ImGui::Text("Warmup Time: 0.000000");
+                    
                 }
 
-                if (ImGui::CollapsingHeader("Thumbnail"))
+                if (ImGui::CollapsingHeader("섬네일"))
                 {
-                    ImGui::Text("Thumbnail Warmup: 1.000000");
+                    
                 }
 
                 if (ImGui::CollapsingHeader("LOD"))
@@ -384,4 +391,31 @@ void SParticleViewerWindow::LoadParticleSystem(const FString& Path)
 void SParticleViewerWindow::LoadParticleSystem(UParticleSystem* ParticleSystem)
 {
     CurrentParticleSystem = ParticleSystem;
+}
+
+void SParticleViewerWindow::SaveParticleSystem()
+{
+    if (!CurrentParticleSystem)
+    {
+        UE_LOG("No particle system to save");
+        return;
+    }
+
+    // SavePath가 설정되어 있으면 (새로 생성한 경우) SavePath에 저장
+    if (!SavePath.empty())
+    {
+        if (CurrentParticleSystem->SaveToFile(SavePath))
+        {
+            UE_LOG("Particle system saved to: %s", SavePath.c_str());
+        }
+        else
+        {
+            UE_LOG("Failed to save particle system");
+        }
+    }
+    else
+    {
+        // TODO: 파일 다이얼로그를 열어서 저장 경로 선택
+        UE_LOG("SavePath is not set. Please implement file dialog.");
+    }
 }

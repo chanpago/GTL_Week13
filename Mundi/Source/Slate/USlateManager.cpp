@@ -80,6 +80,29 @@ USlateManager::~USlateManager()
     Shutdown();
 }
 
+// 뷰포트 윈도우 체크 전역 함수 (InputManager 콜백용)
+static SSkeletalMeshViewerWindow* g_SkeletalViewerWindow = nullptr;
+static SParticleViewerWindow* g_ParticleViewerWindow = nullptr;
+
+static bool IsMouseInViewportWindow(const FVector2D& MousePos)
+{
+    // 스켈레탈 메시 뷰어의 뷰포트 영역 체크
+    if (g_SkeletalViewerWindow && g_SkeletalViewerWindow->IsHover(MousePos))
+    {
+        // GetViewportRect()으로 뷰포트 영역 가져오기
+        return g_SkeletalViewerWindow->GetViewportRect().Contains(MousePos);
+    }
+
+    // 파티클 뷰어의 뷰포트 영역 체크
+    if (g_ParticleViewerWindow && g_ParticleViewerWindow->IsHover(MousePos))
+    {
+        // GetViewportRect()으로 뷰포트 영역 가져오기
+        return g_ParticleViewerWindow->GetViewportRect().Contains(MousePos);
+    }
+
+    return false;
+}
+
 void USlateManager::Initialize(ID3D11Device* InDevice, UWorld* InWorld, const FRect& InRect)
 {
     // MainToolbar 생성
@@ -89,6 +112,9 @@ void USlateManager::Initialize(ID3D11Device* InDevice, UWorld* InWorld, const FR
     Device = InDevice;
     World = InWorld;
     Rect = InRect;
+
+    // InputManager에 뷰포트 체크 콜백 등록
+    UInputManager::GetInstance().SetViewportCheckCallback(IsMouseInViewportWindow);
 
     // === 전체 화면: 좌(4뷰포트) + 우(Control + Details) ===
     TopPanel = new SSplitterH();  // 수평 분할 (좌우)
@@ -187,6 +213,7 @@ void USlateManager::OpenSkeletalMeshViewer()
         return;
 
     SkeletalViewerWindow = new SSkeletalMeshViewerWindow();
+    g_SkeletalViewerWindow = SkeletalViewerWindow; // 전역 포인터 업데이트
 
     // @todo 테스트용으로 삽입함. 나중에 무조건 지울 것 
     // AnimGraphEditorWindow = new SAnimGraphEditorWindow();
@@ -239,6 +266,7 @@ void USlateManager::CloseSkeletalMeshViewer()
     if (!SkeletalViewerWindow) return;
     delete SkeletalViewerWindow;
     SkeletalViewerWindow = nullptr;
+    g_SkeletalViewerWindow = nullptr; // 전역 포인터 업데이트
 }
 
 // ============================================================
@@ -250,6 +278,7 @@ void USlateManager::OpenParticleViewer()
         return;
 
     ParticleViewerWindow = new SParticleViewerWindow();
+    g_ParticleViewerWindow = ParticleViewerWindow; // 전역 포인터 업데이트
 
     // 창 크기/위치 설정
     const float toolbarHeight = 50.0f;
@@ -275,11 +304,26 @@ void USlateManager::OpenParticleViewerWithSystem(UParticleSystem* ParticleSystem
     }
 }
 
+void USlateManager::OpenParticleViewerWithSystem(UParticleSystem* ParticleSystem, const FString& SavePath)
+{
+    if (!ParticleViewerWindow)
+    {
+        OpenParticleViewer();
+    }
+
+    if (ParticleViewerWindow && ParticleSystem)
+    {
+        ParticleViewerWindow->LoadParticleSystem(ParticleSystem);
+        ParticleViewerWindow->SetSavePath(SavePath);
+    }
+}
+
 void USlateManager::CloseParticleViewer()
 {
     if (!ParticleViewerWindow) return;
     delete ParticleViewerWindow;
     ParticleViewerWindow = nullptr;
+    g_ParticleViewerWindow = nullptr; // 전역 포인터 업데이트
 }
 
 void USlateManager::CloseAnimationGraphEditor()

@@ -451,6 +451,11 @@ void SSkeletalMeshViewerWindow::OnRender()
             // 상단: 뷰포트 자식 창: 계산된 TopPanelHeight 사용
             ImGui::BeginChild("SkeletalMeshViewport", ImVec2(0, TopPanelHeight), true, ImGuiWindowFlags_NoScrollbar);
             {
+                if (ImGui::IsWindowHovered())
+                {
+                    ImGui::GetIO().WantCaptureMouse = false;
+                }
+                
                 ImVec2 childPos = ImGui::GetWindowPos();
                 ImVec2 childSize = ImGui::GetWindowSize();
                 ImVec2 rectMin = childPos;

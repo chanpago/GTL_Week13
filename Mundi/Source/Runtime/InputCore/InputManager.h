@@ -78,6 +78,10 @@ public:
     void LockCursorToCenter();
     bool IsCursorLocked() const { return bIsCursorLocked; }
 
+    // 뷰포트 윈도우 체크 콜백 등록 (순환 참조 방지)
+    using ViewportCheckCallback = bool(*)(const FVector2D&);
+    void SetViewportCheckCallback(ViewportCheckCallback Callback) { ViewportChecker = Callback; }
+
 private:
     // 내부 헬퍼 함수들
     void UpdateMousePosition(int X, int Y);
@@ -111,4 +115,7 @@ private:
     // 커서 잠금 상태
     bool bIsCursorLocked = false;
     FVector2D LockedCursorPosition; // 우클릭한 위치 (기준점)
+
+    // 뷰포트 윈도우 체크 콜백
+    ViewportCheckCallback ViewportChecker = nullptr;
 };

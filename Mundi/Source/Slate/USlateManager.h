@@ -89,6 +89,7 @@ public:
     // Particle Viewer
     void OpenParticleViewer();
     void OpenParticleViewerWithSystem(UParticleSystem* ParticleSystem);
+    void OpenParticleViewerWithSystem(UParticleSystem* ParticleSystem, const FString& SavePath);
     void CloseParticleViewer();
     bool IsParticleViewerOpen() const { return ParticleViewerWindow != nullptr; }
 

@@ -389,7 +389,7 @@ void UParticleSystemComponent::BuildEmitterRenderData()
 
     if (EmitterRenderData.IsEmpty() && bEnableDebugEmitter)
     {
-        BuildDebugEmitterData();
+        //BuildDebugEmitterData();
     }
 }
 

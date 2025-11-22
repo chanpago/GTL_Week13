@@ -70,6 +70,7 @@ private:
 public:
     bool IsOpen() const { return bIsOpen; }
     void Close() { bIsOpen = false; }
+    const FRect& GetViewportRect() const { return CenterRect; }
 
 private:
     void UpdateBoneTransformFromSkeleton(ViewerState* State);
