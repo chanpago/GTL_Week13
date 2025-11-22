@@ -947,10 +947,10 @@ void FSceneRenderer::RenderParticlePass()
 	{
 		RHIDevice->GetDeviceContext()->PSSetShaderResources(2, 1, &SceneDepthSRV);
 
-		ID3D11SamplerState* DepthSmaller = RHIDevice->GetSamplerState(RHI_Sampler_Index::LinearClamp);
-		if (DepthSmaller)
+		ID3D11SamplerState* DepthSampler = RHIDevice->GetSamplerState(RHI_Sampler_Index::LinearClamp);
+		if (DepthSampler)
 		{
-			RHIDevice->GetDeviceContext()->PSSetSamplers(2, 1, &DepthSmaller);
+			RHIDevice->GetDeviceContext()->PSSetSamplers(2, 1, &DepthSampler);
 		}
 	}
 	

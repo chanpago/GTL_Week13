@@ -2,6 +2,7 @@
 #include "Archive.h"
 #include "Vector.h"
 #include "Name.h"
+#include "Color.h"
 
 #define  INDEX_NONE -1
 // 직렬화 포맷 (FVertexDynamic와 역할이 달라서 분리됨)
@@ -429,4 +430,12 @@ struct FSkeletalMeshData
         }
         return Ar;
     }
+};
+
+struct FParticleSpriteVertex
+{
+    FVector Position;
+    FVector2D Corner;
+    float Size;
+    FLinearColor Color;
 };
