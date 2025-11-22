@@ -18,7 +18,7 @@ struct VSInput
 {
     float3 Position : POSITION;
     float2 Corner : TEXCOORD0;
-    float Size : TEXCOORD1;
+    float2 Size : TEXCOORD1;
     float4 Color : COLOR0;
 };
 
@@ -37,12 +37,12 @@ PSInput mainVS(VSInput In)
     float3 Right = InverseViewMatrix[0].xyz;
     float3 Up = InverseViewMatrix[1].xyz;
 
-    float halfSize = In.Size * 0.5f;
+    float2 halfSize = In.Size * 0.5f;
 
     float3 worldPos =
         In.Position
-        + Right * In.Corner.x * halfSize
-        + Up * In.Corner.y * halfSize;
+        + Right * In.Corner.x * halfSize.x
+        + Up * In.Corner.y * halfSize.y;
 
     float4 viewPos = mul(float4(worldPos, 1.0f), ViewMatrix);
     float4 projPos = mul(viewPos, ProjectionMatrix);

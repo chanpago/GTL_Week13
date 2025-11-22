@@ -436,6 +436,6 @@ struct FParticleSpriteVertex
 {
     FVector Position;
     FVector2D Corner;
-    float Size;
+    FVector2D Size;
     FLinearColor Color;
 };

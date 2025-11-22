@@ -2,6 +2,7 @@
 #include "PrimitiveComponent.h"
 #include "Source/Runtime/Engine/Particle/ParticleEmitter.h"
 #include "Source/Runtime/Engine/Particle/ParticleSystem.h"
+#include "Source/Runtime/Engine/Particle/ParticleHelper.h"
 #include "UParticleSystemComponent.generated.h"
 
 struct FDynamicEmitterDataBase;
@@ -38,9 +39,13 @@ public:
 	// sprite, mesh 나눠 BuildBatch
 	// 추후 FDynamicEmitterDataBase를 바꿀 것!
 	void BuildParticleBatch(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View);
+	void BuildEmitterRenderData();
+
 	UMaterialInterface* GetMaterial(uint32 InSectionIndex) const override;
-	void SetMaterial(uint32 InSectionIndex, UMaterialInterface* InNewMaterial) override;
-bool EnsureParticleBuffers(uint32 ParticleCapacity);
+	void SetMaterial(uint32 InSectionIndex, UMaterialInterface* InNewMaterial) override;	
+	
+	bool EnsureParticleBuffers(uint32 ParticleCapacity);
+
 private:	
 	/** 파티클 시스템 에셋 */
 	UParticleSystem* Template = nullptr;
@@ -51,7 +56,8 @@ private:
 	//  FOR TEST!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	/** 렌더 스레드로 보낼 데이터 패킷들 */
 	TArray<FDynamicEmitterDataBase*> EmitterRenderData;	
-	int MaxDebugParticles;
+	int MaxDebugParticles = 0;
+
 
 	ID3D11Buffer* ParticleVertexBuffer = nullptr;
 	ID3D11Buffer* ParticleIndexBuffer = nullptr;

@@ -4,8 +4,26 @@
 
 class UParticleLODLevel;
 class UParticleSystemComponent;
-class UParticleEmitter;
 struct FBaseParticle;
+struct FDynamicEmitterReplayDataBase;
+
+class UParticleEmitter : public UObject
+{
+public:
+    void CacheEmitterModuleInfo();
+
+public:
+    TArray<UParticleLODLevel*> LODLevels;
+    EEmitterRenderType RenderType = EEmitterRenderType::Sprite;
+
+    // Mesh 타입인 경우에만 사용
+    UStaticMesh* Mesh = nullptr;
+    // 나중에 필요하면 Material도 여기 두거나 RequiredModule에서 가져오기~
+
+    int32 ParticleSizeBytes = 0;
+    int32 MaxParticles = 0;
+    float MaxLifetime = 0.f;
+};
 
 // 런타임 Emitter Instance
 struct FParticleEmitterInstance
@@ -77,7 +95,7 @@ struct FParticleEmitterInstance
      * @param InitialLocation 초기 Location 
      * @param InitialVelocity 초기 Velocity
      */
-    void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation, const FVector& InitialVelocity);
+    void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation, const FVector& InitialVelocity);    
 
     /** 파티클 제거 */
     void KillParticle(int32 Index);
@@ -88,19 +106,9 @@ struct FParticleEmitterInstance
     /** LOD에 따른 모듈 캐싱 업데이트 */
     void UpdateModuleCache();
 
+    void BuildReplayData(FDynamicEmitterReplayDataBase& OutData);
+
     bool IsComplete() const;
-};
 
-class UParticleEmitter : public UObject
-{
-public:
-    void CacheEmitterModuleInfo();
-
-public:
-    TArray<UParticleLODLevel*> LODLevels;
-
-    int32 ParticleSizeBytes = 0;
-    int32 MaxParticles = 0;
-    float MaxLifetime = 0.f;
-
+    EEmitterRenderType GetDynamicType() const { return Template->RenderType; };
 };

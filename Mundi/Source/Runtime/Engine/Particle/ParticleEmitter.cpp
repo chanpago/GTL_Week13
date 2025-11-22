@@ -7,6 +7,7 @@
 #include "Modules/ParticleModuleRequired.h"
 #include "Modules/ParticleModuleSpawn.h"
 #include "Modules/ParticleModuleTypeDataBase.h"
+#include "DynamicEmitterDataBase.h"
 
 void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSystemComponent* InComponent)
 {
@@ -291,6 +292,81 @@ void FParticleEmitterInstance::UpdateModuleCache()
 
     CachedRequiredModule = CurrentLODLevel->RequiredModule;
     CachedSpawnModule = CurrentLODLevel->SpawnModule;
+}
+
+void FParticleEmitterInstance::BuildReplayData(FDynamicEmitterReplayDataBase& OutData)
+{ 
+    // 1) 기본 공통 정보
+    OutData.EmitterType = GetDynamicType();
+    OutData.ActiveParticleCount = ActiveParticles;
+    OutData.ParticleStride = ParticleStride;
+    OutData.Scale = FVector::One();
+
+    // 2) DataContainer 메모리 재할당
+    OutData.DataContainer.Free();
+
+    if (ActiveParticles <= 0 || !ParticleData)
+    {
+        return;
+    }
+
+    const int32 ParticleBytes = ActiveParticles * ParticleStride;
+    const int32 IndexCount = ActiveParticles;  // 논리적으로 살아있는 파티클 수만
+
+    OutData.DataContainer.Allocate(ParticleBytes, IndexCount);
+
+    // Data Container 재할당
+    std::memcpy(
+        OutData.DataContainer.ParticleData,
+        ParticleData,
+        ParticleBytes
+    );
+
+    if (ParticleIndices && IndexCount > 0)
+    {
+        std::memcpy(
+            OutData.DataContainer.ParticleIndices,
+            ParticleIndices,
+            sizeof(uint16) * IndexCount
+        );
+    }
+
+    // 타입별 추가 필드 세팅
+     // 3) 타입별 추가 필드 세팅
+    switch (OutData.EmitterType)
+    {
+        case EEmitterRenderType::Sprite:
+        {
+            auto& SpriteOut = static_cast<FDynamicSpriteEmitterReplayData&>(OutData);
+
+            SpriteOut.MaterialInterface = CachedRequiredModule
+                ? CachedRequiredModule->Material
+                : nullptr;
+
+            SpriteOut.RequiredModule = CachedRequiredModule;
+
+            break;
+        }
+        case EEmitterRenderType::Mesh:
+        {
+            auto& MeshOut = static_cast<FDynamicMeshEmitterReplayData&>(OutData);
+            
+
+            const int32 ParticleBytes = ActiveParticles * ParticleStride;
+            const int32 InstanceCount = ActiveParticles;
+
+            MeshOut.DataContainer.Free();
+            MeshOut.DataContainer.Allocate(ParticleBytes, InstanceCount);
+
+            std::memcpy(MeshOut.DataContainer.ParticleData, ParticleData, ParticleBytes);
+
+            // Mesh 세팅
+            MeshOut.Mesh = Template ? Template->Mesh : nullptr;
+            // MeshOut.InstanceStride = /* instance 데이터 stride */;
+            MeshOut.InstanceCount = InstanceCount;
+        }
+    }
+
 }
 
 bool FParticleEmitterInstance::IsComplete() const
