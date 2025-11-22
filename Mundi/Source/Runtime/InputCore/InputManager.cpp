@@ -79,7 +79,8 @@ void UInputManager::Update()
             ScreenToClient(WindowHandle, &CursorPos);
 
             // 커서 잠금 모드: 무한 드래그 처리
-            if (bIsCursorLocked)
+            // ImGui가 마우스를 사용 중이면 커서 잠금 모드를 비활성화
+            if (bIsCursorLocked && !ImGui::GetIO().WantCaptureMouse)
             {
                 MousePosition.X = static_cast<float>(CursorPos.x);
                 MousePosition.Y = static_cast<float>(CursorPos.y);
@@ -127,7 +128,8 @@ void UInputManager::ProcessMessage(HWND hWnd, UINT message, WPARAM wParam, LPARA
         
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         bool bAnyItemHovered = ImGui::IsAnyItemHovered();
-        IsUIHover = bAnyItemHovered;
+        // WantCaptureMouse는 마우스가 UI 위에 있거나 UI가 마우스를 사용 중일 때 true
+        IsUIHover = io.WantCaptureMouse || io.WantCaptureMouseUnlessPopupClose || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow);
         IsKeyBoardCapture = io.WantTextInput;
 
         // skeletal mesh 뷰어도 ImGui로 만들어져서 뷰포트에 인풋이 안먹히는 현상이 일어남. 일단은 이렇게 박아놓음.

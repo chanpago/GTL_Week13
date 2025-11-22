@@ -5,6 +5,8 @@
 #include "ImGui/imgui_internal.h"
 #include "USlateManager.h"
 #include "ThumbnailManager.h"
+#include "Source/Runtime/Engine/Particle/ParticleSystem.h"
+#include "Source/Runtime/Core/Object/ObjectFactory.h"
 #include <algorithm>
 
 IMPLEMENT_CLASS(UContentBrowserWindow)
@@ -273,6 +275,22 @@ void UContentBrowserWindow::RenderContentGrid()
 
     ImGui::BeginChild("ContentArea", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
+    // 우클릭 컨텍스트 메뉴 (빈 공간)
+    // BeginPopupContextWindow 대신 수동으로 처리하여 마우스 캡처 문제 방지
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+    {
+        ImGui::OpenPopup("ContentBrowserContextMenu");
+    }
+
+    if (ImGui::BeginPopup("ContentBrowserContextMenu"))
+    {
+        if (ImGui::MenuItem("Create Particle System"))
+        {
+            CreateNewParticleSystem();
+        }
+        ImGui::EndPopup();
+    }
+
     for (int i = 0; i < DisplayedFiles.size(); ++i)
     {
         FFileEntry& entry = DisplayedFiles[i];
@@ -438,4 +456,36 @@ FString UContentBrowserWindow::FormatFileSize(uintmax_t Size) const
     char buffer[64];
     sprintf_s(buffer, "%.2f %s", size, units[unitIndex]);
     return FString(buffer);
+}
+
+void UContentBrowserWindow::CreateNewParticleSystem()
+{
+    // 빈 ParticleSystem 생성
+    UParticleSystem* NewSystem = NewObject<UParticleSystem>();
+    NewSystem->ObjectName = FName("NewParticleSystem");
+
+    // 파일 경로 생성
+    std::filesystem::path ParticlePath = CurrentPath / "NewParticleSystem.particle";
+
+    // 동일한 이름이 있으면 번호 붙이기
+    int Counter = 1;
+    while (std::filesystem::exists(ParticlePath))
+    {
+        std::string FileName = "NewParticleSystem_" + std::to_string(Counter) + ".particle";
+        ParticlePath = CurrentPath / FileName;
+        Counter++;
+    }
+
+    // 파일 저장
+    if (NewSystem->SaveToFile(WideToUTF8(ParticlePath.wstring())))
+    {
+        UE_LOG("Created new particle system: %s", WideToUTF8(ParticlePath.wstring()).c_str());
+        RefreshCurrentDirectory();
+    }
+    else
+    {
+        UE_LOG("Failed to create particle system");
+    }
+
+    delete NewSystem;
 }

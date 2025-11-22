@@ -58,6 +58,9 @@ private:
 	const char* GetIconForFile(const FFileEntry& Entry) const;
 	FString FormatFileSize(uintmax_t Size) const;
 
+	// 에셋 생성
+	void CreateNewParticleSystem();
+
 private:
 	std::filesystem::path RootPath;
 	std::filesystem::path CurrentPath;
