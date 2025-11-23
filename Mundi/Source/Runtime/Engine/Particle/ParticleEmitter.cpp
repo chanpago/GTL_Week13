@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "ParticleEmitter.h"
 #include "ParticleHelper.h"
 #include "ParticleLODLevel.h"
@@ -344,6 +344,11 @@ void FParticleEmitterInstance::UpdateModuleCache()
 
 void FParticleEmitterInstance::BuildReplayData(FDynamicEmitterReplayDataBase& OutData)
 { 
+    if (ActiveParticles <= 0 || !ParticleData)
+    {
+        return;
+    }
+
     // 1) 기본 공통 정보
     OutData.EmitterType = GetDynamicType();
     OutData.ActiveParticleCount = ActiveParticles;
@@ -352,11 +357,6 @@ void FParticleEmitterInstance::BuildReplayData(FDynamicEmitterReplayDataBase& Ou
 
     // 2) DataContainer 메모리 재할당
     OutData.DataContainer.Free();
-
-    if (ActiveParticles <= 0 || !ParticleData)
-    {
-        return;
-    }
 
     const int32 ParticleBytes = ActiveParticles * ParticleStride;
     const int32 IndexCount = ActiveParticles;  // 논리적으로 살아있는 파티클 수만
@@ -399,23 +399,18 @@ void FParticleEmitterInstance::BuildReplayData(FDynamicEmitterReplayDataBase& Ou
 
             break;
         }
-        case EEmitterRenderType::Mesh:
+        case EEmitterRenderType::Mesh: 
         {
             auto& MeshOut = static_cast<FDynamicMeshEmitterReplayData&>(OutData);
-            
-
-            const int32 ParticleBytes = ActiveParticles * ParticleStride;
-            const int32 InstanceCount = ActiveParticles;
-
-            MeshOut.DataContainer.Free();
-            MeshOut.DataContainer.Allocate(ParticleBytes, InstanceCount);
-
-            std::memcpy(MeshOut.DataContainer.ParticleData, ParticleData, ParticleBytes);
-
-            // Mesh 세팅
             MeshOut.Mesh = Template ? Template->Mesh : nullptr;
+            MeshOut.OverrideMaterial = nullptr;
+
+            if (Template && !Template->bUseMeshMaterials && CachedRequiredModule)
+            {
+                MeshOut.OverrideMaterial = CachedRequiredModule->Material;
+            }
             // MeshOut.InstanceStride = /* instance 데이터 stride */;
-            MeshOut.InstanceCount = InstanceCount;
+            // MeshOut.InstanceCount = InstanceCount;
         }
     }
 

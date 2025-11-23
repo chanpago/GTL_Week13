@@ -38,8 +38,8 @@ public:
 	void CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View) override;
 
 	// sprite, mesh 나눠 BuildBatch
-	// 추후 FDynamicEmitterDataBase를 바꿀 것!
-	void BuildParticleBatch(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View);
+	void BuildSpriteParticleBatch(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View);
+	void BuildMeshParticleBatch(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View);
 	void BuildEmitterRenderData();
 	void BuildDebugEmitterData();
 

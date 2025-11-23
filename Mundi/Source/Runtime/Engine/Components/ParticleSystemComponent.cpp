@@ -1,8 +1,9 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "ParticleSystemComponent.h"
 #include "MeshBatchElement.h"
 #include "SceneView.h"
 #include "Source/Runtime/Engine/Particle/DynamicEmitterDataBase.h"
+#include "Source/Runtime/Engine/Particle/ParticleLODLevel.h"
 
 UParticleSystemComponent::UParticleSystemComponent()
 {
@@ -183,13 +184,14 @@ void UParticleSystemComponent::CollectMeshBatches(TArray<FMeshBatchElement>& Out
     if (EmitterRenderData.IsEmpty())
         return;
 
-    BuildParticleBatch(OutMeshBatchElements, View);
+    BuildSpriteParticleBatch(OutMeshBatchElements, View);
+    BuildMeshParticleBatch(OutMeshBatchElements, View);
 
     // 이번 프레임 끝에 DynamicData 파괴
     ClearEmitterRenderData();
 }
 
-void UParticleSystemComponent::BuildParticleBatch(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
+void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
 {
     if (EmitterRenderData.IsEmpty())
         return;
@@ -441,6 +443,159 @@ void UParticleSystemComponent::BuildParticleBatch(TArray<FMeshBatchElement>& Out
     }
 }
 
+void UParticleSystemComponent::BuildMeshParticleBatch(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
+{
+    if (EmitterRenderData.IsEmpty())
+        return;
+
+    const FVector ViewOrigin = View ? View->ViewLocation : FVector::Zero();
+    FVector ViewDir = FVector(1, 0, 0);
+    if (View)
+    {
+        ViewDir = View->ViewRotation.RotateVector(FVector(1, 0, 0)).GetSafeNormal();
+    }
+
+    for (FDynamicEmitterDataBase* Base : EmitterRenderData)
+    {
+        if (!Base || Base->EmitterType != EEmitterRenderType::Mesh)
+            continue;
+
+        auto* MeshData = static_cast<FDynamicMeshEmitterData*>(Base);
+        const auto* Src = static_cast<const FDynamicMeshEmitterReplayData*>(MeshData->GetSource());
+        if (!Src || !Src->Mesh || Src->ActiveParticleCount <= 0)
+            continue;
+
+        UStaticMesh* StaticMesh = Src->Mesh;
+
+        UParticleEmitter* SourceEmitter = nullptr;
+        UParticleModuleRequired* RequiredModule = nullptr;
+        if (Template && MeshData->EmitterIndex >= 0 && MeshData->EmitterIndex < Template->Emitters.Num())
+        {
+            SourceEmitter = Template->Emitters[MeshData->EmitterIndex];
+            if (SourceEmitter && SourceEmitter->LODLevels.Num() > 0)
+            {
+                UParticleLODLevel* LOD0 = SourceEmitter->LODLevels[0];
+                if (LOD0)
+                {
+                    RequiredModule = LOD0->RequiredModule;
+                }
+            }
+        }
+
+        UMaterialInterface* Material = nullptr;
+        if (Src->OverrideMaterial)
+        {
+            Material = Src->OverrideMaterial;
+        }
+        else if (RequiredModule && RequiredModule->Material)
+        {
+            Material = RequiredModule->Material;
+        }
+
+        if (!Material && SourceEmitter && SourceEmitter->bUseMeshMaterials && StaticMesh)
+        {
+            const TArray<FGroupInfo>& Groups = StaticMesh->GetMeshGroupInfo();
+            if (!Groups.IsEmpty())
+            {
+                const FString& MatName = Groups[0].InitialMaterialName;
+                if (!MatName.empty())
+                {
+                    UMaterial* MeshMaterial = UResourceManager::GetInstance().Load<UMaterial>(MatName);
+                    Material = MeshMaterial;
+                }
+            }
+        }
+
+
+        if (!Material)
+        {
+            Material = ParticleMaterial;
+        }
+
+        if (!Material)
+        {
+            UE_LOG("[BuildMeshParticleBatch] No material for mesh emitter %d", MeshData->EmitterIndex);
+            continue;
+        }
+        UShader* MeshShader = Material->GetShader();
+        if (!MeshShader)
+        {
+            UE_LOG("[BuildMeshParticleBatch] Material %s has no shader",
+                Material->GetName().c_str());
+            continue;
+        }
+
+        TArray<FShaderMacro> ShaderMacros = View ? View->ViewShaderMacros : TArray<FShaderMacro>();
+        ShaderMacros.Append(Material->GetShaderMacros());
+
+        FShaderVariant* ShaderVariant = MeshShader->GetOrCompileShaderVariant(ShaderMacros);
+        if (!ShaderVariant)
+        {
+            UE_LOG("[BuildMeshParticleBatch] Failed to get shader variant for %s",
+                Material->GetName().c_str());
+            continue;
+        }
+
+        ID3D11Buffer* MeshVB = StaticMesh->GetVertexBuffer();
+        ID3D11Buffer* MeshIB = StaticMesh->GetIndexBuffer();
+        const uint32  MeshIndexCount = StaticMesh->GetIndexCount();
+        const uint32  MeshVertexStride = StaticMesh->GetVertexStride();
+        const D3D11_PRIMITIVE_TOPOLOGY Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+        if (!MeshVB || !MeshIB || MeshIndexCount == 0)
+        {
+            UE_LOG("[BuildMeshParticleBatch] Mesh %s has invalid buffers",
+                StaticMesh->GetName().c_str());
+            continue;
+        }
+
+        const int32 NumParticles = Src->ActiveParticleCount;
+
+        TArray<int32> SortIndices;
+        MeshData->SortParticles(ViewOrigin, ViewDir, SortIndices);
+        const bool bUseSortIndices = (SortIndices.Num() == NumParticles);
+
+        for (int32 LocalIdx = 0; LocalIdx < NumParticles; ++LocalIdx)
+        {
+            const int32 ParticleIdx =
+                bUseSortIndices ? SortIndices[LocalIdx] : LocalIdx;
+
+            const FBaseParticle* Particle = MeshData->GetParticle(ParticleIdx);
+            if (!Particle)
+                continue;
+
+            FVector ParticleWorldPos = Particle->Location;
+            FMatrix ComponentWorld = GetWorldMatrix();
+
+            if (MeshData->bUseLocalSpace)
+            {
+                ParticleWorldPos = ComponentWorld.TransformPosition(ParticleWorldPos);
+            }
+
+            FMatrix ParticleWorld = ComponentWorld;
+            const int32 BatchIndex = OutMeshBatchElements.Add(FMeshBatchElement());
+            FMeshBatchElement& Batch = OutMeshBatchElements[BatchIndex];
+
+            Batch.VertexShader = ShaderVariant->VertexShader;
+            Batch.PixelShader = ShaderVariant->PixelShader;
+            Batch.InputLayout = ShaderVariant->InputLayout;
+
+            Batch.Material = Material;
+            Batch.VertexBuffer = MeshVB;
+            Batch.IndexBuffer = MeshIB;
+            Batch.VertexStride = MeshVertexStride;
+            Batch.IndexCount = MeshIndexCount;
+            Batch.StartIndex = 0;
+            Batch.BaseVertexIndex = 0;
+            Batch.PrimitiveTopology = Topology;
+
+            Batch.WorldMatrix = ParticleWorld;
+            Batch.ObjectID = InternalIndex;
+
+        }
+    }
+}
+
 void UParticleSystemComponent::BuildEmitterRenderData()
 {
     // 1) 이전 프레임 데이터 정리
@@ -483,12 +638,20 @@ void UParticleSystemComponent::BuildEmitterRenderData()
                 case EEmitterRenderType::Mesh:
                 {
                     auto* MeshData = new FDynamicMeshEmitterData();
+
                     MeshData->EmitterIndex = EmitterIdx;
                     MeshData->SortMode = EParticleSortMode::ByViewDepth;
                     MeshData->SortPriority = 0;
 
                     Inst->BuildReplayData(MeshData->Source);
                     NewData = MeshData;
+
+                    if (!MeshData->Source.Mesh)
+                    {
+                        delete MeshData;
+                        NewData = nullptr;
+                    }
+
                     break;
                 }
             }
@@ -647,3 +810,4 @@ bool UParticleSystemComponent::EnsureParticleBuffers(uint32 ParticleCapacity)
 
     return true;
 }
+

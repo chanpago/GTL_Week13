@@ -34,8 +34,10 @@ struct FDynamicSpriteEmitterReplayData : public FDynamicEmitterReplayDataBase
 struct FDynamicMeshEmitterReplayData : public FDynamicEmitterReplayDataBase
 {
     UStaticMesh* Mesh = nullptr;
-    int32        InstanceStride = 0;
-    int32        InstanceCount = 0;
+    UMaterialInterface* OverrideMaterial = nullptr; // 있으면 이걸로 덮어씀
+    // TODO : GPU Instancing
+    // int32        InstanceStride = 0;
+    // int32        InstanceCount = 0;
 };
 
 struct FDynamicEmitterDataBase {
