@@ -43,6 +43,12 @@ public:
     // Save current particle system
     void SaveParticleSystem();
 
+    // Create new emitter in current particle system
+    void CreateNewEmitter();
+
+    // Delete selected emitter
+    void DeleteSelectedEmitter();
+
 private:
     ID3D11Device* Device = nullptr;
 
@@ -66,6 +72,9 @@ private:
 
     // Selected emitter index for UI
     int32 SelectedEmitterIndex = 0;
+
+    // Selected emitter for highlighting and deletion
+    class UParticleEmitter* SelectedEmitter = nullptr;
 
     // Selected module for details panel
     class UParticleModule* SelectedModule = nullptr;

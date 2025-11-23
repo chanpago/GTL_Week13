@@ -10,6 +10,9 @@ struct FDynamicEmitterReplayDataBase;
 class UParticleEmitter : public UObject
 {
     DECLARE_CLASS(UParticleEmitter, UObject)
+
+public:
+    UParticleEmitter();
 public:
     UParticleEmitter();
     ~UParticleEmitter() override;

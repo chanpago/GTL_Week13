@@ -6,10 +6,62 @@
 #include "Modules/ParticleModule.h"
 #include "Modules/ParticleModuleRequired.h"
 #include "Modules/ParticleModuleSpawn.h"
+#include "Modules/ParticleModuleLifetime.h"
+#include "Modules/ParticleModuleSize.h"
+#include "Modules/ParticleModuleVelocity.h"
 #include "Modules/ParticleModuleTypeDataBase.h"
 #include "DynamicEmitterDataBase.h"
 
 IMPLEMENT_CLASS(UParticleEmitter)
+
+UParticleEmitter::UParticleEmitter()
+{
+    // 기본 이미터 이름 설정
+    ObjectName = FName("Particle Emitter");
+    RenderType = EEmitterRenderType::Sprite;
+
+    // LOD Level 생성
+    UParticleLODLevel* LOD = NewObject<UParticleLODLevel>();
+    LOD->LODIndex = 0;
+    LOD->bEnabled = true;
+
+    // 1. Required 모듈 (필수)
+    UParticleModuleRequired* RequiredModule = NewObject<UParticleModuleRequired>();
+    LOD->RequiredModule = RequiredModule;
+
+    // 2. Spawn 모듈 (필수)
+    UParticleModuleSpawn* SpawnModule = NewObject<UParticleModuleSpawn>();
+    SpawnModule->SpawnRateType = ESpawnRateType::Constant;
+    SpawnModule->SpawnRate = FRawDistributionFloat(2.0f); // 초당 2개 파티클 생성
+    LOD->SpawnModule = SpawnModule;
+
+    // 3. Lifetime 모듈
+    UParticleModuleLifetime* LifetimeModule = NewObject<UParticleModuleLifetime>();
+    LifetimeModule->Lifetime.MinValue = 1.0f;
+    LifetimeModule->Lifetime.MaxValue = 1.0f;
+    LifetimeModule->Lifetime.bUseRange = false;
+    LOD->SpawnModules.Add(LifetimeModule);
+
+    // 4. Initial Size 모듈
+    UParticleModuleSize* SizeModule = NewObject<UParticleModuleSize>();
+    SizeModule->StartSize.MinValue = FVector(10.0f, 10.0f, 10.0f);
+    SizeModule->StartSize.MaxValue = FVector(10.0f, 10.0f, 10.0f);
+    SizeModule->StartSize.bUseRange = false;
+    LOD->SpawnModules.Add(SizeModule);
+
+    // 5. Initial Velocity 모듈
+    UParticleModuleVelocity* VelocityModule = NewObject<UParticleModuleVelocity>();
+    VelocityModule->StartVelocity.MinValue = FVector(0.0f, 0.0f, 10.0f);
+    VelocityModule->StartVelocity.MaxValue = FVector(0.0f, 0.0f, 20.0f);
+    VelocityModule->StartVelocity.bUseRange = true;
+    LOD->SpawnModules.Add(VelocityModule);
+
+    // LOD Level을 Emitter에 추가
+    LODLevels.Add(LOD);
+
+    // 모듈 캐시 재구축
+    LOD->RebuildModuleCaches();
+}
 
 void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSystemComponent* InComponent)
 {

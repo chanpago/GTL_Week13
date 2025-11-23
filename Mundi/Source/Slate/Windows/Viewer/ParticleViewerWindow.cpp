@@ -193,6 +193,12 @@ void SParticleViewerWindow::OnRender()
     // 좌측: 뷰포트 + Properties
     ImGui::BeginChild("LeftMain", ImVec2(leftPanelWidth, mainContentHeight), false);
     {
+        // 좌측 패널 클릭 시 이미터 선택 해제
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        {
+            SelectedEmitter = nullptr;
+        }
+
         const float viewportHeight = mainContentHeight * 0.6f;
         const float propertiesHeight = mainContentHeight - viewportHeight;
 
@@ -554,10 +560,37 @@ void SParticleViewerWindow::OnRender()
     ImGui::SameLine();
 
     // 우측: Emitter/모듈 패널
-    ImGui::BeginChild("EmitterPanel", ImVec2(rightPanelWidth, mainContentHeight), true);
+    ImGui::BeginChild("EmitterPanel", ImVec2(rightPanelWidth, mainContentHeight), true, ImGuiWindowFlags_HorizontalScrollbar);
     {
         ImGui::Text("이미터");
         ImGui::Separator();
+
+        // 빈 영역 클릭 감지
+        bool bShowContextMenu = false;
+        if (ImGui::IsWindowHovered())
+        {
+            // 우클릭 - 컨텍스트 메뉴
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+            {
+                bShowContextMenu = true;
+            }
+            // 좌클릭 - 선택 해제
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+            {
+                // 이 플래그는 이미터 블럭을 클릭했는지 추적
+                // 아래에서 이미터 블럭 클릭 시 false로 설정됨
+                SelectedEmitter = nullptr;
+            }
+        }
+
+        // Delete 키 입력 감지 (EmitterPanel에 포커스가 있을 때)
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows) && SelectedEmitter)
+        {
+            if (ImGui::IsKeyPressed(ImGuiKey_Delete))
+            {
+                DeleteSelectedEmitter();
+            }
+        }
 
         if (CurrentParticleSystem && CurrentParticleSystem->Emitters.Num() > 0)
         {
@@ -573,14 +606,32 @@ void SParticleViewerWindow::OnRender()
                 const float emitterBlockWidth = 200.0f;
                 ImGui::BeginChild("EmitterBlock", ImVec2(emitterBlockWidth, 0), true);
                 {
+                    // 선택된 이미터인지 확인
+                    bool bIsSelected = (SelectedEmitter == Emitter);
+
                     // 이미터 헤더 (Selectable로 호버링 가능하게)
                     const float headerHeight = 50.0f;
-                    ImGui::PushID("emitter_header");
-                    if (ImGui::Selectable("##emitterheader", false, 0, ImVec2(0, headerHeight)))
+
+                    // 선택된 이미터면 주황색 배경
+                    if (bIsSelected)
                     {
-                        // 이미터 헤더 클릭 시 처리
+                        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(1.0f, 0.5f, 0.0f, 0.8f)); // 주황색
+                        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(1.0f, 0.6f, 0.1f, 0.9f));
+                        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(1.0f, 0.4f, 0.0f, 1.0f));
+                    }
+
+                    ImGui::PushID("emitter_header");
+                    if (ImGui::Selectable("##emitterheader", bIsSelected, 0, ImVec2(0, headerHeight)))
+                    {
+                        // 이미터 헤더 클릭 시 선택
+                        SelectedEmitter = Emitter;
                     }
                     ImGui::PopID();
+
+                    if (bIsSelected)
+                    {
+                        ImGui::PopStyleColor(3);
+                    }
 
                     // 헤더 위에 내용 그리기
                     ImVec2 headerMin = ImGui::GetItemRectMin();
@@ -654,8 +705,8 @@ void SParticleViewerWindow::OnRender()
 
                 ImGui::PopID();
 
-                // 다음 이미터를 옆에 배치 (2열 레이아웃)
-                if ((i + 1) % 2 != 0 && i + 1 < CurrentParticleSystem->Emitters.Num())
+                // 다음 이미터를 옆에 배치 (가로로 계속 나열)
+                if (i + 1 < CurrentParticleSystem->Emitters.Num())
                 {
                     ImGui::SameLine();
                 }
@@ -665,12 +716,33 @@ void SParticleViewerWindow::OnRender()
         {
             ImGui::TextDisabled("No emitters");
         }
+
+        // 컨텍스트 메뉴 (빈 영역 우클릭 시)
+        if (bShowContextMenu && CurrentParticleSystem)
+        {
+            ImGui::OpenPopup("EmitterContextMenu");
+        }
+
+        if (ImGui::BeginPopup("EmitterContextMenu"))
+        {
+            if (ImGui::MenuItem("새 파티클 스프라이트 이미터"))
+            {
+                CreateNewEmitter();
+            }
+            ImGui::EndPopup();
+        }
     }
     ImGui::EndChild();
 
     // 4. 하단: Curve Editor
     ImGui::BeginChild("CurveEditor", ImVec2(0, curveEditorHeight), true);
     {
+        // Curve Editor 클릭 시 이미터 선택 해제
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        {
+            SelectedEmitter = nullptr;
+        }
+
         ImGui::Text("Curve Editor");
         ImGui::Separator();
 
@@ -858,4 +930,83 @@ void SParticleViewerWindow::SaveParticleSystem()
             UE_LOG("Particle system saved to: %s", SavePath.c_str());
         }
     }
+}
+
+void SParticleViewerWindow::CreateNewEmitter()
+{
+    if (!CurrentParticleSystem)
+    {
+        UE_LOG("No particle system loaded. Cannot create emitter.");
+        return;
+    }
+
+    // 새 이미터 생성 (생성자에서 기본 모듈들이 자동으로 생성됨)
+    UParticleEmitter* NewEmitter = NewObject<UParticleEmitter>();
+
+    // 파티클 시스템에 이미터 추가
+    CurrentParticleSystem->Emitters.Add(NewEmitter);
+
+    // 런타임 캐시 재구축
+    CurrentParticleSystem->BuildRuntimeCache();
+
+    // PreviewComponent가 있으면 다시 초기화
+    if (PreviewComponent)
+    {
+        PreviewComponent->InitParticles();
+        PreviewComponent->ActivateSystem();
+        PreviewComponent->SetActive(true);
+    }
+
+    UE_LOG("New emitter created successfully");
+}
+
+void SParticleViewerWindow::DeleteSelectedEmitter()
+{
+    if (!CurrentParticleSystem || !SelectedEmitter)
+    {
+        UE_LOG("No emitter selected for deletion");
+        return;
+    }
+
+    // 파티클 시스템에서 이미터 찾기
+    int32 EmitterIndex = -1;
+    for (int32 i = 0; i < CurrentParticleSystem->Emitters.Num(); i++)
+    {
+        if (CurrentParticleSystem->Emitters[i] == SelectedEmitter)
+        {
+            EmitterIndex = i;
+            break;
+        }
+    }
+
+    if (EmitterIndex == -1)
+    {
+        UE_LOG("Selected emitter not found in particle system");
+        SelectedEmitter = nullptr;
+        return;
+    }
+
+    // 이미터 삭제
+    UParticleEmitter* EmitterToDelete = CurrentParticleSystem->Emitters[EmitterIndex];
+    CurrentParticleSystem->Emitters.RemoveAt(EmitterIndex);
+
+    // 메모리 해제
+    ObjectFactory::DeleteObject(EmitterToDelete);
+
+    // 선택 해제
+    SelectedEmitter = nullptr;
+    SelectedModule = nullptr;
+
+    // 런타임 캐시 재구축
+    CurrentParticleSystem->BuildRuntimeCache();
+
+    // PreviewComponent가 있으면 다시 초기화
+    if (PreviewComponent)
+    {
+        PreviewComponent->InitParticles();
+        PreviewComponent->ActivateSystem();
+        PreviewComponent->SetActive(true);
+    }
+
+    UE_LOG("Emitter deleted successfully");
 }
