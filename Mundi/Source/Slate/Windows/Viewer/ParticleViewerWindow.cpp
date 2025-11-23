@@ -13,7 +13,11 @@
 #include "Source/Runtime/Engine/Particle/Modules/ParticleModuleVelocity.h"
 #include "Source/Runtime/Engine/Particle/Modules/ParticleModuleColor.h"
 #include "Source/Runtime/Core/Object/ObjectFactory.h"
+#include "Source/Runtime/AssetManagement/ResourceManager.h"
+#include "Source/Runtime/Engine/Components/ParticleSystemComponent.h"
+#include "Texture.h"
 #include "World.h"
+#include "Actor.h"
 #include "CameraActor.h"
 #include "imgui.h"
 
@@ -221,15 +225,258 @@ void SParticleViewerWindow::OnRender()
                 // 모듈 타입별로 속성 표시
                 if (auto* RequiredModule = dynamic_cast<UParticleModuleRequired*>(SelectedModule))
                 {
-                    ImGui::Text("Emitter Settings");
-                    ImGui::DragInt("Max Particles", &RequiredModule->MaxParticles, 1.0f, 1, 10000);
-                    ImGui::DragFloat("Emitter Duration", &RequiredModule->EmitterDuration, 0.01f, 0.0f, 100.0f);
-                    ImGui::DragFloat("Emitter Delay", &RequiredModule->EmitterDelay, 0.01f, 0.0f, 10.0f);
-                    ImGui::DragInt("Emitter Loops", &RequiredModule->EmitterLoops, 1.0f, 0, 100);
-                    ImGui::DragFloat("Spawn Rate Base", &RequiredModule->SpawnRateBase, 0.1f, 0.0f, 1000.0f);
-                    ImGui::Checkbox("Use Local Space", &RequiredModule->bUseLocalSpace);
-                    ImGui::Checkbox("Kill On Deactivate", &RequiredModule->bKillOnDeactivate);
-                    ImGui::Checkbox("Kill On Completed", &RequiredModule->bKillOnCompleted);
+                    ImGui::Spacing();
+
+                    // 2열 레이아웃 시작
+                    ImGui::Columns(2, "RequiredModuleColumns", false);
+                    ImGui::SetColumnWidth(0, 150.0f);
+
+                    // Material
+                    {
+                        ImGui::Text("Material");
+                        ImGui::NextColumn();
+
+                        // 머터리얼 텍스처 가져오기
+                        UTexture* DiffuseTexture = RequiredModule->Material ? RequiredModule->Material->GetTexture(EMaterialTextureSlot::Diffuse) : nullptr;
+                        const char* currentMaterialName = RequiredModule->Material ? RequiredModule->Material->GetName().c_str() : "None";
+
+                        // 미리보기 정사각형 (50x50)
+                        if (DiffuseTexture && DiffuseTexture->GetShaderResourceView())
+                        {
+                            ImGui::Image((void*)DiffuseTexture->GetShaderResourceView(), ImVec2(50, 50));
+                        }
+                        else
+                        {
+                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+                            ImGui::Button("##matpreview", ImVec2(50, 50));
+                            ImGui::PopStyleColor();
+                        }
+
+                        ImGui::SameLine();
+
+                        // 머터리얼 이름 + 콤보박스
+                        ImGui::BeginGroup();
+                        ImGui::Text("%s", currentMaterialName);
+                        ImGui::SetNextItemWidth(-1);
+                        if (ImGui::BeginCombo("##MaterialCombo", ""))
+                        {
+                            // None 옵션
+                            if (ImGui::Selectable("None##MatNone", RequiredModule->Material == nullptr))
+                            {
+                                RequiredModule->Material = nullptr;
+                            }
+
+                            ImGui::Separator();
+
+                            // 모든 머터리얼 가져오기
+                            TArray<UMaterial*> AllMaterials = UResourceManager::GetInstance().GetAll<UMaterial>();
+
+                            if (AllMaterials.Num() > 0)
+                            {
+                                for (int i = 0; i < AllMaterials.Num(); i++)
+                                {
+                                    UMaterial* Mat = AllMaterials[i];
+                                    if (Mat)
+                                    {
+                                        ImGui::PushID(i);
+                                        bool isSelected = (RequiredModule->Material == Mat);
+
+                                        // 텍스처 미리보기 + 이름
+                                        UTexture* MatTexture = Mat->GetTexture(EMaterialTextureSlot::Diffuse);
+                                        if (MatTexture && MatTexture->GetShaderResourceView())
+                                        {
+                                            ImGui::Image((void*)MatTexture->GetShaderResourceView(), ImVec2(30, 30));
+                                            ImGui::SameLine();
+                                        }
+
+                                        if (ImGui::Selectable(Mat->GetName().c_str(), isSelected))
+                                        {
+                                            RequiredModule->Material = Mat;
+                                        }
+                                        ImGui::PopID();
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                ImGui::TextDisabled("No materials found");
+                            }
+
+                            ImGui::EndCombo();
+                        }
+                        ImGui::EndGroup();
+
+                        ImGui::NextColumn();
+                    }
+
+                    ImGui::Spacing();
+
+                    // Blend Mode
+                    {
+                        ImGui::Text("Blend Mode");
+                        ImGui::NextColumn();
+
+                        const char* blendModes[] = { "Opaque", "Masked", "Translucent", "Additive", "Modulate", "Alpha" };
+                        int currentBlendMode = (int)RequiredModule->BlendMode;
+
+                        ImGui::SetNextItemWidth(-1);
+                        if (ImGui::BeginCombo("##BlendModeCombo", blendModes[currentBlendMode]))
+                        {
+                            for (int i = 0; i < IM_ARRAYSIZE(blendModes); i++)
+                            {
+                                bool isSelected = (currentBlendMode == i);
+                                if (ImGui::Selectable(blendModes[i], isSelected))
+                                {
+                                    RequiredModule->BlendMode = (EBlendMode)i;
+                                }
+                            }
+                            ImGui::EndCombo();
+                        }
+
+                        ImGui::NextColumn();
+                    }
+
+                    ImGui::Spacing();
+
+                    // Screen Alignment
+                    {
+                        ImGui::Text("Screen Alignment");
+                        ImGui::NextColumn();
+
+                        const char* screenAlignments[] = { "Camera Facing", "Velocity", "Local Space" };
+                        int currentAlignment = (int)RequiredModule->ScreenAlignment;
+
+                        ImGui::SetNextItemWidth(-1);
+                        if (ImGui::BeginCombo("##ScreenAlignmentCombo", screenAlignments[currentAlignment]))
+                        {
+                            for (int i = 0; i < IM_ARRAYSIZE(screenAlignments); i++)
+                            {
+                                bool isSelected = (currentAlignment == i);
+                                if (ImGui::Selectable(screenAlignments[i], isSelected))
+                                {
+                                    RequiredModule->ScreenAlignment = (EScreenAlignment)i;
+                                }
+                            }
+                            ImGui::EndCombo();
+                        }
+
+                        ImGui::NextColumn();
+                    }
+
+                    ImGui::Spacing();
+
+                    // Sort Mode
+                    {
+                        ImGui::Text("Sort Mode");
+                        ImGui::NextColumn();
+
+                        const char* sortModes[] = { "None", "By Distance", "By Age", "View Depth" };
+                        int currentSortMode = (int)RequiredModule->SortMode;
+
+                        ImGui::SetNextItemWidth(-1);
+                        if (ImGui::BeginCombo("##SortModeCombo", sortModes[currentSortMode]))
+                        {
+                            for (int i = 0; i < IM_ARRAYSIZE(sortModes); i++)
+                            {
+                                bool isSelected = (currentSortMode == i);
+                                if (ImGui::Selectable(sortModes[i], isSelected))
+                                {
+                                    RequiredModule->SortMode = (ESortMode)i;
+                                }
+                            }
+                            ImGui::EndCombo();
+                        }
+
+                        ImGui::NextColumn();
+                    }
+
+                    ImGui::Spacing();
+
+                    // Max Particles
+                    {
+                        ImGui::Text("Max Particles");
+                        ImGui::NextColumn();
+                        ImGui::SetNextItemWidth(-1);
+                        ImGui::DragInt("##MaxParticles", &RequiredModule->MaxParticles, 1.0f, 1, 10000);
+                        ImGui::NextColumn();
+                    }
+
+                    ImGui::Spacing();
+
+                    // Emitter Duration
+                    {
+                        ImGui::Text("Emitter Duration");
+                        ImGui::NextColumn();
+                        ImGui::SetNextItemWidth(-1);
+                        ImGui::DragFloat("##EmitterDuration", &RequiredModule->EmitterDuration, 0.01f, 0.0f, 100.0f);
+                        ImGui::NextColumn();
+                    }
+
+                    ImGui::Spacing();
+
+                    // Emitter Delay
+                    {
+                        ImGui::Text("Emitter Delay");
+                        ImGui::NextColumn();
+                        ImGui::SetNextItemWidth(-1);
+                        ImGui::DragFloat("##EmitterDelay", &RequiredModule->EmitterDelay, 0.01f, 0.0f, 10.0f);
+                        ImGui::NextColumn();
+                    }
+
+                    ImGui::Spacing();
+
+                    // Emitter Loops
+                    {
+                        ImGui::Text("Emitter Loops");
+                        ImGui::NextColumn();
+                        ImGui::SetNextItemWidth(-1);
+                        ImGui::DragInt("##EmitterLoops", &RequiredModule->EmitterLoops, 1.0f, 0, 100);
+                        ImGui::NextColumn();
+                    }
+
+                    ImGui::Spacing();
+
+                    // Spawn Rate Base
+                    {
+                        ImGui::Text("Spawn Rate Base");
+                        ImGui::NextColumn();
+                        ImGui::SetNextItemWidth(-1);
+                        ImGui::DragFloat("##SpawnRateBase", &RequiredModule->SpawnRateBase, 0.1f, 0.0f, 1000.0f);
+                        ImGui::NextColumn();
+                    }
+
+                    ImGui::Spacing();
+
+                    // Use Local Space
+                    {
+                        ImGui::Text("Use Local Space");
+                        ImGui::NextColumn();
+                        ImGui::Checkbox("##UseLocalSpace", &RequiredModule->bUseLocalSpace);
+                        ImGui::NextColumn();
+                    }
+
+                    ImGui::Spacing();
+
+                    // Kill On Deactivate
+                    {
+                        ImGui::Text("Kill On Deactivate");
+                        ImGui::NextColumn();
+                        ImGui::Checkbox("##KillOnDeactivate", &RequiredModule->bKillOnDeactivate);
+                        ImGui::NextColumn();
+                    }
+
+                    ImGui::Spacing();
+
+                    // Kill On Completed
+                    {
+                        ImGui::Text("Kill On Completed");
+                        ImGui::NextColumn();
+                        ImGui::Checkbox("##KillOnCompleted", &RequiredModule->bKillOnCompleted);
+                        ImGui::NextColumn();
+                    }
+
+                    // 2열 레이아웃 종료
+                    ImGui::Columns(1);
                 }
                 else if (auto* SpawnModule = dynamic_cast<UParticleModuleSpawn*>(SelectedModule))
                 {
@@ -322,13 +569,38 @@ void SParticleViewerWindow::OnRender()
                     ImGui::SetCursorScreenPos(ImVec2(headerMin.x + 5, headerMin.y + 5));
                     ImGui::Text("%s", Emitter->GetName().c_str());
 
-                    // 미리보기 박스 (우측 하단)
+                    // 머터리얼 미리보기 박스 (우측 하단)
                     ImGui::SetCursorScreenPos(ImVec2(headerMax.x - 45, headerMin.y + 5));
-                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-                    ImGui::Button("##preview", ImVec2(40, 40));
-                    ImGui::PopStyleColor(3);
+
+                    // 머터리얼 텍스처 가져오기
+                    UTexture* EmitterMatTexture = nullptr;
+                    const char* matTooltip = "No Material";
+
+                    if (Emitter->LODLevels.Num() > 0 && Emitter->LODLevels[0]->RequiredModule && Emitter->LODLevels[0]->RequiredModule->Material)
+                    {
+                        UMaterial* mat = Emitter->LODLevels[0]->RequiredModule->Material;
+                        EmitterMatTexture = mat->GetTexture(EMaterialTextureSlot::Diffuse);
+                        matTooltip = mat->GetName().c_str();
+                    }
+
+                    // 텍스처가 있으면 Image로 표시, 없으면 검은 버튼
+                    if (EmitterMatTexture && EmitterMatTexture->GetShaderResourceView())
+                    {
+                        ImGui::Image((void*)EmitterMatTexture->GetShaderResourceView(), ImVec2(40, 40));
+                    }
+                    else
+                    {
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+                        ImGui::Button("##preview", ImVec2(40, 40));
+                        ImGui::PopStyleColor(3);
+                    }
+
+                    if (ImGui::IsItemHovered())
+                    {
+                        ImGui::SetTooltip("%s", matTooltip);
+                    }
 
                     // 원래 커서 위치 복구
                     ImGui::SetCursorScreenPos(ImVec2(headerMin.x, headerMax.y));
@@ -514,11 +786,58 @@ void SParticleViewerWindow::OnRenderViewport()
 void SParticleViewerWindow::LoadParticleSystem(const FString& Path)
 {
     // TODO: 경로에서 파티클 시스템 로드
+    UParticleSystem* LoadedSystem = UParticleSystem::LoadFromFile(Path);
+    if (LoadedSystem)
+    {
+        LoadParticleSystem(LoadedSystem);
+    }
 }
 
 void SParticleViewerWindow::LoadParticleSystem(UParticleSystem* ParticleSystem)
 {
     CurrentParticleSystem = ParticleSystem;
+
+    if (!PreviewWorld || !ParticleSystem)
+        return;
+
+    // 기존 PreviewActor가 있으면 제거
+    if (PreviewActor)
+    {
+        // World의 Actor 리스트에서 제거하고 삭제
+        PreviewActor->Destroy();
+        ObjectFactory::DeleteObject(PreviewActor);
+        PreviewActor = nullptr;
+        PreviewComponent = nullptr;
+    }
+
+    // 새 Actor 생성
+    PreviewActor = PreviewWorld->SpawnActor<AActor>();
+    PreviewActor->ObjectName = FName("ParticlePreviewActor");
+    PreviewActor->SetActorLocation(FVector(0, 0, 0));
+    PreviewActor->SetTickInEditor(true);  // 에디터 모드에서도 Tick 활성화
+
+    // ParticleSystemComponent 생성 및 추가
+    PreviewComponent = NewObject<UParticleSystemComponent>();
+    PreviewComponent->SetTemplate(ParticleSystem);
+
+    // Actor에 Component 추가 (OwnedComponents에 추가 - Tick되려면 필수!)
+    PreviewActor->AddOwnedComponent(PreviewComponent);
+
+    // Root로 설정
+    PreviewActor->SetRootComponent(PreviewComponent);
+
+    // 컴포넌트를 World에 등록
+    PreviewComponent->RegisterComponent(PreviewWorld);
+
+    // 컴포넌트 초기화 및 활성화
+    PreviewComponent->InitParticles();
+    PreviewComponent->ActivateSystem();
+    PreviewComponent->SetActive(true);  // bIsActive를 명시적으로 true로 설정
+
+    // Actor의 BeginPlay 호출로 컴포넌트 완전 초기화
+    PreviewActor->BeginPlay();
+
+    UE_LOG("Particle system loaded and spawned in preview world");
 }
 
 void SParticleViewerWindow::SaveParticleSystem()

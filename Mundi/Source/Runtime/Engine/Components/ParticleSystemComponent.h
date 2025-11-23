@@ -43,9 +43,13 @@ public:
 	void BuildDebugEmitterData();
 
 	UMaterialInterface* GetMaterial(uint32 InSectionIndex) const override;
-	void SetMaterial(uint32 InSectionIndex, UMaterialInterface* InNewMaterial) override;	
-	
+	void SetMaterial(uint32 InSectionIndex, UMaterialInterface* InNewMaterial) override;
+
 	bool EnsureParticleBuffers(uint32 ParticleCapacity);
+
+	// Template accessor
+	void SetTemplate(UParticleSystem* InTemplate) { Template = InTemplate; }
+	UParticleSystem* GetTemplate() const { return Template; }
 
 private:	
 	/** 파티클 시스템 에셋 */

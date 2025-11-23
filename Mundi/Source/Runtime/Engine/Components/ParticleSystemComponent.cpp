@@ -7,6 +7,7 @@
 UParticleSystemComponent::UParticleSystemComponent()
 {
     // FOR TEST !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    bCanEverTick = true;  // 파티클 시스템은 매 프레임 Tick 필요
     bAutoActivate = true;
 
     // 디버그용 파티클 3개

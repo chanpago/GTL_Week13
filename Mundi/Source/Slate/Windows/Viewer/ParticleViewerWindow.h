@@ -1,11 +1,13 @@
 ﻿#pragma once                                                                                      
 #include "../SWindow.h"                                                                               
                                                                                                     
-class FViewport;                                                                                   
-class FViewportClient;                                                                             
-class UWorld;                                                                                      
-struct ID3D11Device;                                                                               
-class UParticleSystem;                                                                             
+class FViewport;
+class FViewportClient;
+class UWorld;
+struct ID3D11Device;
+class UParticleSystem;
+class AActor;
+class UParticleSystemComponent;                                                                             
                                                                                                    
 class SParticleViewerWindow : public SWindow                                                       
 {                                                                                                  
@@ -50,6 +52,10 @@ private:
 
     // Current particle system
     UParticleSystem* CurrentParticleSystem = nullptr;
+
+    // Preview actor with particle component
+    AActor* PreviewActor = nullptr;
+    UParticleSystemComponent* PreviewComponent = nullptr;
 
     // Save path (for new particle systems created from content browser)
     FString SavePath;
