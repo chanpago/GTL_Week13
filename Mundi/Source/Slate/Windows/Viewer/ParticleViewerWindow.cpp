@@ -831,7 +831,28 @@ void SParticleViewerWindow::OnRender()
                                 {
                                     ImGui::PushID(m + 1000);
                                     bool isSelected = (SelectedModule == Module);
-                                    if (ImGui::Selectable(Module->GetClass()->Name, isSelected, 0, ImVec2(0, 20)))
+
+                                    // 모듈 이름에서 "UParticleModule" 접두사 제거
+                                    const char* fullName = Module->GetClass()->Name;
+                                    const char* displayName = fullName;
+                                    const char* prefix = "UParticleModule";
+                                    size_t prefixLen = strlen(prefix);
+                                    if (strncmp(fullName, prefix, prefixLen) == 0)
+                                    {
+                                        displayName = fullName + prefixLen;
+                                    }
+
+                                    // Required 모듈 체크
+                                    bool isRequired = (strcmp(displayName, "Required") == 0);
+
+                                    // 모듈 이름 (왼쪽 정렬, 버튼 공간 확보)
+                                    float itemWidth = ImGui::GetContentRegionAvail().x;
+                                    float buttonWidth = 20.0f;
+                                    float rightMargin = 10.0f;  // 오른쪽 여백
+                                    // Required든 아니든 체크박스 + C버튼 공간 확보 (정렬 맞추기)
+                                    float nameWidth = itemWidth - buttonWidth * 2 - rightMargin - 8;
+
+                                    if (ImGui::Selectable(displayName, isSelected, 0, ImVec2(nameWidth, 20)))
                                     {
                                         SelectedModule = Module;
                                     }
@@ -841,6 +862,59 @@ void SParticleViewerWindow::OnRender()
                                     {
                                         bMouseOverModule = true;
                                     }
+
+                                    // 버튼들 (같은 라인에 배치)
+                                    ImGui::SameLine();
+
+                                    // Required가 아니면 활성화/비활성화 버튼 표시
+                                    if (!isRequired)
+                                    {
+                                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
+
+                                        // 활성화 상태에 따라 색상과 텍스트 변경
+                                        if (Module->bEnabled)
+                                        {
+                                            // 체크 표시 (초록색)
+                                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.6f, 0.0f, 1.0f));
+                                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
+                                            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.8f, 0.0f, 1.0f));
+                                            if (ImGui::Button("V", ImVec2(buttonWidth, 20)))
+                                            {
+                                                Module->bEnabled = false;
+                                            }
+                                            ImGui::PopStyleColor(3);
+                                        }
+                                        else
+                                        {
+                                            // X 표시 (빨간색)
+                                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.0f, 0.0f, 1.0f));
+                                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.0f, 0.0f, 1.0f));
+                                            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+                                            if (ImGui::Button("X", ImVec2(buttonWidth, 20)))
+                                            {
+                                                Module->bEnabled = true;
+                                            }
+                                            ImGui::PopStyleColor(3);
+                                        }
+
+                                        ImGui::PopStyleVar();
+                                    }
+                                    else
+                                    {
+                                        // Required는 빈 공간
+                                        ImGui::Dummy(ImVec2(buttonWidth, 20));
+                                    }
+
+                                    ImGui::SameLine();
+
+                                    // 커브 버튼 (모든 모듈)
+                                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
+                                    if (ImGui::Button("C", ImVec2(buttonWidth, 20)))
+                                    {
+                                        // 커브 에디터에서 이 모듈 선택
+                                        SelectedModule = Module;
+                                    }
+                                    ImGui::PopStyleVar();
 
                                     ImGui::PopID();
                                 }
