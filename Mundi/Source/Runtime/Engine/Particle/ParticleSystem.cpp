@@ -20,7 +20,7 @@ UParticleSystem::UParticleSystem()
     UParticleEmitter* DefaultEmitter = NewObject<UParticleEmitter>();
 
     //// Emitter를 ParticleSystem에 추가
-    //Emitters.Add(DefaultEmitter);
+    Emitters.Add(DefaultEmitter);
 
     // 모듈 캐시 재구축
     BuildRuntimeCache();
