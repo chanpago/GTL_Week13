@@ -1444,12 +1444,21 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 			else if (Batch.Material)
 			{
 				const FMaterialInfo& MaterialInfo = Batch.Material->GetMaterialInfo();
+				UE_LOG("[SceneRenderer] Material: %s, DiffuseTexture: %s",
+					   Batch.Material->GetName().c_str(),
+					   MaterialInfo.DiffuseTextureFileName.c_str());
+
 				if (!MaterialInfo.DiffuseTextureFileName.empty())
 				{
 					if (UTexture* TextureData = Batch.Material->GetTexture(EMaterialTextureSlot::Diffuse))
 					{
 						DiffuseTextureSRV = TextureData->GetShaderResourceView();
 						PixelConst.bHasDiffuseTexture = (DiffuseTextureSRV != nullptr);
+						UE_LOG("[SceneRenderer] Diffuse SRV: %s", DiffuseTextureSRV ? "Valid" : "NULL");
+					}
+					else
+					{
+						UE_LOG("[SceneRenderer] Failed to get Diffuse texture!");
 					}
 				}
 				if (!MaterialInfo.NormalTextureFileName.empty())

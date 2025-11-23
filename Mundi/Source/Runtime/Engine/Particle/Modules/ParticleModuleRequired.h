@@ -33,6 +33,9 @@ class UParticleModuleRequired : public UParticleModule
 {
     DECLARE_CLASS(UParticleModuleRequired, UParticleModule)
 public:
+    UParticleModuleRequired();
+
+public:
     // ---- Emitter 운영 ----
     int32 MaxParticles = 1000;
 

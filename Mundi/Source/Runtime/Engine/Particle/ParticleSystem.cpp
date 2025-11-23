@@ -34,7 +34,7 @@ UParticleSystem::UParticleSystem()
     // 2. Spawn 모듈 (필수)
     UParticleModuleSpawn* SpawnModule = NewObject<UParticleModuleSpawn>();
     SpawnModule->SpawnRateType = ESpawnRateType::Constant;
-    SpawnModule->SpawnRate = FRawDistributionFloat(20.0f); // 초당 20개 파티클 생성
+    SpawnModule->SpawnRate = FRawDistributionFloat(2.0f); // 초당 20개 파티클 생성
     LOD->SpawnModule = SpawnModule;
 
     // 3. Lifetime 모듈
@@ -46,15 +46,15 @@ UParticleSystem::UParticleSystem()
 
     // 4. Initial Size 모듈
     UParticleModuleSize* SizeModule = NewObject<UParticleModuleSize>();
-    SizeModule->StartSize.MinValue = FVector(25.0f, 25.0f, 25.0f);
-    SizeModule->StartSize.MaxValue = FVector(25.0f, 25.0f, 25.0f);
+    SizeModule->StartSize.MinValue = FVector(10.0f, 10.0f, 10.0f);
+    SizeModule->StartSize.MaxValue = FVector(10.0f, 10.0f, 10.0f);
     SizeModule->StartSize.bUseRange = false;
     LOD->SpawnModules.Add(SizeModule);
 
     // 5. Initial Velocity 모듈
     UParticleModuleVelocity* VelocityModule = NewObject<UParticleModuleVelocity>();
-    VelocityModule->StartVelocity.MinValue = FVector(0.0f, 0.0f, 100.0f);
-    VelocityModule->StartVelocity.MaxValue = FVector(0.0f, 0.0f, 200.0f);
+    VelocityModule->StartVelocity.MinValue = FVector(0.0f, 0.0f, 10.0f);
+    VelocityModule->StartVelocity.MaxValue = FVector(0.0f, 0.0f, 20.0f);
     VelocityModule->StartVelocity.bUseRange = true;
     LOD->SpawnModules.Add(VelocityModule);
 

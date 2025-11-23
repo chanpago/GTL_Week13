@@ -393,6 +393,10 @@ void FParticleEmitterInstance::BuildReplayData(FDynamicEmitterReplayDataBase& Ou
 
             SpriteOut.RequiredModule = CachedRequiredModule;
 
+            UE_LOG("[BuildReplayData] MaterialInterface: %s, CachedRequiredModule: %s",
+                   SpriteOut.MaterialInterface ? SpriteOut.MaterialInterface->GetName().c_str() : "NULL",
+                   CachedRequiredModule ? "Valid" : "NULL");
+
             break;
         }
         case EEmitterRenderType::Mesh:

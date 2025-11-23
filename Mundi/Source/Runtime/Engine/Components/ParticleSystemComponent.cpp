@@ -308,6 +308,13 @@ void UParticleSystemComponent::BuildParticleBatch(TArray<FMeshBatchElement>& Out
 
             const FLinearColor Color = Particle->Color;
 
+            // 첫 파티클만 로그 출력
+            if (LocalIdx == 0 && WrittenParticles == 0)
+            {
+                UE_LOG("[BuildParticleBatch] First Particle Color: (%.2f, %.2f, %.2f, %.2f)",
+                       Color.R, Color.G, Color.B, Color.A);
+            }
+
             for (int32 CornerIndex = 0; CornerIndex < 4; ++CornerIndex)
             {
                 FParticleSpriteVertex& Vertex = Vertices[VertexCursor++];
@@ -342,71 +349,95 @@ void UParticleSystemComponent::BuildParticleBatch(TArray<FMeshBatchElement>& Out
         return;
     }
 
+    // 파티클 전용 쉐이더 로드 (파티클은 특별한 vertex layout 필요)
     if (!ParticleMaterial)
     {
         ParticleMaterial = UResourceManager::GetInstance().Load<UMaterial>("Shaders/Effects/ParticleSprite.hlsl");
     }
 
-    UShader* ParticleShader = nullptr;
-    if (ParticleMaterial)
+    if (!ParticleMaterial)
     {
-        ParticleShader = ParticleMaterial->GetShader();
-    }
-    if (!ParticleShader)
-    {
-        ParticleShader = UResourceManager::GetInstance().Load<UShader>("Shaders/Effects/ParticleSprite.hlsl");
-    }
-    if (!ParticleShader)
-    {
+        UE_LOG("[BuildParticleBatch] ERROR: Failed to load particle shader!");
         return;
     }
 
-    TArray<FShaderMacro> ShaderMacros = View ? View->ViewShaderMacros : TArray<FShaderMacro>();
-    if (ParticleMaterial)
+    UShader* ParticleShader = ParticleMaterial->GetShader();
+    if (!ParticleShader)
     {
-        ShaderMacros.Append(ParticleMaterial->GetShaderMacros());
+        UE_LOG("[BuildParticleBatch] ERROR: Particle material has no shader!");
+        return;
     }
+
+    UE_LOG("[BuildParticleBatch] Using ParticleMaterial: %s, Shader: %s",
+           ParticleMaterial->GetName().c_str(),
+           ParticleShader ? ParticleShader->GetName().c_str() : "NULL");
+
+    TArray<FShaderMacro> ShaderMacros = View ? View->ViewShaderMacros : TArray<FShaderMacro>();
+    ShaderMacros.Append(ParticleMaterial->GetShaderMacros());
 
     FShaderVariant* ShaderVariant = ParticleShader->GetOrCompileShaderVariant(ShaderMacros);
     if (!ShaderVariant)
     {
+        UE_LOG("[BuildParticleBatch] ERROR: Failed to compile particle shader variant!");
         return;
     }
 
-    for (const FSpriteBatchCommand& Command : SpriteBatchCommands)
+    for (const FSpriteBatchCommand& Cmd : SpriteBatchCommands)
     {
-        if (Command.ParticleCount == 0)
+        // 각 Emitter의 Material을 가져옴 (텍스처 적용용)
+        UMaterialInterface* EmitterMaterial = nullptr;
+        if (Cmd.SpriteData)
+        {
+            const auto* ReplayData = static_cast<const FDynamicSpriteEmitterReplayData*>(Cmd.SpriteData->GetSource());
+            if (ReplayData)
+            {
+                EmitterMaterial = ReplayData->MaterialInterface;
+                UE_LOG("[BuildParticleBatch] ReplayData->MaterialInterface: %s",
+                       EmitterMaterial ? EmitterMaterial->GetName().c_str() : "NULL");
+            }
+            else
+            {
+                UE_LOG("[BuildParticleBatch] ReplayData is NULL!");
+            }
+        }
+        else
+        {
+            UE_LOG("[BuildParticleBatch] SpriteData is NULL!");
+        }
+
+        if (Cmd.ParticleCount == 0)
         {
             continue;
         }
 
+        // Mesh Batch Element 생성
         const int32 BatchIndex = OutMeshBatchElements.Add(FMeshBatchElement());
         FMeshBatchElement& Batch = OutMeshBatchElements[BatchIndex];
 
+        // 항상 파티클 전용 쉐이더 사용 (FParticleSpriteVertex layout 필요)
         Batch.VertexShader = ShaderVariant->VertexShader;
         Batch.PixelShader = ShaderVariant->PixelShader;
         Batch.InputLayout = ShaderVariant->InputLayout;
 
-        UMaterialInterface* MaterialToUse = ParticleMaterial;
-        if (Command.SpriteData)
-        {
-            const auto* ReplaySource = static_cast<const FDynamicSpriteEmitterReplayData*>(Command.SpriteData->GetSource());
-            if (ReplaySource && ReplaySource->MaterialInterface)
-            {
-                MaterialToUse = ReplaySource->MaterialInterface;
-            }
-        }
+        // Material은 EmitterMaterial 사용 (텍스처 바인딩용), 없으면 기본 파티클 Material
+        Batch.Material = EmitterMaterial ? EmitterMaterial : ParticleMaterial;
 
-        Batch.Material = MaterialToUse;
+        UE_LOG("[BuildParticleBatch] Batch VS: %p, PS: %p, Material: %s",
+               Batch.VertexShader, Batch.PixelShader,
+               Batch.Material ? Batch.Material->GetName().c_str() : "NULL");
+
         Batch.VertexBuffer = ParticleVertexBuffer;
         Batch.IndexBuffer = ParticleIndexBuffer;
         Batch.VertexStride = sizeof(FParticleSpriteVertex);
-        Batch.IndexCount = Command.ParticleCount * 6;
-        Batch.StartIndex = Command.StartParticle * 6;
+        Batch.IndexCount = Cmd.ParticleCount * 6;
+        Batch.StartIndex = Cmd.StartParticle * 6;
         Batch.BaseVertexIndex = 0;
         Batch.PrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         Batch.WorldMatrix = GetWorldMatrix();
         Batch.ObjectID = InternalIndex;
+
+        UE_LOG("[BuildParticleBatch] Shader: ParticleSprite, Material: %s, Particles: %d",
+               Batch.Material ? Batch.Material->GetName().c_str() : "NULL", Cmd.ParticleCount);
     }
 }
 
@@ -444,11 +475,7 @@ void UParticleSystemComponent::BuildEmitterRenderData()
                     }
 
                     Inst->BuildReplayData(SpriteData->Source);
-
-                    if (!SpriteData->Source.MaterialInterface)
-                    {
-                        SpriteData->Source.MaterialInterface = ParticleMaterial;
-                    }
+                    // BuildReplayData()에서 이미 CachedRequiredModule->Material을 설정함!
 
                     NewData = SpriteData;
                     break;

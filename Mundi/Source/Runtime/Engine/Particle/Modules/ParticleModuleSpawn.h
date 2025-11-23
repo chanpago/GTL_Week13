@@ -16,7 +16,7 @@ public:
     ESpawnRateType SpawnRateType = ESpawnRateType::Constant;
 
     // 초당 생성할 파티클 수 (Constant 타입)
-    FRawDistributionFloat SpawnRate = FRawDistributionFloat(10.0f);
+    FRawDistributionFloat SpawnRate = FRawDistributionFloat(3.0f);
 
     // 시간에 따른 스폰 속도 (OverTime 타입)
     FRawDistributionFloat SpawnRateOverTime = FRawDistributionFloat(10.0f, 50.0f);

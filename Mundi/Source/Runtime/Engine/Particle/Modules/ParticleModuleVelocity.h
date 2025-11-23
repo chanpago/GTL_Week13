@@ -6,7 +6,7 @@ class UParticleModuleVelocity : public UParticleModule
     DECLARE_CLASS(UParticleModuleVelocity, UParticleModule)
 public:
     // 초기 속도
-    FRawDistributionVector StartVelocity = FRawDistributionVector(FVector(0.0f, 0.0f, 100.0f));
+    FRawDistributionVector StartVelocity = FRawDistributionVector(FVector(0.0f, 0.0f, 10.0f));
 
     // 속도 배율 (랜덤성 추가용)
     FRawDistributionFloat VelocityMultiplier = FRawDistributionFloat(1.0f);
