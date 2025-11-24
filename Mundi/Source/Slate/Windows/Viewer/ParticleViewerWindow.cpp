@@ -496,7 +496,24 @@ void SParticleViewerWindow::OnRender()
                     {
                         ImGui::Text("Use Local Space");
                         ImGui::NextColumn();
-                        ImGui::Checkbox("##UseLocalSpace", &RequiredModule->bUseLocalSpace);
+
+                        if (ImGui::Checkbox("##UseLocalSpace", &RequiredModule->bUseLocalSpace))
+                        {
+                            // 값이 변경되면 파티클 시스템 재시작
+                            if (CurrentParticleSystem && PreviewComponent)
+                            {
+                                CurrentParticleSystem->BuildRuntimeCache();
+                                PreviewComponent->ResetAndActivate();
+                            }
+                        }
+
+                        if (ImGui::IsItemHovered())
+                        {
+                            ImGui::SetTooltip(RequiredModule->bUseLocalSpace
+                                ? "Local Space: Particles follow the actor (e.g., rocket engine)"
+                                : "World Space: Particles stay in place after spawn (e.g., explosion)");
+                        }
+
                         ImGui::NextColumn();
                     }
 

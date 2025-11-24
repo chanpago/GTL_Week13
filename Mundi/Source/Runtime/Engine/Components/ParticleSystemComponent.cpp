@@ -203,6 +203,11 @@ void UParticleSystemComponent::BuildEmitterRenderData()
                 MeshData->SortMode = Inst->CachedRequiredModule->SortMode;
                 MeshData->SortPriority = 0;
 
+                if (Inst->CachedRequiredModule)
+                {
+                    MeshData->bUseLocalSpace = Inst->CachedRequiredModule->bUseLocalSpace;
+                }
+
                 Inst->BuildReplayData(MeshData->Source);
 
                 if (MeshData->Source.Mesh)
@@ -306,10 +311,11 @@ void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FMeshBatchElement
             if (!Particle) continue;
 
             FVector WorldPos = Particle->Location;
-            if (SpriteData->bUseLocalSpace)
+            if (SpriteData->bUseLocalSpace)  // Local Space: 로컬 좌표를 월드로 변환 (컴포넌트 종속)
             {
                 WorldPos = GetWorldMatrix().TransformPosition(WorldPos);
             }
+            // World Space: 이미 월드 좌표이므로 그대로 사용 (독립적)
 
             const FVector2D Size = FVector2D(Particle->Size.X, Particle->Size.Y);
             const FLinearColor Color = Particle->Color;
@@ -457,12 +463,16 @@ void UParticleSystemComponent::BuildMeshParticleBatch(TArray<FMeshBatchElement>&
                 continue;
 
             FVector ParticleWorldPos = Particle->Location;
-            if (MeshData->bUseLocalSpace)
-            {
-                ParticleWorldPos = ComponentWorld.TransformPosition(ParticleWorldPos);
-            }
+            FMatrix ParticleWorld;
 
-            FMatrix ParticleWorld = FMatrix::MakeScale(Particle->Size) * FMatrix::MakeTranslation(ParticleWorldPos) * ComponentWorld;
+            if (MeshData->bUseLocalSpace)  // Local Space: 로컬 좌표 + 컴포넌트 변환 (컴포넌트 종속)
+            {
+                ParticleWorld = FMatrix::MakeScale(Particle->Size) * FMatrix::MakeTranslation(ParticleWorldPos) * ComponentWorld;
+            }
+            else  // World Space: 이미 월드 좌표이므로 그대로 사용 (독립적)
+            {
+                ParticleWorld = FMatrix::MakeScale(Particle->Size) * FMatrix::MakeTranslation(ParticleWorldPos);
+            }
 
             FMeshBatchElement& Batch = OutMeshBatchElements[OutMeshBatchElements.Add(FMeshBatchElement())];
 
