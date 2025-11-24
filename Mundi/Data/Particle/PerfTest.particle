@@ -1,0 +1,76 @@
+{
+        "Emitters" : [{
+            "LODLevels" : [{
+                "LODIndex" : 0,
+                "Modules" : [{
+                    "Lifetime_Max" : 1.000000,
+                    "Lifetime_Min" : 1.000000,
+                    "Lifetime_bUseRange" : true,
+                    "Type" : "Lifetime",
+                    "bEnabled" : true
+                  }, {
+                    "StartSize_Max" : [5.000000, 5.000000, 5.000000],
+                    "StartSize_Min" : [1.000000, 1.000000, 1.000000],
+                    "StartSize_bUseRange" : true,
+                    "Type" : "Size",
+                    "bEnabled" : true
+                  }, {
+                    "Gravity" : [0.000000, 0.000000, 0.000000],
+                    "StartVelocity_Max" : [20.000000, 20.000000, 20.000000],
+                    "StartVelocity_Min" : [-20.000000, -20.000000, 0.000000],
+                    "StartVelocity_bUseRange" : true,
+                    "Type" : "Velocity",
+                    "bEnabled" : true
+                  }, {
+                    "AlphaOverLife_Max" : 1.000000,
+                    "AlphaOverLife_Min" : 1.000000,
+                    "AlphaOverLife_bUseRange" : false,
+                    "AlphaPoint1Time" : 0.000000,
+                    "AlphaPoint1Value" : 1.000000,
+                    "AlphaPoint2Time" : 1.000000,
+                    "AlphaPoint2Value" : 0.000000,
+                    "ColorOverLife_Max" : [1.000000, 1.000000, 1.000000, 1.000000],
+                    "ColorOverLife_Min" : [1.000000, 1.000000, 1.000000, 1.000000],
+                    "ColorOverLife_bUseRange" : false,
+                    "Type" : "ColorOverLife",
+                    "bEnabled" : true,
+                    "bUseAlphaOverLife" : true,
+                    "bUseColorOverLife" : false
+                  }],
+                "RequiredModule" : {
+                  "BlendMode" : 5,
+                  "EmitterDelay" : 0.000000,
+                  "EmitterDuration" : 1.000000,
+                  "EmitterLoops" : 0,
+                  "InitialColor_Max" : [1.000000, 1.000000, 1.000000, 1.000000],
+                  "InitialColor_Min" : [1.000000, 1.000000, 1.000000, 1.000000],
+                  "InitialColor_bUseRange" : false,
+                  "InitialRotation_Max" : 0.000000,
+                  "InitialRotation_Min" : 0.000000,
+                  "InitialRotation_bUseRange" : false,
+                  "InitialSize_Max" : [50.000000, 50.000000, 1.000000],
+                  "InitialSize_Min" : [50.000000, 50.000000, 1.000000],
+                  "InitialSize_bUseRange" : false,
+                  "Material" : "MatID_1",
+                  "MaxParticles" : 10000,
+                  "ScreenAlignment" : 0,
+                  "SortMode" : 1,
+                  "SpawnRateBase" : 10.000000,
+                  "bKillOnCompleted" : false,
+                  "bKillOnDeactivate" : true,
+                  "bUseLocalSpace" : false
+                },
+                "SpawnModule" : {
+                  "SpawnRateType" : 0,
+                  "SpawnRate_Max" : 10000.000000,
+                  "SpawnRate_Min" : 10000.000000,
+                  "SpawnRate_bUseRange" : true
+                },
+                "bEnabled" : true
+              }],
+            "Name" : "UParticleEmitter_5",
+            "RenderType" : 0
+          }],
+        "Name" : "UParticleSystem_3",
+        "Type" : "ParticleSystem"
+      }

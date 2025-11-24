@@ -67,6 +67,9 @@ void UParticleSystemComponent::InitParticles()
 
 void UParticleSystemComponent::DestroyParticles()
 {
+    // 삭제하기 전에 비동기 작업이 끝날 때까지 기다림
+    AsyncUpdater.EnsureCompletion();
+    
     for (FParticleEmitterInstance* Inst : EmitterInstances)
     {
         if (Inst)
@@ -76,7 +79,6 @@ void UParticleSystemComponent::DestroyParticles()
         }
     }
     EmitterInstances.Empty();
-    ClearEmitterRenderData();
 }
 
 void UParticleSystemComponent::BeginPlay()
@@ -95,42 +97,60 @@ void UParticleSystemComponent::EndPlay()
 // ============================================================================
 // Update
 // ============================================================================
-
 void UParticleSystemComponent::TickComponent(float DeltaTime)
 {
     Super::TickComponent(DeltaTime);
 
-    if (!bIsActive || !Template) return;
+    if (!Template) return;
 
-    uint32 FrameParticleCount = 0;
-    bool bAllEmittersComplete = true;
-    for (FParticleEmitterInstance* Inst : EmitterInstances)
+    AccumulatedDeltaTime += DeltaTime;
+    
+    // [Main Thread] 비동기 관리자에게 작업 요청 & 결과 동기화
+    FParticleSimulationContext Context;
+    Context.DeltaTime = AccumulatedDeltaTime;
+    Context.ComponentLocation = GetWorldLocation();
+    Context.ComponentRotation = GetWorldRotation();
+    Context.bIsActive = bIsActive;
+    Context.bSuppressSpawning = bSuppressSpawning;
+
+    if (bUseAsyncSimulation)
     {
-        TIME_PROFILE(Particle_EmitterTick)
-        Inst->Tick(DeltaTime);
-        FrameParticleCount += Inst->ActiveParticles;
-
-        if (!Inst->IsComplete())
+        if (!AsyncUpdater.IsBusy())
         {
-            bAllEmittersComplete = false;
+            // 워커가 놀고 있으면 누적된 시간만큼 일 시킴
+            AsyncUpdater.KickOff(EmitterInstances, Context);
+            AccumulatedDeltaTime = 0;
         }
     }
+    else
+    {
+        AsyncUpdater.KickOffSync(EmitterInstances, Context);
+        AccumulatedDeltaTime = 0;
+    }
 
-    FParticleStatManager::GetInstance().AddParticleCount(FrameParticleCount);
+    // [Main Thread] 캐싱된 통계 데이터 사용
+    const FParticleFrameStats& Stats = AsyncUpdater.LastFrameStats;
+    FParticleStatManager::GetInstance().AddParticleCount(Stats.TotalActiveParticles);
 
-    if (bAllEmittersComplete)
+    // 종료 처리
+    if (bIsActive && Stats.bAllEmittersComplete)
     {
         OnParticleSystemFinished.Broadcast(this);
-        DeactivateSystem();
+        DeactivateSystem(); 
+    }
 
-        if (bAutoDestroy) { GetOwner()->Destroy(); }
+    if (!bIsActive && !Stats.bHasActiveParticles)
+    {
+        if (bAutoDestroy) 
+        { 
+            GetOwner()->Destroy(); 
+        } 
     }
 }
 
 // ============================================================================
 // Rendering
 // ============================================================================
-
 void UParticleSystemComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
 {
     if (!IsVisible())
@@ -139,90 +159,25 @@ void UParticleSystemComponent::CollectMeshBatches(TArray<FMeshBatchElement>& Out
     }
     TIME_PROFILE(Particle_CollectBatches)
 
+    AsyncUpdater.TrySync();
     // EmitterInstance -> DynamicEmitterReplayDatabase
-    BuildEmitterRenderData();
+    TArray<FDynamicEmitterDataBase*>& CurrentData = AsyncUpdater.RenderData;
+    if (CurrentData.IsEmpty()) return;
 
-    if (EmitterRenderData.IsEmpty())
-        return;
-
-    // DaynamicEmitterReplayDatabase -> MeshBatchElement
-    BuildSpriteParticleBatch(OutMeshBatchElements, View);
-    BuildMeshParticleBatch(OutMeshBatchElements, View);
-
-    // 이번 프레임 끝에 DynamicData 파괴
-    ClearEmitterRenderData();
+    // DynamicEmitterReplayDatabase -> MeshBatchElement
+    BuildSpriteParticleBatch(CurrentData, OutMeshBatchElements, View);
+    BuildMeshParticleBatch(CurrentData, OutMeshBatchElements, View);
 }
 
 void UParticleSystemComponent::DuplicateSubObjects()
 {
     Super::DuplicateSubObjects();
     EmitterInstances.Empty();
-    EmitterRenderData.Empty();
     ParticleVertexBuffer = nullptr;
     ParticleIndexBuffer = nullptr;
 }
 
-void UParticleSystemComponent::BuildEmitterRenderData()
-{
-    // 1) 이전 프레임 데이터 정리
-    ClearEmitterRenderData();
-
-    if (!EmitterInstances.IsEmpty())
-    {
-        // 2) 각 Instance -> DynamicData 생성
-        for (int32 EmitterIdx = 0; EmitterIdx < EmitterInstances.Num(); ++EmitterIdx)
-        {
-            FParticleEmitterInstance* Inst = EmitterInstances[EmitterIdx];
-            if (!Inst || Inst->ActiveParticles <= 0) continue;
-
-            const EParticleType Type = Inst->GetDynamicType();
-            FDynamicEmitterDataBase* NewData = nullptr;
-
-            if (Type == EParticleType::Sprite)
-            {
-                auto* SpriteData = new FDynamicSpriteEmitterData();
-                SpriteData->EmitterType = Type;
-                SpriteData->EmitterIndex = EmitterIdx;
-                SpriteData->SortMode = Inst->CachedRequiredModule->SortMode;
-                SpriteData->SortPriority = 0;
-
-                if (Inst->CachedRequiredModule)
-                {
-                    SpriteData->bUseLocalSpace = Inst->CachedRequiredModule->bUseLocalSpace;
-                }
-
-                Inst->BuildReplayData(SpriteData->Source);
-                NewData = SpriteData;
-            }
-            else if (Type == EParticleType::Mesh)
-            {
-                auto* MeshData = new FDynamicMeshEmitterData();
-                MeshData->EmitterType = Type;
-                MeshData->EmitterIndex = EmitterIdx;
-                MeshData->SortMode = Inst->CachedRequiredModule->SortMode;
-                MeshData->SortPriority = 0;
-
-                Inst->BuildReplayData(MeshData->Source);
-
-                if (MeshData->Source.Mesh)
-                {
-                    NewData = MeshData;
-                }
-                else
-                {
-                    delete MeshData;
-                }
-            }
-
-            if (NewData)
-            {
-                EmitterRenderData.Add(NewData);
-            }
-        }
-    }
-}
-
-void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
+void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FDynamicEmitterDataBase*>& EmitterRenderData, TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
 {
     if (EmitterRenderData.IsEmpty())
         return;
@@ -402,7 +357,7 @@ void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FMeshBatchElement
     }
 }
 
-void UParticleSystemComponent::BuildMeshParticleBatch(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
+void UParticleSystemComponent::BuildMeshParticleBatch(TArray<FDynamicEmitterDataBase*>& EmitterRenderData, TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
 {
     if (EmitterRenderData.IsEmpty())
         return;
@@ -624,25 +579,4 @@ void UParticleSystemComponent::ReleaseParticleBuffers()
 
     ParticleVertexCapacity = 0;
     ParticleIndexCount = 0;
-}
-
-void UParticleSystemComponent::ClearEmitterRenderData()
-{
-    for (FDynamicEmitterDataBase* Data : EmitterRenderData)
-    {
-        if (Data)
-        {
-            if (auto* Sprite = dynamic_cast<FDynamicSpriteEmitterData*>(Data))
-            {
-                Sprite->Source.DataContainer.Free();
-            }
-            else if (auto* Mesh = dynamic_cast<FDynamicMeshEmitterData*>(Data))
-            {
-                Mesh->Source.DataContainer.Free();
-            }
-
-            delete Data;
-        }
-    }
-    EmitterRenderData.Empty();
 }

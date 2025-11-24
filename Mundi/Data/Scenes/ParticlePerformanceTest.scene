@@ -1,6 +1,6 @@
 {
   "Actors" : {
-    "1083" : {
+    "1105" : {
       "ObjectName" : "ADirectionalLightActor_2",
       "OwnedComponents" : [{
           "CascadedAreaColorDebugValue" : 0.000000,
@@ -8,7 +8,7 @@
           "CascadedCount" : 4,
           "CascadedLinearBlendingValue" : 0.500000,
           "CascadedOverlapValue" : 0.200000,
-          "Id" : 1085,
+          "Id" : 1107,
           "Intensity" : 1.000000,
           "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
           "ObjectName" : "UDirectionalLightComponent_2",
@@ -29,16 +29,16 @@
           "bIsVisible" : true,
           "bTickEnabled" : true
         }],
-      "RootComponentId" : 1085,
+      "RootComponentId" : 1107,
       "Tag" : "",
       "Type" : "ADirectionalLightActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "1086" : {
+    "1108" : {
       "ObjectName" : "AAmbientLightActor_2",
       "OwnedComponents" : [{
-          "Id" : 1088,
+          "Id" : 1110,
           "Intensity" : 0.100000,
           "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
           "ObjectName" : "UAmbientLightComponent_2",
@@ -58,16 +58,16 @@
           "bIsVisible" : true,
           "bTickEnabled" : true
         }],
-      "RootComponentId" : 1088,
+      "RootComponentId" : 1110,
       "Tag" : "",
       "Type" : "AAmbientLightActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "1089" : {
+    "1111" : {
       "ObjectName" : "APlayerCameraManager_3",
       "OwnedComponents" : [{
-          "Id" : 1090,
+          "Id" : 1112,
           "ObjectName" : "USceneComponent_4",
           "ParentId" : 0,
           "RelativeLocation" : [0.000000, 0.000000, 0.000000],
@@ -79,34 +79,19 @@
           "bIsVisible" : true,
           "bTickEnabled" : true
         }],
-      "RootComponentId" : 1090,
+      "RootComponentId" : 1112,
       "Tag" : "",
       "Type" : "APlayerCameraManager",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "1091" : {
+    "1113" : {
       "ObjectName" : "빈 액터_0",
       "OwnedComponents" : [{
-          "Id" : 1092,
-          "ObjectName" : "UParticleSystemComponent_1",
-          "ParentId" : 1093,
-          "RelativeLocation" : [0.000000, 0.000000, 0.000000],
-          "RelativeRotationEuler" : [0.000000, 0.000000, 0.000000],
-          "RelativeScale" : [1.000000, 1.000000, 1.000000],
-          "Template" : "Data/Particle/Test.particle",
-          "Type" : "UParticleSystemComponent",
-          "bBlockComponent" : false,
-          "bGenerateOverlapEvents" : true,
-          "bHiddenInGame" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bTickEnabled" : true
-        }, {
-          "Id" : 1093,
+          "Id" : 1114,
           "ObjectName" : "USceneComponent_5",
           "ParentId" : 0,
-          "RelativeLocation" : [1.532815, -1.532815, 1.173166],
+          "RelativeLocation" : [1.532815, -2.715635, 1.173166],
           "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
           "RelativeScale" : [1.000000, 1.000000, 1.000000],
           "Type" : "USceneComponent",
@@ -114,93 +99,112 @@
           "bIsActive" : true,
           "bIsVisible" : true,
           "bTickEnabled" : true
+        }, {
+          "Id" : 1115,
+          "ObjectName" : "UParticleSystemComponent_1",
+          "ParentId" : 1114,
+          "RelativeLocation" : [0.000000, 0.000000, 0.000000],
+          "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
+          "RelativeScale" : [1.000000, 1.000000, 1.000000],
+          "Template" : "Data/Particle/PerfTest.particle",
+          "Type" : "UParticleSystemComponent",
+          "bBlockComponent" : false,
+          "bGenerateOverlapEvents" : true,
+          "bHiddenInGame" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bTickEnabled" : true
         }],
-      "RootComponentId" : 1093,
+      "RootComponentId" : 1114,
       "Tag" : "",
       "Type" : "AEmptyActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "1099" : {
-      "ObjectName" : "AEmptyActor_0",
+    "1141" : {
+      "ObjectName" : "스켈레탈 메시_0",
       "OwnedComponents" : [{
-          "Id" : 1100,
-          "ObjectName" : "UParticleSystemComponent_1",
-          "ParentId" : 1101,
-          "RelativeLocation" : [0.000000, 0.000000, 0.000000],
+          "AnimGraphPath" : "",
+          "Id" : 1142,
+          "MaterialSlots" : [{
+              "Type" : "None"
+            }, {
+              "AssetPath" : "Ch06_body",
+              "Type" : "UMaterial"
+            }, {
+              "AssetPath" : "Ch06_eyelashes",
+              "Type" : "UMaterial"
+            }, {
+              "AssetPath" : "Ch06_body1",
+              "Type" : "UMaterial"
+            }],
+          "ObjectName" : "USkeletalMeshComponent_1",
+          "ParentId" : 0,
+          "RelativeLocation" : [-1.980141, 12.474632, 1.306821],
           "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
           "RelativeScale" : [1.000000, 1.000000, 1.000000],
-          "Template" : "Data/Particle/Test.particle",
-          "Type" : "UParticleSystemComponent",
+          "SkeletalMesh" : "Data/FBX/James_Mixamo_Idle.fbx",
+          "Type" : "USkeletalMeshComponent",
           "bBlockComponent" : false,
+          "bCastShadows" : true,
           "bGenerateOverlapEvents" : true,
           "bHiddenInGame" : false,
           "bIsActive" : true,
           "bIsVisible" : true,
           "bTickEnabled" : true
-        }, {
-          "Id" : 1101,
-          "ObjectName" : "USceneComponent_5",
-          "ParentId" : 0,
-          "RelativeLocation" : [1.532815, 5.033566, 1.173166],
-          "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
-          "RelativeScale" : [1.000000, 1.000000, 1.000000],
-          "Type" : "USceneComponent",
-          "bHiddenInGame" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bTickEnabled" : true
         }],
-      "RootComponentId" : 1101,
+      "RootComponentId" : 1142,
       "Tag" : "",
-      "Type" : "AEmptyActor",
+      "Type" : "ASkeletalMeshActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     },
-    "1103" : {
-      "ObjectName" : "AEmptyActor_1",
+    "1144" : {
+      "ObjectName" : "스켈레탈 메시_1",
       "OwnedComponents" : [{
-          "Id" : 1104,
-          "ObjectName" : "UParticleSystemComponent_1",
-          "ParentId" : 1105,
-          "RelativeLocation" : [0.000000, 0.000000, 0.000000],
+          "AnimGraphPath" : "",
+          "Id" : 1145,
+          "MaterialSlots" : [{
+              "Type" : "None"
+            }, {
+              "AssetPath" : "Ch06_body",
+              "Type" : "UMaterial"
+            }, {
+              "AssetPath" : "Ch06_eyelashes",
+              "Type" : "UMaterial"
+            }, {
+              "AssetPath" : "Ch06_body1",
+              "Type" : "UMaterial"
+            }],
+          "ObjectName" : "USkeletalMeshComponent_2",
+          "ParentId" : 0,
+          "RelativeLocation" : [-2.983988, 16.405933, 3.356576],
           "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
           "RelativeScale" : [1.000000, 1.000000, 1.000000],
-          "Template" : "Data/Particle/Test.particle",
-          "Type" : "UParticleSystemComponent",
+          "SkeletalMesh" : "Data/FBX/James_Mixamo_Idle.fbx",
+          "Type" : "USkeletalMeshComponent",
           "bBlockComponent" : false,
+          "bCastShadows" : true,
           "bGenerateOverlapEvents" : true,
           "bHiddenInGame" : false,
           "bIsActive" : true,
           "bIsVisible" : true,
           "bTickEnabled" : true
-        }, {
-          "Id" : 1105,
-          "ObjectName" : "USceneComponent_5",
-          "ParentId" : 0,
-          "RelativeLocation" : [1.532815, 9.187159, 1.173166],
-          "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
-          "RelativeScale" : [1.000000, 1.000000, 1.000000],
-          "Type" : "USceneComponent",
-          "bHiddenInGame" : false,
-          "bIsActive" : true,
-          "bIsVisible" : true,
-          "bTickEnabled" : true
         }],
-      "RootComponentId" : 1105,
+      "RootComponentId" : 1145,
       "Tag" : "",
-      "Type" : "AEmptyActor",
+      "Type" : "ASkeletalMeshActor",
       "bActorHiddenInGame" : false,
       "bActorIsActive" : true
     }
   },
-  "NextUUID" : 1107,
+  "NextUUID" : 1146,
   "PerspectiveCamera" : {
     "FOV" : [60.000000],
     "FarClip" : [2000.000000],
-    "Location" : [-41.989937, -0.186296, 13.161411],
+    "Location" : [-53.338013, 51.527203, 25.865435],
     "NearClip" : [0.100000],
-    "Rotation" : [0.000000, -2.700000, 4.199891]
+    "Rotation" : [0.000000, 13.300006, -43.700203]
   },
   "Version" : 1
 }

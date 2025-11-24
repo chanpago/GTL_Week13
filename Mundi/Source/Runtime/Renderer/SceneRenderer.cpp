@@ -1460,7 +1460,7 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 					{
 						DiffuseTextureSRV = TextureData->GetShaderResourceView();
 						PixelConst.bHasDiffuseTexture = (DiffuseTextureSRV != nullptr);
-						UE_LOG("[SceneRenderer] Diffuse SRV: %s", DiffuseTextureSRV ? "Valid" : "NULL");
+						// UE_LOG("[SceneRenderer] Diffuse SRV: %s", DiffuseTextureSRV ? "Valid" : "NULL");
 					}
 					else
 					{
