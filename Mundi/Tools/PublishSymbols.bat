@@ -27,16 +27,30 @@ set BIN_DIR=%~dp0..\..\Binaries\%CONFIG%
 set SERVER_IP=172.21.11.109
 set STORE_PATH=\\%SERVER_IP%\SymbolStore
 
-echo [SymStore] Checking server availability...
+echo [SymStore] Checking server availability (timeout: 3 seconds)...
 
-:: Simple and fast check - create a test file
-set "TEST_FILE=%STORE_PATH%\test_%RANDOM%.tmp"
-echo test > "%TEST_FILE%" 2>nul
+:: Create temporary PowerShell script for timeout check
+set "PS_SCRIPT=%TEMP%\check_symstore_%RANDOM%.ps1"
 
-if exist "%TEST_FILE%" (
-    del "%TEST_FILE%" 2>nul
-    echo [SymStore] Server is accessible.
-) else (
+(
+echo $ErrorActionPreference = 'Stop'
+echo $timeout = 3
+echo try {
+echo     $result = Test-Path -Path '%STORE_PATH%' -PathType Container -ErrorAction Stop
+echo     if ($result^) { exit 0 } else { exit 1 }
+echo } catch {
+echo     exit 1
+echo }
+) > "%PS_SCRIPT%"
+
+:: Run PowerShell script with timeout
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%"
+set RESULT=%ERRORLEVEL%
+
+:: Cleanup
+del "%PS_SCRIPT%" 2>nul
+
+if %RESULT% NEQ 0 (
     echo.
     echo [Warning] Cannot access Symbol Store path: "%STORE_PATH%"
     echo           Server might be unreachable or you lack permissions.
@@ -44,6 +58,7 @@ if exist "%TEST_FILE%" (
     exit /b 0
 )
 
+echo [SymStore] Server is accessible.
 
 :: ========================================================
 :: [Setup 4] Version Tag (Auto-generated from Date_Time)
