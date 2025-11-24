@@ -28,6 +28,12 @@ AActor::AActor()
 AActor::~AActor()
 {
 	DestroyAllComponents();
+	
+	if (LuaGameObject)
+	{
+		delete LuaGameObject;
+		LuaGameObject = nullptr;
+	}
 }
 
 void AActor::BeginPlay()

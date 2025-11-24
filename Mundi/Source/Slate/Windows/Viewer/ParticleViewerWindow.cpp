@@ -1747,6 +1747,7 @@ void SParticleViewerWindow::LoadParticleSystem(UParticleSystem* ParticleSystem)
     if (PreviewActor)
     {
         // World의 Actor 리스트에서 제거하고 삭제
+        PreviewActor->EndPlay();
         PreviewActor->Destroy();
         PreviewActor = nullptr;
         PreviewComponent = nullptr;
