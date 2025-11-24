@@ -4,7 +4,7 @@
 #include "K2Node.h"
 #include "ObjectIterator.h"
 
-IMPLEMENT_CLASS(UBlueprintNodeSpawner, UObject)
+IMPLEMENT_CLASS(UBlueprintNodeSpawner)
 
 UEdGraphNode* UBlueprintNodeSpawner::SpawnNode(UEdGraph* Graph, ImVec2 Position)
 {

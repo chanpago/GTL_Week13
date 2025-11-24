@@ -3,7 +3,7 @@
 #include "AnimInstance.h"
 #include "AnimSequence.h"
 
-IMPLEMENT_CLASS(UAnimationStateMachine, UObject)
+IMPLEMENT_CLASS(UAnimationStateMachine)
 
 void UAnimationStateMachine::Initialize(UAnimInstance* InOwner, EAnimLayer InLayer)
 {

@@ -45,7 +45,7 @@ static UCharacterMovementComponent* GetMovementFromContext(FBlueprintContext* Co
 //	[GetIsFalling] 
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_GetIsFalling, UK2Node)
+IMPLEMENT_CLASS(UK2Node_GetIsFalling)
 
 UK2Node_GetIsFalling::UK2Node_GetIsFalling()
 {
@@ -85,7 +85,7 @@ void UK2Node_GetIsFalling::GetMenuActions(FBlueprintActionDatabaseRegistrar& Act
 //	[GetVelocity] 
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_GetVelocity, UK2Node)
+IMPLEMENT_CLASS(UK2Node_GetVelocity)
 
 UK2Node_GetVelocity::UK2Node_GetVelocity()
 {
@@ -138,7 +138,7 @@ void UK2Node_GetVelocity::GetMenuActions(FBlueprintActionDatabaseRegistrar& Acti
 //	[GetSpeed] 
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_GetSpeed, UK2Node)
+IMPLEMENT_CLASS(UK2Node_GetSpeed)
 
 UK2Node_GetSpeed::UK2Node_GetSpeed()
 {

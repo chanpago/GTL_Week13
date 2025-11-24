@@ -12,7 +12,7 @@ namespace ed = ax::NodeEditor;
 //	[AnimSequence] 애니메이션 시퀀스 노드 
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_AnimSequence, UK2Node)
+IMPLEMENT_CLASS(UK2Node_AnimSequence)
 
 UK2Node_AnimSequence::UK2Node_AnimSequence()
 {
@@ -118,7 +118,7 @@ FBlueprintValue UK2Node_AnimSequence::EvaluatePin(const UEdGraphPin* OutputPin, 
 //	[AnimStateEntry] 애니메이션 상태 머신 진입점
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_AnimStateEntry, UK2Node)
+IMPLEMENT_CLASS(UK2Node_AnimStateEntry)
 
 UK2Node_AnimStateEntry::UK2Node_AnimStateEntry()
 {
@@ -158,7 +158,7 @@ void UK2Node_AnimSequence::GetMenuActions(FBlueprintActionDatabaseRegistrar& Act
 //	[AnimState] 애니메이션 상태 노드
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_AnimState, UK2Node)
+IMPLEMENT_CLASS(UK2Node_AnimState)
 
 UK2Node_AnimState::UK2Node_AnimState()
 {
@@ -212,7 +212,7 @@ void UK2Node_AnimState::GetMenuActions(FBlueprintActionDatabaseRegistrar& Action
 //	[AnimTransition] 애니메이션 전이 노드
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_AnimTransition, UK2Node)
+IMPLEMENT_CLASS(UK2Node_AnimTransition)
 
 UK2Node_AnimTransition::UK2Node_AnimTransition()
 {
@@ -248,7 +248,7 @@ void UK2Node_AnimTransition::GetMenuActions(FBlueprintActionDatabaseRegistrar& A
 //	[BlendSpace1D] 1D 블렌드 스페이스 노드
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_BlendSpace1D, UK2Node)
+IMPLEMENT_CLASS(UK2Node_BlendSpace1D)
 
 UK2Node_BlendSpace1D::UK2Node_BlendSpace1D()
 {

@@ -60,13 +60,10 @@ UWorld::~UWorld()
 
 	if (Level)
 	{
-		if (bPie)
+		// 모든 액터가 살아있을 때 EndPlay를 먼저 호출 후 삭제 진행
+		for (AActor* Actor : Level->GetActors())
 		{
-			// 모든 액터가 살아있을 때 EndPlay를 먼저 호출 후 삭제 진행
-			for (AActor* Actor : Level->GetActors())
-			{
-				Actor->EndPlay();
-			}
+			Actor->EndPlay();
 		}
 
 		TArray<AActor*> TempActors =  Level->GetActors();

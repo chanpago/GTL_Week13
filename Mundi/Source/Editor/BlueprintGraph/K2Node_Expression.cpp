@@ -28,7 +28,7 @@ FBlueprintValue EvaluateSelectOp(const UEdGraphNode* Node, FBlueprintContext* Co
 //	[Int] Select 노드 구현
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_Select_Int, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Select_Int)
 
 UK2Node_Select_Int::UK2Node_Select_Int()
 {
@@ -74,7 +74,7 @@ void UK2Node_Select_Int::GetMenuActions(FBlueprintActionDatabaseRegistrar& Actio
 //	[Float] Select 노드 구현
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_Select_Float, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Select_Float)
 
 UK2Node_Select_Float::UK2Node_Select_Float()
 {
@@ -114,7 +114,7 @@ void UK2Node_Select_Float::GetMenuActions(FBlueprintActionDatabaseRegistrar& Act
 //	[Bool] Select 노드 구현
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_Select_Bool, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Select_Bool)
 
 UK2Node_Select_Bool::UK2Node_Select_Bool()
 {

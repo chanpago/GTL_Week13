@@ -51,7 +51,7 @@ static int GetKeyCodeFromStr(const FString& InKeyName)
     return 0; // 알 수 없는 키
 }
 
-IMPLEMENT_CLASS(UK2Node_IsPressed, UK2Node)
+IMPLEMENT_CLASS(UK2Node_IsPressed)
 
 UK2Node_IsPressed::UK2Node_IsPressed()
 {
@@ -111,7 +111,7 @@ void UK2Node_IsPressed::GetMenuActions(FBlueprintActionDatabaseRegistrar& Action
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_IsKeyDown, UK2Node)
+IMPLEMENT_CLASS(UK2Node_IsKeyDown)
 
 UK2Node_IsKeyDown::UK2Node_IsKeyDown()
 {
@@ -176,7 +176,7 @@ void UK2Node_IsKeyDown::GetMenuActions(FBlueprintActionDatabaseRegistrar& Action
 //	[Input] 마우스 위치 확인 노드
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_GetMousePosition, UK2Node)
+IMPLEMENT_CLASS(UK2Node_GetMousePosition)
 
 UK2Node_GetMousePosition::UK2Node_GetMousePosition()
 {
@@ -223,7 +223,7 @@ void UK2Node_GetMousePosition::GetMenuActions(FBlueprintActionDatabaseRegistrar&
 //	[Debug] Watch Int
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_Watch_Int, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Watch_Int)
 
 UK2Node_Watch_Int::UK2Node_Watch_Int()
 {
@@ -255,7 +255,7 @@ void UK2Node_Watch_Int::GetMenuActions(FBlueprintActionDatabaseRegistrar& Action
 //	[Debug] Watch Float
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_Watch_Float, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Watch_Float)
 
 UK2Node_Watch_Float::UK2Node_Watch_Float()
 {
@@ -287,7 +287,7 @@ void UK2Node_Watch_Float::GetMenuActions(FBlueprintActionDatabaseRegistrar& Acti
 //	[Debug] Watch Bool
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_Watch_Bool, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Watch_Bool)
 
 UK2Node_Watch_Bool::UK2Node_Watch_Bool()
 {

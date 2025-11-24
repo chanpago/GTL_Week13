@@ -9,7 +9,7 @@ namespace ed = ax::NodeEditor;
 //	[Int] 리터럴 노드
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_Literal_Int, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Literal_Int)
 
 void UK2Node_Literal_Int::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
@@ -60,7 +60,7 @@ void UK2Node_Literal_Int::GetMenuActions(FBlueprintActionDatabaseRegistrar& Acti
 //	[Float] 리터럴 노드
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_Literal_Float, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Literal_Float)
 
 void UK2Node_Literal_Float::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
@@ -112,7 +112,7 @@ void UK2Node_Literal_Float::GetMenuActions(FBlueprintActionDatabaseRegistrar& Ac
 //	[Bool] 리터럴 노드
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_Literal_Bool, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Literal_Bool)
 
 void UK2Node_Literal_Bool::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {

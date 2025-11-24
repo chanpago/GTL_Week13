@@ -4,7 +4,7 @@
 #include "BlueprintActionDatabase.h"
 #include "K2Node_Animation.h"
 
-IMPLEMENT_CLASS(UAnimationGraph, UEdGraph)
+IMPLEMENT_CLASS(UAnimationGraph)
 
 UAnimationGraph::UAnimationGraph()
 {

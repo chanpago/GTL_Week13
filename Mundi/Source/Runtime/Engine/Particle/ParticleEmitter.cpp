@@ -4,7 +4,6 @@
 #include "ParticleLODLevel.h"
 #include "Modules/ParticleModule.h"
 #include "Modules/ParticleModuleRequired.h"
-#include "Modules/ParticleModuleTypeDataBase.h"
 
 IMPLEMENT_CLASS(UParticleEmitter)
 
@@ -66,7 +65,7 @@ void UParticleEmitter::CacheEmitterModuleInfo()
     if (LOD0->TypeDataModule)
     {
         // TypeDataModule 관련 처리는 나중에 구현
-        Offset = FMath::Max(Offset, LOD0->TypeDataModule->GetRequiredParticleBytes());
+        // Offset = FMath::Max(Offset, LOD0->TypeDataModule->GetRequiredParticleBytes());
     }
 
     ParticleSizeBytes = Offset;
@@ -138,4 +137,30 @@ void UParticleEmitter::Serialize(const bool bInIsLoading, JSON& InOutHandle)
         }
         InOutHandle["LODLevels"] = LODArray;
     }
+}
+
+template<typename T>
+T* UParticleEmitter::GetModule(int32 LODIndex) const
+{
+    // LOD 존재 검증
+    if (LODLevels.Num() <= LODIndex || LODLevels[LODIndex] == nullptr)
+        return nullptr;
+
+    const UParticleLODLevel* LOD = LODLevels[LODIndex];
+
+    // 캐시가 비었다면 Rebuild 필요
+    if (LOD->AllModulesCache.Num() == 0)
+        return nullptr;
+
+    for (UParticleModule* M : LOD->AllModulesCache)
+    {
+        if (!M || !M->bEnabled)
+            continue;
+
+        // 템플릿 타입과 정확히 매칭되는 모듈 가져오기
+        if (auto* Casted = dynamic_cast<T*>(M))
+            return Casted;
+    }
+
+    return nullptr;
 }

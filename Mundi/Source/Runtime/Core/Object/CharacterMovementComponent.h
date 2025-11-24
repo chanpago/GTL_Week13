@@ -42,7 +42,7 @@ protected:
 	ACharacter* CharacterOwner = nullptr;
 	bool bIsFalling = false;
 
-	const float GLOBAL_GRAVITY_Z = -9.8;
+	const float GLOBAL_GRAVITY_Z = -9.8f;
 	const float GravityScale = 1.0f;
 
 

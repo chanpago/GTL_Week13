@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "EdGraphNode.h"
 
-IMPLEMENT_CLASS(UEdGraphNode, UObject)
+IMPLEMENT_CLASS(UEdGraphNode)
 
 void UEdGraphNode::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {

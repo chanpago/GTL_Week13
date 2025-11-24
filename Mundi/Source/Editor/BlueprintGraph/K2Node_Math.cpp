@@ -27,7 +27,7 @@ FBlueprintValue EvaluateBinaryOp(const UEdGraphNode* Node, OpFunc Op, FBlueprint
 //  [Float] 노드
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_Add_FloatFloat, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Add_FloatFloat)
 
 UK2Node_Add_FloatFloat::UK2Node_Add_FloatFloat()
 {
@@ -62,7 +62,7 @@ void UK2Node_Add_FloatFloat::GetMenuActions(FBlueprintActionDatabaseRegistrar& A
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Subtract_FloatFloat, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Subtract_FloatFloat)
 
 UK2Node_Subtract_FloatFloat::UK2Node_Subtract_FloatFloat()
 {
@@ -97,7 +97,7 @@ void UK2Node_Subtract_FloatFloat::GetMenuActions(FBlueprintActionDatabaseRegistr
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Multiply_FloatFloat, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Multiply_FloatFloat)
 
 UK2Node_Multiply_FloatFloat::UK2Node_Multiply_FloatFloat()
 {
@@ -132,7 +132,7 @@ void UK2Node_Multiply_FloatFloat::GetMenuActions(FBlueprintActionDatabaseRegistr
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Divide_FloatFloat, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Divide_FloatFloat)
 
 UK2Node_Divide_FloatFloat::UK2Node_Divide_FloatFloat()
 {
@@ -168,7 +168,7 @@ void UK2Node_Divide_FloatFloat::GetMenuActions(FBlueprintActionDatabaseRegistrar
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Greater_FloatFloat, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Greater_FloatFloat)
 
 UK2Node_Greater_FloatFloat::UK2Node_Greater_FloatFloat()
 {
@@ -203,7 +203,7 @@ void UK2Node_Greater_FloatFloat::GetMenuActions(FBlueprintActionDatabaseRegistra
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Equal_FloatFloat, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Equal_FloatFloat)
 
 UK2Node_Equal_FloatFloat::UK2Node_Equal_FloatFloat()
 {
@@ -242,7 +242,7 @@ void UK2Node_Equal_FloatFloat::GetMenuActions(FBlueprintActionDatabaseRegistrar&
 //  [Int] 노드
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_Add_IntInt, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Add_IntInt)
 
 UK2Node_Add_IntInt::UK2Node_Add_IntInt()
 {
@@ -277,7 +277,7 @@ void UK2Node_Add_IntInt::GetMenuActions(FBlueprintActionDatabaseRegistrar& Actio
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Subtract_IntInt, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Subtract_IntInt)
 
 UK2Node_Subtract_IntInt::UK2Node_Subtract_IntInt()
 {
@@ -312,7 +312,7 @@ void UK2Node_Subtract_IntInt::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Multiply_IntInt, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Multiply_IntInt)
 
 UK2Node_Multiply_IntInt::UK2Node_Multiply_IntInt()
 {
@@ -347,7 +347,7 @@ void UK2Node_Multiply_IntInt::GetMenuActions(FBlueprintActionDatabaseRegistrar& 
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Divide_IntInt, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Divide_IntInt)
 
 UK2Node_Divide_IntInt::UK2Node_Divide_IntInt()
 {
@@ -383,7 +383,7 @@ void UK2Node_Divide_IntInt::GetMenuActions(FBlueprintActionDatabaseRegistrar& Ac
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Greater_IntInt, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Greater_IntInt)
 
 UK2Node_Greater_IntInt::UK2Node_Greater_IntInt()
 {
@@ -418,7 +418,7 @@ void UK2Node_Greater_IntInt::GetMenuActions(FBlueprintActionDatabaseRegistrar& A
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Equal_IntInt, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Equal_IntInt)
 
 UK2Node_Equal_IntInt::UK2Node_Equal_IntInt()
 {
@@ -457,7 +457,7 @@ void UK2Node_Equal_IntInt::GetMenuActions(FBlueprintActionDatabaseRegistrar& Act
 //  [Bool] 노드 (논리 연산)
 // ----------------------------------------------------------------
 
-IMPLEMENT_CLASS(UK2Node_And_BoolBool, UK2Node)
+IMPLEMENT_CLASS(UK2Node_And_BoolBool)
 
 UK2Node_And_BoolBool::UK2Node_And_BoolBool()
 {
@@ -492,7 +492,7 @@ void UK2Node_And_BoolBool::GetMenuActions(FBlueprintActionDatabaseRegistrar& Act
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Or_BoolBool, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Or_BoolBool)
 
 UK2Node_Or_BoolBool::UK2Node_Or_BoolBool()
 {
@@ -527,7 +527,7 @@ void UK2Node_Or_BoolBool::GetMenuActions(FBlueprintActionDatabaseRegistrar& Acti
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Xor_BoolBool, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Xor_BoolBool)
 
 UK2Node_Xor_BoolBool::UK2Node_Xor_BoolBool()
 {
@@ -562,7 +562,7 @@ void UK2Node_Xor_BoolBool::GetMenuActions(FBlueprintActionDatabaseRegistrar& Act
     ActionRegistrar.AddAction(Spawner);
 }
 
-IMPLEMENT_CLASS(UK2Node_Not_Bool, UK2Node)
+IMPLEMENT_CLASS(UK2Node_Not_Bool)
 
 UK2Node_Not_Bool::UK2Node_Not_Bool()
 {

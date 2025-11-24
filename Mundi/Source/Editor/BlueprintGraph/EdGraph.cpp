@@ -2,7 +2,7 @@
 #include "EdGraph.h"
 #include "EdGraphNode.h"
 
-IMPLEMENT_CLASS(UEdGraph, UObject)
+IMPLEMENT_CLASS(UEdGraph)
 
 UEdGraph::~UEdGraph()
 {
