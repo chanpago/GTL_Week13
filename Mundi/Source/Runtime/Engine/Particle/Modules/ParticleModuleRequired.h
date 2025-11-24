@@ -54,4 +54,8 @@ public:
     FRawDistributionVector InitialSize;
     FRawDistributionColor  InitialColor;
     FRawDistributionFloat  InitialRotation;
+
+    // ---- SubUV (스프라이트 시트 애니메이션) ----
+    int32 SubImages_Horizontal = 1;  // NX (가로 타일 수)
+    int32 SubImages_Vertical = 1;    // NY (세로 타일 수)
 };

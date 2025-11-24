@@ -439,4 +439,6 @@ struct FParticleSpriteVertex
     FVector2D Size;        // 8 bytes (offset 20)
     FLinearColor Color;    // 16 bytes (offset 28)
     float Rotation;        // 4 bytes (offset 44)
+    float SubImageIndex;   // 4 bytes (offset 48) - SubUV 애니메이션용 float 프레임 인덱스
+    float Padding[3];      // 12 bytes (offset 52) - 16바이트 정렬 맞추기
 };

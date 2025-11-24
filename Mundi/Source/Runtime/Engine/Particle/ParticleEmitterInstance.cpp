@@ -6,6 +6,7 @@
 #include "PlatformTime.h"
 #include "Modules/ParticleModuleRequired.h"
 #include "Modules/ParticleModuleSpawn.h"
+#include "Modules/ParticleModuleSubUV.h"
 
 void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSystemComponent* InComponent)
 {
@@ -443,9 +444,26 @@ void FParticleEmitterInstance::BuildReplayData(FDynamicEmitterReplayDataBase& Ou
         {
             auto& SpriteOut = static_cast<FDynamicSpriteEmitterReplayData&>(OutData);
             SpriteOut.RequiredModule = CachedRequiredModule;
+
+            // SubUV 모듈 찾기
+            if (CurrentLODLevel)
+            {
+                for (auto* Module : CurrentLODLevel->Modules)
+                {
+                    if (auto* SubUV = Cast<UParticleModuleSubUV>(Module))
+                    {
+                        if (SubUV->bEnabled)
+                        {
+                            SpriteOut.SubUVModule = SubUV;
+                            SpriteOut.SubUVPayloadOffset = SubUV->PayloadOffset;
+                            break;
+                        }
+                    }
+                }
+            }
             break;
         }
-        case EParticleType::Mesh: 
+        case EParticleType::Mesh:
         {
             auto& MeshOut = static_cast<FDynamicMeshEmitterReplayData&>(OutData);
             MeshOut.Mesh = Template ? Template->Mesh : nullptr;

@@ -407,6 +407,7 @@
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleSpawn.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleTypeDataBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleVelocity.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleSubUV.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\ParticleDataContainer.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\ParticleEmitter.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\ParticleEmitterInstance.cpp" />
@@ -895,6 +896,7 @@
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleSpawn.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleTypeDataBase.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleVelocity.h" />
+    <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleSubUV.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\ParticleDataContainer.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\ParticleEmitter.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\ParticleEmitterInstance.h" />

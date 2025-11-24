@@ -273,16 +273,13 @@ void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FDynamicEmitterDa
             FLinearColor Color = Particle->Color;
             const float Rotation = Particle->Rotation;
 
-            //if (LocalIdx < 10)
-            //    Color = FLinearColor(1, 0, 0, 0.5);
-            //else if (LocalIdx < 20)
-            //    Color = FLinearColor(1, 1, 0, 0.5);
-            //else if(LocalIdx < 30)
-            //    Color = FLinearColor(0, 1, 0, 0.5);
-            //else if (LocalIdx < 40)
-            //    Color = FLinearColor(0, 1, 1, 0.5);
-            //else if (LocalIdx < 50)
-            //    Color = FLinearColor(0, 0, 1, 0.5);
+            // SubImageIndex 가져오기 (SubUV 모듈이 있으면 payload에서 읽기)
+            float SubImageIndex = 0.0f;
+            if (Src->SubUVModule && Src->SubUVPayloadOffset >= 0)
+            {
+                const uint8* ParticleBase = reinterpret_cast<const uint8*>(Particle);
+                SubImageIndex = *reinterpret_cast<const float*>(ParticleBase + Src->SubUVPayloadOffset);
+            }
 
             // 4개 코너 버텍스 생성
             for (int32 CornerIndex = 0; CornerIndex < 4; ++CornerIndex)
@@ -293,6 +290,7 @@ void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FDynamicEmitterDa
                 Vertex.Size = Size;
                 Vertex.Color = Color;
                 Vertex.Rotation = Rotation;
+                Vertex.SubImageIndex = SubImageIndex;
             }
 
             ++WrittenParticles;
@@ -358,6 +356,18 @@ void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FDynamicEmitterDa
         Batch.PrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         Batch.WorldMatrix = GetWorldMatrix();
         Batch.ObjectID = InternalIndex;
+
+        // SubUV 파라미터 설정
+        const FDynamicSpriteEmitterReplayData* SrcData = static_cast<const FDynamicSpriteEmitterReplayData*>(Cmd.SpriteData->GetSource());
+        if (SrcData && SrcData->RequiredModule)
+        {
+            Batch.SubImages_Horizontal = SrcData->RequiredModule->SubImages_Horizontal;
+            Batch.SubImages_Vertical = SrcData->RequiredModule->SubImages_Vertical;
+        }
+        if (SrcData && SrcData->SubUVModule)
+        {
+            Batch.SubUV_InterpMethod = static_cast<int32>(SrcData->SubUVModule->InterpMethod);
+        }
     }
 }
 

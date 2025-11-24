@@ -1532,6 +1532,17 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 		RHIDevice->SetAndUpdateConstantBuffer(ModelBufferType(Batch.WorldMatrix, Batch.WorldMatrix.InverseAffine().Transpose()));
 		RHIDevice->SetAndUpdateConstantBuffer(ColorBufferType(Batch.InstanceColor, Batch.ObjectID));
 
+		// SubUV 파라미터 설정 (파티클에서만 필요)
+		if (Batch.SubImages_Horizontal > 1 || Batch.SubImages_Vertical > 1)
+		{
+			FSubUVBufferType SubUVBuffer;
+			SubUVBuffer.SubImages_Horizontal = Batch.SubImages_Horizontal;
+			SubUVBuffer.SubImages_Vertical = Batch.SubImages_Vertical;
+			SubUVBuffer.InterpMethod = Batch.SubUV_InterpMethod;
+			SubUVBuffer.Padding0 = 0.0f;
+			RHIDevice->SetAndUpdateConstantBuffer(SubUVBuffer);
+		}
+
 		// 5. 드로우 콜 실행
 		RHIDevice->GetDeviceContext()->DrawIndexed(Batch.IndexCount, Batch.StartIndex, Batch.BaseVertexIndex);
 	}

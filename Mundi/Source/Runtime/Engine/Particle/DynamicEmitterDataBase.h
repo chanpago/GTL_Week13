@@ -20,6 +20,10 @@ struct FDynamicEmitterReplayDataBase
 struct FDynamicSpriteEmitterReplayData : public FDynamicEmitterReplayDataBase
 {
     UParticleModuleRequired* RequiredModule = nullptr;
+
+    // SubUV 모듈 (있으면 payload에서 SubImageIndex 읽기)
+    class UParticleModuleSubUV* SubUVModule = nullptr;
+    int32 SubUVPayloadOffset = -1;
 };
 
 struct FDynamicMeshEmitterReplayData : public FDynamicEmitterReplayDataBase

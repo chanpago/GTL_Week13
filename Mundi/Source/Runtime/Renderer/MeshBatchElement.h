@@ -66,6 +66,11 @@ struct FMeshBatchElement
 	ID3D11ShaderResourceView* GPUSkinMatrixSRV = nullptr;
 	ID3D11ShaderResourceView* GPUSkinNormalMatrixSRV = nullptr;
 
+	// SubUV 파라미터 (파티클 전용)
+	int32 SubImages_Horizontal = 1;
+	int32 SubImages_Vertical = 1;
+	int32 SubUV_InterpMethod = 0;  // 0=None, 1=LinearBlend
+
 	// --- 기본 생성자 ---
 	FMeshBatchElement() = default;
 
