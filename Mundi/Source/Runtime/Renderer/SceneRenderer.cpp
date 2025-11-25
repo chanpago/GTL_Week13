@@ -548,11 +548,6 @@ void FSceneRenderer::RenderShadowDepthPass(FShadowRenderRequest& ShadowRequest, 
 		ID3D11ShaderResourceView* NullSRVs[2] = { nullptr, nullptr };
 		RHIDevice->GetDeviceContext()->VSSetShaderResources(12, 2, NullSRVs);
 	}
-	//if (CurrentInstancingSRV)
-	//{
-	//	ID3D11ShaderResourceView* SRV = nullptr;
-	//	RHIDevice->GetDeviceContext()->VSSetShaderResources(ParticleInstanceDataSlot, 1, &SRV);
-	//}
 }
 
 
@@ -948,7 +943,7 @@ void FSceneRenderer::RenderParticlePass()
 
 	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTargetWithId); // Scene+Depth
 
-	RHIDevice->RSSetState(ERasterizerMode::Solid);
+	RHIDevice->RSSetState(ERasterizerMode::Solid_NoCull);
 	RHIDevice->OMSetDepthStencilState(EComparisonFunc::LessEqualReadOnly);
 	RHIDevice->OMSetBlendState(true);
 	
@@ -1580,6 +1575,12 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 	if (bClearListAfterDraw)
 	{
 		InMeshBatches.Empty();
+		if (CurrentInstancingSRV)
+		{
+			ID3D11ShaderResourceView* SRV = nullptr;
+			RHIDevice->GetDeviceContext()->VSSetShaderResources(ParticleInstanceDataSlot, 1, &SRV);
+			CurrentInstancingSRV = nullptr;
+		}
 	}
 }
 

@@ -45,6 +45,12 @@ struct VSOutput
 	float4 Color : COLOR0;
 };
 
+static const uint CornerIndexLUT[6] =
+{
+    0, 1, 2,
+	2, 3, 0
+};
+
 static const float2 CornerOffsets[4] = {
 	float2(-1.0f, -1.0f), float2(1.0f, -1.0f),
 	float2(1.0f,  1.0f),  float2(-1.0f,  1.0f)
@@ -55,8 +61,8 @@ VSOutput mainVS(VSInput In)
 	VSOutput Out;
 	FParticleInstanceData Instance = ParticleInstances[In.InstanceID];
 
-	uint cornerIndex = In.VertexID & 3;
-	float2 corner = CornerOffsets[cornerIndex];
+    uint cornerIndex = CornerIndexLUT[In.VertexID];
+    float2 corner = CornerOffsets[cornerIndex];
 	float2 halfSize = Instance.Size * 0.5f;
 
 	float cosR = cos(Instance.Rotation);

@@ -366,7 +366,7 @@ void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FMeshBatchElement
 			Batch.IndexBuffer = nullptr;
 
 			Batch.VertexStride = 0;
-			Batch.IndexCount = 4; // DrawInstanced(4, InstanceCount) 쪽에 맡기면 IndexCount는 의미 X.
+			Batch.IndexCount = 6;
 			Batch.StartIndex = 0;
 			Batch.BaseVertexIndex = 0;
 			Batch.PrimitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
