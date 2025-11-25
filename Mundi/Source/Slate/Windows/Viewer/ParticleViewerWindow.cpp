@@ -1902,8 +1902,9 @@ void SParticleViewerWindow::OnRender()
                                         displayName = fullName + prefixLen;
                                     }
 
-                                    // Required 모듈 체크
+                                    // Required, Spawn 모듈 체크
                                     bool isRequired = (strcmp(displayName, "Required") == 0);
+                                    bool isSpawn = (strcmp(displayName, "Spawn") == 0);
 
                                     // 모듈 이름 (왼쪽 정렬, 버튼 공간 확보)
                                     float itemWidth = ImGui::GetContentRegionAvail().x;
@@ -1912,9 +1913,33 @@ void SParticleViewerWindow::OnRender()
                                     // Required든 아니든 체크박스 + C버튼 공간 확보 (정렬 맞추기)
                                     float nameWidth = itemWidth - buttonWidth * 2 - rightMargin - 8;
 
-                                    if (ImGui::Selectable(displayName, isSelected, 0, ImVec2(nameWidth, 20)))
+                                    // Required, Spawn 모듈은 특별한 색상 적용 (상시 표시)
+                                    if (isRequired)
+                                    {
+                                        // 노란색 배경 - 상시 표시를 위해 모든 상태에 같은 색상 계열 적용
+                                        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.8f, 0.7f, 0.0f, 0.8f));
+                                        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.9f, 0.8f, 0.1f, 0.9f));
+                                        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(1.0f, 0.9f, 0.2f, 1.0f));
+                                    }
+                                    else if (isSpawn)
+                                    {
+                                        // 빨간색 배경 - 상시 표시를 위해 모든 상태에 같은 색상 계열 적용
+                                        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.8f, 0.2f, 0.2f, 0.8f));
+                                        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.9f, 0.3f, 0.3f, 0.9f));
+                                        ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+                                    }
+
+                                    // Required, Spawn은 항상 색상이 보이도록 selected 상태로 표시
+                                    bool showAsSelected = isSelected || isRequired || isSpawn;
+                                    if (ImGui::Selectable(displayName, showAsSelected, 0, ImVec2(nameWidth, 20)))
                                     {
                                         SelectedModule = Module;
+                                    }
+
+                                    // 색상 복원
+                                    if (isRequired || isSpawn)
+                                    {
+                                        ImGui::PopStyleColor(3);
                                     }
 
                                     // 마우스가 이 모듈 위에 있는지 확인
@@ -1926,8 +1951,8 @@ void SParticleViewerWindow::OnRender()
                                     // 버튼들 (같은 라인에 배치)
                                     ImGui::SameLine();
 
-                                    // Required가 아니면 활성화/비활성화 버튼 표시
-                                    if (!isRequired)
+                                    // Required, Spawn이 아니면 활성화/비활성화 버튼 표시
+                                    if (!isRequired && !isSpawn)
                                     {
                                         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
 
@@ -1961,7 +1986,7 @@ void SParticleViewerWindow::OnRender()
                                     }
                                     else
                                     {
-                                        // Required는 빈 공간
+                                        // Required, Spawn은 빈 공간
                                         ImGui::Dummy(ImVec2(buttonWidth, 20));
                                     }
 
