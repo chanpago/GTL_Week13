@@ -29,6 +29,42 @@ struct FRawDistribution
     }
 };
 
+template<>
+struct FRawDistribution<FVector>
+{
+    FVector MinValue;
+    FVector MaxValue;
+    bool bUseRange = false;
+
+    FRawDistribution() : MinValue(FVector::Zero()), MaxValue(FVector::Zero()), bUseRange(false) {}
+    FRawDistribution(const FVector& value) : MinValue(value), MaxValue(value), bUseRange(false) {}
+    FRawDistribution(const FVector& min, const FVector& max) : MinValue(min), MaxValue(max), bUseRange(true) {}
+
+    // 비율(Ratio)이 정해져 있을 때
+    FVector GetValue(float Ratio) const
+    {
+        if (bUseRange)
+        {
+            return FMath::Lerp(MinValue, MaxValue, Ratio);
+        }
+        return MinValue;
+    }
+
+    // 3축 각각 다른 비율을 적용하고 싶을 때
+    FVector GetValue(const FVector& Ratios) const
+    {
+        if (bUseRange)
+        {
+            return FVector(
+                FMath::Lerp(MinValue.X, MaxValue.X, Ratios.X),
+                FMath::Lerp(MinValue.Y, MaxValue.Y, Ratios.Y),
+                FMath::Lerp(MinValue.Z, MaxValue.Z, Ratios.Z)
+            );
+        }
+        return MinValue;
+    }
+};
+
 using FRawDistributionFloat = FRawDistribution<float>;
 using FRawDistributionVector = FRawDistribution<FVector>;
 using FRawDistributionColor = FRawDistribution<FLinearColor>;

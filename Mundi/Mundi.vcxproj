@@ -414,6 +414,7 @@
     <ClCompile Include="Source\Runtime\Engine\Particle\Async\ParticleAsyncUpdater.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\DynamicEmitterDataBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModule.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleCollision.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleColor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleColorOverLife.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleLifetime.cpp" />
@@ -428,6 +429,7 @@
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleTypeDataBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleVelocity.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleSubUV.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleVelocityCone.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\ParticleDataContainer.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\ParticleEmitter.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\ParticleEmitterInstance.cpp" />
@@ -903,6 +905,7 @@
     <ClInclude Include="Source\Runtime\Engine\Particle\Async\ParticleSimulationContext.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\DynamicEmitterDataBase.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModule.h" />
+    <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleCollision.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleColor.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleColorOverLife.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleLifetime.h" />
@@ -917,6 +920,7 @@
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleTypeDataBase.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleVelocity.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleSubUV.h" />
+    <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleVelocityCone.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\ParticleDataContainer.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\ParticleEmitter.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\ParticleEmitterInstance.h" />

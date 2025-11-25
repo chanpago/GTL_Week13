@@ -16,6 +16,8 @@
 #include "Modules/ParticleModuleMesh.h"
 #include "Modules/ParticleModuleSubUV.h"
 #include "Material.h"
+#include "Modules/ParticleModuleCollision.h"
+#include "Modules/ParticleModuleVelocityCone.h"
 
 IMPLEMENT_CLASS(UParticleLODLevel)
 
@@ -195,11 +197,38 @@ void UParticleLODLevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
             if (Spawn)
             {
                 int32 RateType = 0;
-                if (FJsonSerializer::ReadInt32(SpawnJson, "SpawnRateType", RateType)) Spawn->SpawnRateType = (ESpawnRateType)RateType;
+                if (FJsonSerializer::ReadInt32(SpawnJson, "SpawnRateType", RateType)) 
+                    Spawn->SpawnRateType = static_cast<ESpawnRateType>(RateType);
 
+                // 2. Constant Spawn Rate
                 FJsonSerializer::ReadFloat(SpawnJson, "SpawnRate_Min", Spawn->SpawnRate.MinValue);
                 FJsonSerializer::ReadFloat(SpawnJson, "SpawnRate_Max", Spawn->SpawnRate.MaxValue);
                 FJsonSerializer::ReadBool(SpawnJson, "SpawnRate_bUseRange", Spawn->SpawnRate.bUseRange);
+
+                // 3. OverTime Spawn Rate
+                FJsonSerializer::ReadFloat(SpawnJson, "SpawnRateOverTime_Min", Spawn->SpawnRateOverTime.MinValue);
+                FJsonSerializer::ReadFloat(SpawnJson, "SpawnRateOverTime_Max", Spawn->SpawnRateOverTime.MaxValue);
+                FJsonSerializer::ReadBool(SpawnJson, "SpawnRateOverTime_bUseRange", Spawn->SpawnRateOverTime.bUseRange);
+
+                // 4. Burst List
+                if (SpawnJson.hasKey("BurstList"))
+                {
+                    JSON BurstArray = SpawnJson["BurstList"];
+        
+                    // JSON 배열 순회
+                    int32 ArraySize = BurstArray.size();
+                    for (int32 i = 0; i < ArraySize; ++i)
+                    {
+                        JSON EntryJson = BurstArray[i];
+            
+                        UParticleModuleSpawn::FBurstEntry Entry;
+                        FJsonSerializer::ReadFloat(EntryJson, "Time", Entry.Time);
+                        FJsonSerializer::ReadInt32(EntryJson, "Count", Entry.Count);
+                        FJsonSerializer::ReadInt32(EntryJson, "CountRange", Entry.CountRange);
+            
+                        Spawn->BurstList.Add(Entry);
+                    }
+                }
             }
         }
         // -----------------------------------------------------------
@@ -309,13 +338,34 @@ void UParticleLODLevel::Serialize(const bool bInIsLoading, JSON& InOutHandle)
         if (SpawnModule)
         {
             JSON SpawnJson = JSON::Make(JSON::Class::Object);
-            SpawnJson["SpawnRateType"] = (int)SpawnModule->SpawnRateType;
+
+            // 1. 기본 Rate Type
+            SpawnJson["SpawnRateType"] = static_cast<int32>(SpawnModule->SpawnRateType);
+
+            // 2. Constant Spawn Rate
             SpawnJson["SpawnRate_Min"] = SpawnModule->SpawnRate.MinValue;
             SpawnJson["SpawnRate_Max"] = SpawnModule->SpawnRate.MaxValue;
             SpawnJson["SpawnRate_bUseRange"] = SpawnModule->SpawnRate.bUseRange;
+
+            // 3. OverTime Spawn Rate
+            SpawnJson["SpawnRateOverTime_Min"] = SpawnModule->SpawnRateOverTime.MinValue;
+            SpawnJson["SpawnRateOverTime_Max"] = SpawnModule->SpawnRateOverTime.MaxValue;
+            SpawnJson["SpawnRateOverTime_bUseRange"] = SpawnModule->SpawnRateOverTime.bUseRange;
+
+            // 4. Burst List (배열 처리 추가됨)
+            JSON BurstArray = JSON::Make(JSON::Class::Array);
+            for (const auto& Entry : SpawnModule->BurstList)
+            {
+                JSON EntryJson = JSON::Make(JSON::Class::Object);
+                EntryJson["Time"] = Entry.Time;
+                EntryJson["Count"] = Entry.Count;
+                EntryJson["CountRange"] = Entry.CountRange;
+        
+                BurstArray.append(EntryJson);
+            }
+            SpawnJson["BurstList"] = BurstArray;
             InOutHandle["SpawnModule"] = SpawnJson;
         }
-
         // 일반 Modules 배열 저장
         JSON ModulesArray = JSON::Make(JSON::Class::Array);
         
@@ -590,6 +640,52 @@ void UParticleLODLevel::ParseAndAddModule(JSON& ModuleJson)
         }
         NewModule = SubUV;
     }
+    else if (ModuleType == "Collision")
+    {
+        auto* Collision = Cast<UParticleModuleCollision>(AddModule(UParticleModuleCollision::StaticClass()));
+        if (Collision)
+        {
+            int32 ResponseVal = 0;
+            if (FJsonSerializer::ReadInt32(ModuleJson, "CollisionResponse", ResponseVal))
+            {
+                Collision->CollisionResponse = static_cast<EParticleCollisionResponse>(ResponseVal);
+            }
+            FJsonSerializer::ReadFloat(ModuleJson, "Restitution", Collision->Restitution);
+            FJsonSerializer::ReadFloat(ModuleJson, "Friction", Collision->Friction);
+            FJsonSerializer::ReadFloat(ModuleJson, "RadiusScale", Collision->RadiusScale);
+            FJsonSerializer::ReadBool(ModuleJson, "bWriteEvent", Collision->bWriteEvent);
+        }
+        NewModule = Collision;
+    }
+    else if (ModuleType == "VelocityCone")
+    {
+        auto* Cone = Cast<UParticleModuleVelocityCone>(AddModule(UParticleModuleVelocityCone::StaticClass()));
+        if (Cone)
+        {
+            // 1. Direction
+            // (기본값으로 0,0,1 등을 가지고 있으니, 읽기 실패해도 안전하도록 개별 처리)
+            FJsonSerializer::ReadFloat(ModuleJson, "Direction_X", Cone->Direction.X);
+            FJsonSerializer::ReadFloat(ModuleJson, "Direction_Y", Cone->Direction.Y);
+            FJsonSerializer::ReadFloat(ModuleJson, "Direction_Z", Cone->Direction.Z);
+        
+            // 로드 후 정규화(Normalize)를 한 번 해주는 것이 안전함
+            if (!Cone->Direction.IsZero())
+            {
+                Cone->Direction.Normalize();
+            }
+
+            // 2. Angle
+            FJsonSerializer::ReadFloat(ModuleJson, "Angle_Min", Cone->Angle.MinValue);
+            FJsonSerializer::ReadFloat(ModuleJson, "Angle_Max", Cone->Angle.MaxValue);
+            FJsonSerializer::ReadBool(ModuleJson, "Angle_bUseRange", Cone->Angle.bUseRange);
+
+            // 3. Velocity
+            FJsonSerializer::ReadFloat(ModuleJson, "Velocity_Min", Cone->Velocity.MinValue);
+            FJsonSerializer::ReadFloat(ModuleJson, "Velocity_Max", Cone->Velocity.MaxValue);
+            FJsonSerializer::ReadBool(ModuleJson, "Velocity_bUseRange", Cone->Velocity.bUseRange);
+        }
+        NewModule = Cone;
+    }
 
     if (NewModule)
     {
@@ -709,6 +805,33 @@ JSON UParticleLODLevel::SerializeModule(UParticleModule* Module)
         ModuleJson["SubImageIndex_bUseRange"] = SubUV->SubImageIndex.bUseRange;
         ModuleJson["InterpMethod"] = static_cast<int>(SubUV->InterpMethod);
         ModuleJson["bUseRealTime"] = SubUV->bUseRealTime;
+    }else if (auto* Collision = Cast<UParticleModuleCollision>(Module))
+    {
+        ModuleJson["Type"] = "Collision";
+        ModuleJson["CollisionResponse"] = static_cast<int>(Collision->CollisionResponse);
+        ModuleJson["Restitution"] = Collision->Restitution;
+        ModuleJson["Friction"] = Collision->Friction;
+        ModuleJson["RadiusScale"] = Collision->RadiusScale;
+        ModuleJson["bWriteEvent"] = Collision->bWriteEvent;
+    }
+    else if (auto* Cone = Cast<UParticleModuleVelocityCone>(Module))
+    {
+        ModuleJson["Type"] = "VelocityCone";
+
+        // 1. Direction (Vector -> 3 Floats)
+        ModuleJson["Direction_X"] = Cone->Direction.X;
+        ModuleJson["Direction_Y"] = Cone->Direction.Y;
+        ModuleJson["Direction_Z"] = Cone->Direction.Z;
+
+        // 2. Angle (Distribution)
+        ModuleJson["Angle_Min"] = Cone->Angle.MinValue;
+        ModuleJson["Angle_Max"] = Cone->Angle.MaxValue;
+        ModuleJson["Angle_bUseRange"] = Cone->Angle.bUseRange;
+
+        // 3. Velocity (Distribution)
+        ModuleJson["Velocity_Min"] = Cone->Velocity.MinValue;
+        ModuleJson["Velocity_Max"] = Cone->Velocity.MaxValue;
+        ModuleJson["Velocity_bUseRange"] = Cone->Velocity.bUseRange;
     }
     else
     {

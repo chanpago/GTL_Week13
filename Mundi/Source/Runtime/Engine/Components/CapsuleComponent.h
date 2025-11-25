@@ -15,8 +15,7 @@ public:
 
 	// Duplication
 	virtual void DuplicateSubObjects() override;
-
-protected:
+	
 	UPROPERTY(EditAnywhere, Category="CapsuleHalfHeight")
 	float CapsuleHalfHeight;
 

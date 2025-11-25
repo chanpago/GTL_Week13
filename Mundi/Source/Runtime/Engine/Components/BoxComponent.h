@@ -17,8 +17,7 @@ public:
 
 	// Duplication
 	virtual void DuplicateSubObjects() override;
-
-private:
+	
 	UPROPERTY(EditAnywhere, Category="BoxExtent")
 	FVector BoxExtent; // Half Extent
 

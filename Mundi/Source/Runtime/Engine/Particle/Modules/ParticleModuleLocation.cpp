@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include "ParticleModuleLocation.h"
+
+#include "ParticleModuleRequired.h"
 #include "../ParticleEmitter.h"
 #include "Source/Runtime/Engine/Particle/ParticleEmitterInstance.h"
 #include "Source/Runtime/Engine/Particle/ParticleHelper.h"
@@ -11,59 +13,74 @@ UParticleModuleLocation::UParticleModuleLocation()
     bSpawnModule = true;
 }
 
-void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase)
+void UParticleModuleLocation::SpawnAsync(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase, const FParticleSimulationContext& Context)
 {
-    if (!ParticleBase)
-        return;
-
-    // 랜덤 시드 생성
-    float RandomValue = Owner->GetRandomFloat();
-
-    FVector SpawnLocation = FVector(0.0f,0.0f,0.0f);
+    ParticleBase->Location = FVector(0, 0, 0);
+    FVector LocalOffset = FVector::Zero();
 
     switch (DistributionType)
     {
     case ELocationDistributionType::Point:
-        SpawnLocation = StartLocation.GetValue(RandomValue);
+        LocalOffset = StartLocation.GetValue({Owner->GetRandomFloat(), Owner->GetRandomFloat(), Owner->GetRandomFloat()});
         break;
 
     case ELocationDistributionType::Box:
         {
-            // 박스 영역 내 랜덤 위치 - 각 축마다 별도의 랜덤값 사용
-            float rx = (Owner->GetRandomFloat() * 2.0f - 1.0f) * BoxExtent.X;
-            float ry = (Owner->GetRandomFloat() * 2.0f - 1.0f) * BoxExtent.Y;
-            float rz = (Owner->GetRandomFloat() * 2.0f - 1.0f) * BoxExtent.Z;
-            SpawnLocation = FVector(rx, ry, rz);
+            FVector RandPos;
+            RandPos.X = (Owner->GetRandomFloat() * 2.0f - 1.0f) * BoxExtent.X;
+            RandPos.Y = (Owner->GetRandomFloat() * 2.0f - 1.0f) * BoxExtent.Y;
+            RandPos.Z = (Owner->GetRandomFloat() * 2.0f - 1.0f) * BoxExtent.Z;
+            
+            // StartLocation(중심점 오프셋) + 박스 랜덤 범위
+            LocalOffset = StartLocation.GetValue(0.0f) + RandPos;
         }
         break;
 
     case ELocationDistributionType::Sphere:
         {
-            // 구 영역 내 랜덤 위치 - 각 파라미터마다 별도의 랜덤값 사용
-            float theta = Owner->GetRandomFloat() * 2.0f * PI;
-            float phi = Owner->GetRandomFloat() * PI;
-            float r = Owner->GetRandomFloat() * SphereRadius;
+            float Theta = Owner->GetRandomFloat() * 2.0f * PI;
+            float Pi = Owner->GetRandomFloat() * PI;
+            float R = Owner->GetRandomFloat() * SphereRadius;
 
-            SpawnLocation.X = r * sinf(phi) * cosf(theta);
-            SpawnLocation.Y = r * sinf(phi) * sinf(theta);
-            SpawnLocation.Z = r * cosf(phi);
+            LocalOffset.X = R * sinf(Pi) * cosf(Theta);
+            LocalOffset.Y = R * sinf(Pi) * sinf(Theta);
+            LocalOffset.Z = R * cosf(Pi);
+
+            LocalOffset += StartLocation.GetValue(0.0f);
         }
         break;
 
     case ELocationDistributionType::Cylinder:
         {
-            // 원통 영역 내 랜덤 위치 - 각 파라미터마다 별도의 랜덤값 사용
-            float angle = Owner->GetRandomFloat() * 2.0f * PI;
-            float radius = Owner->GetRandomFloat() * CylinderRadius;
-            float height = (Owner->GetRandomFloat() * 2.0f - 1.0f) * CylinderHeight * 0.5f;
+            float Angle = Owner->GetRandomFloat() * 2.0f * PI;
+            float Radius = Owner->GetRandomFloat() * CylinderRadius;
+            float Height = (Owner->GetRandomFloat() * 2.0f - 1.0f) * CylinderHeight * 0.5f;
 
-            SpawnLocation.X = radius * cosf(angle);
-            SpawnLocation.Y = radius * sinf(angle);
-            SpawnLocation.Z = height;
+            LocalOffset.X = Radius * cosf(Angle);
+            LocalOffset.Y = Radius * sinf(Angle);
+            LocalOffset.Z = Height;
+
+            LocalOffset += StartLocation.GetValue(0.0f);
         }
         break;
     }
 
-    ParticleBase->Location = SpawnLocation;
-    ParticleBase->OldLocation = SpawnLocation;
+    bool bUseLocalSpace = false;
+    if (Owner->CachedRequiredModule)
+    {
+        bUseLocalSpace = Owner->CachedRequiredModule->bUseLocalSpace;
+    }
+
+    if (bUseLocalSpace)
+    {
+        // [Local Space]
+        ParticleBase->Location += LocalOffset;
+    }
+    else
+    {
+        // [World Space] (기본)
+        ParticleBase->Location += Context.ComponentWorldMatrix.TransformPosition(LocalOffset);
+    }
+
+    ParticleBase->OldLocation = ParticleBase->Location;
 }

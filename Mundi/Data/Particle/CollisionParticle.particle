@@ -1,0 +1,137 @@
+{
+        "Emitters" : [{
+            "LODLevels" : [{
+                "LODIndex" : 0,
+                "Modules" : [{
+                    "Lifetime_Max" : 3.000000,
+                    "Lifetime_Min" : 0.100000,
+                    "Lifetime_bUseRange" : true,
+                    "Type" : "Lifetime",
+                    "bEnabled" : true
+                  }, {
+                    "StartSize_Max" : [0.400000, 0.400000, 0.200000],
+                    "StartSize_Min" : [0.100000, 0.100000, 0.100000],
+                    "StartSize_bUseRange" : true,
+                    "Type" : "Size",
+                    "bEnabled" : true
+                  }, {
+                    "AlphaOverLife_Max" : 1.000000,
+                    "AlphaOverLife_Min" : 1.000000,
+                    "AlphaOverLife_bUseRange" : false,
+                    "AlphaPoint1Time" : 0.000000,
+                    "AlphaPoint1Value" : 1.000000,
+                    "AlphaPoint2Time" : 1.000000,
+                    "AlphaPoint2Value" : 0.000000,
+                    "ColorOverLife_Max" : [1.000000, 0.741313, 0.000000, 1.000000],
+                    "ColorOverLife_Min" : [0.784314, 0.192157, 0.000000, 1.000000],
+                    "ColorOverLife_bUseRange" : true,
+                    "Type" : "ColorOverLife",
+                    "bEnabled" : true,
+                    "bUseAlphaOverLife" : true,
+                    "bUseColorOverLife" : true
+                  }, {
+                    "BoxExtent" : [3.000000, 3.000000, 3.000000],
+                    "CylinderHeight" : 2.000000,
+                    "CylinderRadius" : 1.000000,
+                    "DistributionType" : 2,
+                    "SphereRadius" : 0.100000,
+                    "StartLocation_Max" : [0.000000, 0.000000, 0.000000],
+                    "StartLocation_Min" : [0.000000, 0.000000, 0.000000],
+                    "StartLocation_bUseRange" : false,
+                    "Type" : "Location",
+                    "bEnabled" : true
+                  }, {
+                    "CollisionResponse" : 0,
+                    "Friction" : 0.200000,
+                    "RadiusScale" : 0.200000,
+                    "Restitution" : 0.300000,
+                    "Type" : "Collision",
+                    "bEnabled" : true,
+                    "bWriteEvent" : false
+                  }, {
+                    "InitialRotation_Max" : 0.000000,
+                    "InitialRotation_Min" : 0.000000,
+                    "InitialRotation_bUseRange" : false,
+                    "StartRotationRate_Max" : 0.000000,
+                    "StartRotationRate_Min" : 5.000000,
+                    "StartRotationRate_bUseRange" : false,
+                    "Type" : "RotationRate",
+                    "bEnabled" : true
+                  }, {
+                    "Gravity" : [0.000000, 0.000000, -5.000000],
+                    "StartVelocity_Max" : [0.000000, 0.000000, 10.000000],
+                    "StartVelocity_Min" : [0.000000, 0.000000, 0.000000],
+                    "StartVelocity_bUseRange" : false,
+                    "Type" : "Velocity",
+                    "bEnabled" : true
+                  }, {
+                    "Angle_Max" : 30.000000,
+                    "Angle_Min" : 180.000000,
+                    "Angle_bUseRange" : false,
+                    "Direction_X" : 0.000000,
+                    "Direction_Y" : 0.000000,
+                    "Direction_Z" : 1.000000,
+                    "Type" : "VelocityCone",
+                    "Velocity_Max" : 3.000000,
+                    "Velocity_Min" : 2.000000,
+                    "Velocity_bUseRange" : true,
+                    "bEnabled" : true
+                  }, {
+                    "Point1Time" : 0.000000,
+                    "Point1Value" : [1.000000, 1.000000, 1.000000],
+                    "Point2Time" : 1.000000,
+                    "Point2Value" : [0.100000, 0.100000, 0.100000],
+                    "Type" : "SizeMultiplyLife",
+                    "bEnabled" : true,
+                    "bMultiplyX" : true,
+                    "bMultiplyY" : true,
+                    "bMultiplyZ" : true
+                  }],
+                "RequiredModule" : {
+                  "BlendMode" : 5,
+                  "DiffuseTexture" : "Data/Spark.png",
+                  "EmitterDelay" : 0.000000,
+                  "EmitterDuration" : 1.000000,
+                  "EmitterLoops" : 0,
+                  "InitialColor_Max" : [1.000000, 1.000000, 1.000000, 1.000000],
+                  "InitialColor_Min" : [1.000000, 1.000000, 1.000000, 1.000000],
+                  "InitialColor_bUseRange" : false,
+                  "InitialRotation_Max" : 0.000000,
+                  "InitialRotation_Min" : 0.000000,
+                  "InitialRotation_bUseRange" : false,
+                  "InitialSize_Max" : [50.000000, 50.000000, 1.000000],
+                  "InitialSize_Min" : [50.000000, 50.000000, 1.000000],
+                  "InitialSize_bUseRange" : false,
+                  "Material" : "material",
+                  "MaxParticles" : 10000,
+                  "ScreenAlignment" : 0,
+                  "SortMode" : 1,
+                  "SpawnRateBase" : 10.000000,
+                  "SubImages_Horizontal" : 1,
+                  "SubImages_Vertical" : 1,
+                  "bKillOnCompleted" : false,
+                  "bKillOnDeactivate" : true,
+                  "bUseLocalSpace" : false
+                },
+                "SpawnModule" : {
+                  "BurstList" : [{
+                      "Count" : 1000,
+                      "CountRange" : 0,
+                      "Time" : 0.100000
+                    }],
+                  "SpawnRateOverTime_Max" : 0.000000,
+                  "SpawnRateOverTime_Min" : 0.000000,
+                  "SpawnRateOverTime_bUseRange" : false,
+                  "SpawnRateType" : 2,
+                  "SpawnRate_Max" : 1000.000000,
+                  "SpawnRate_Min" : 500.000000,
+                  "SpawnRate_bUseRange" : true
+                },
+                "bEnabled" : true
+              }],
+            "Name" : "UParticleEmitter_9",
+            "RenderType" : 0
+          }],
+        "Name" : "NewParticleSystem",
+        "Type" : "ParticleSystem"
+      }

@@ -685,6 +685,48 @@ struct FQuat
 		);
 	}
 
+	// 두 단위 벡터(A -> B) 사이의 최단 회전 쿼터니언을 구함
+	static FQuat FindBetweenNormals(const FVector& A, const FVector& B)
+	{
+		float Dot = FVector::Dot(A, B);
+		// Case A: 두 벡터가 이미 거의 같은 방향일 때
+		if (Dot > 0.9999f)
+		{
+			return Identity();
+		}
+
+		// Case B: 두 벡터가 정반대 방향일 때 (180도 회전)
+		if (Dot < -0.9999f)
+		{
+			// A와 수직인 임의의 회전축을 찾아야 함
+			// Z축(0,0,1)과 외적 시도
+			FVector Axis = FVector::Cross({0,0,1}, A);
+			
+			// 만약 A가 Z축과 평행해서 외적 결과가 0이라면, X축(1,0,0)과 외적 시도
+			if (Axis.SizeSquared() < 0.001f)
+			{
+				// Cross( (1,0,0), A )
+				Axis.X = 0.0f;
+				Axis.Y = -A.Z;
+				Axis.Z = A.Y;
+			}
+        
+			Axis.Normalize();
+        
+			// 180도 회전 쿼터니언: (x, y, z, 0)
+			return {Axis.X, Axis.Y, Axis.Z, 0.0f};
+		}
+
+		// Case C: 일반적인 경우
+		// 회전축 = A Cross B
+		FVector Cross = FVector::Cross(A, B);
+
+		// 쿼터니언 생성 공식 (Half-Way Vector Trick)
+		// q = [ Cross, 1 + Dot ] -> 이후 정규화
+		FQuat Q(Cross.X, Cross.Y, Cross.Z, 1.0f + Dot);
+		Q.Normalize();
+		return Q;
+	}
 
 	FVector GetForwardVector() const
 	{

@@ -16,9 +16,9 @@ public:
     // Duplication
     virtual void DuplicateSubObjects() override;
 
-private:
     UPROPERTY(EditAnywhere, Category="SphereRaidus")
     float SphereRadius = 0;
+private:
 
     void GetShape(FShape& Out) const override;
 

@@ -421,6 +421,3 @@ FSkeletalMeshData* UFbxLoader::LoadFbxMeshAsset(const FString& FilePath)
 
 	return MeshData;
 }
-
-
-

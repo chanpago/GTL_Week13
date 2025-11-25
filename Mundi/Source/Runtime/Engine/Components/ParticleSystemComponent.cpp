@@ -1,12 +1,18 @@
 ﻿#include "pch.h"
 #include "ParticleSystemComponent.h"
 
+#include "BoxComponent.h"
+#include "BVHierarchy.h"
 #include "CameraActor.h"
+#include "CapsuleComponent.h"
+#include "Collision.h"
 #include "MeshBatchElement.h"
 #include "PlatformTime.h"
 #include "PlayerCameraManager.h"
 #include "RenderManager.h"
 #include "SceneView.h"
+#include "SphereComponent.h"
+#include "WorldPartitionManager.h"
 #include "Source/Runtime/Engine/Particle/DynamicEmitterDataBase.h"
 #include "Source/Runtime/Engine/Particle/ParticleEmitterInstance.h"
 #include "Source/Runtime/Engine/Particle/ParticleLODLevel.h"
@@ -125,6 +131,67 @@ void UParticleSystemComponent::TickComponent(float DeltaTime)
     Context.CameraLocation = Camera ? Camera->GetWorldLocation() : FVector();
     Context.CameraRotation = Camera ? Camera->GetWorldRotation() : FQuat();
 
+    if (GetWorld() && GetWorld()->GetPartitionManager())
+    {
+        float SearchRadius = 1000.0f; // 이거 나중에 ParticleSystem Asset에 정보 추가!!!!!!! 
+        FVector Center = GetWorldLocation();
+        
+        FAABB QueryBox;
+        QueryBox.Min = Center - FVector(SearchRadius, SearchRadius, SearchRadius);
+        QueryBox.Max = Center + FVector(SearchRadius, SearchRadius, SearchRadius);
+
+        TArray<UPrimitiveComponent*> Candidates = GetWorld()->GetPartitionManager()->GetBVH()->QueryIntersectedComponents(QueryBox);
+        Context.WorldColliders.Reserve(Candidates.Num());
+
+        for (UPrimitiveComponent* Prim : Candidates)
+        {
+            UShapeComponent* ShapeComponent = Cast<UShapeComponent>(Prim);
+            if (!ShapeComponent) continue;
+
+            const FTransform& TF = ShapeComponent->GetWorldTransform();
+            FVector WorldLoc = TF.Translation;
+            FQuat WorldRot = TF.Rotation;
+            FVector Scale = TF.Scale3D;
+
+            FColliderProxy Proxy;
+            // [BOX]
+            if (UBoxComponent* BoxComp = Cast<UBoxComponent>(ShapeComponent))
+            {
+                Proxy.Type = EShapeKind::Box;
+                FShape Shape; BoxComp->GetShape(Shape);
+                FOBB OBB; Collision::BuildOBB(Shape, TF, OBB);
+                Proxy.Box = OBB;
+            }
+            // [SPHERE]
+            else if (USphereComponent* SphereComp = Cast<USphereComponent>(ShapeComponent))
+            {
+                Proxy.Type = EShapeKind::Sphere;
+                Proxy.Sphere.Center = WorldLoc;
+                // 가장 큰 축의 스케일을 적용
+                float MaxScale = Scale.GetMaxValue();
+                Proxy.Sphere.Radius = SphereComp->SphereRadius * MaxScale;
+            }
+            // [CAPSULE]
+            else if (UCapsuleComponent* CapsuleComp = Cast<UCapsuleComponent>(ShapeComponent))
+            {
+                Proxy.Type = EShapeKind::Capsule;
+                float UnscaledRadius = CapsuleComp->CapsuleRadius;
+                float ScaledRadius = UnscaledRadius * FMath::Max(FMath::Abs(Scale.X), FMath::Abs(Scale.Y));
+                float UnscaledHalfHeight = CapsuleComp->CapsuleHalfHeight;
+                float ScaledHalfHeight = UnscaledHalfHeight * FMath::Abs(Scale.Z);
+
+                float CylHalfHeight = FMath::Max(0.0f, ScaledHalfHeight - ScaledRadius);
+
+                FVector UpAxis = WorldRot.RotateVector(FVector{0, 0, 1});
+                Proxy.Capsule.Radius = ScaledRadius;
+                Proxy.Capsule.PosA = WorldLoc - (UpAxis * CylHalfHeight);
+                Proxy.Capsule.PosB = WorldLoc + (UpAxis * CylHalfHeight);
+            }
+
+            Context.WorldColliders.Add(Proxy);
+        }
+    }
+    
     if (bUseAsyncSimulation)
     {
         if (!AsyncUpdater.IsBusy())
