@@ -13,6 +13,8 @@ class UParticleModuleLocation : public UParticleModule
 {
     DECLARE_CLASS(UParticleModuleLocation, UParticleModule)
 public:
+    UParticleModuleLocation();
+
     // 분포 타입
     ELocationDistributionType DistributionType = ELocationDistributionType::Point;
 

@@ -401,6 +401,7 @@
     <ClCompile Include="Source\Runtime\Engine\GameFramework\Info.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\PointLightActor.cpp" />
     <ClCompile Include="Source\Runtime\Engine\GameFramework\SpotLightActor.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Particle\Async\ParticleAsyncUpdater.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\DynamicEmitterDataBase.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModule.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleColor.cpp" />
@@ -887,6 +888,8 @@
     <ClInclude Include="Source\Runtime\Engine\GameFramework\PointLightActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\SkeletalMeshActor.h" />
     <ClInclude Include="Source\Runtime\Engine\GameFramework\SpotLightActor.h" />
+    <ClInclude Include="Source\Runtime\Engine\Particle\Async\ParticleAsyncUpdater.h" />
+    <ClInclude Include="Source\Runtime\Engine\Particle\Async\ParticleSimulationContext.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\DynamicEmitterDataBase.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModule.h" />
     <ClInclude Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleColor.h" />

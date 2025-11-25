@@ -1363,7 +1363,7 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 	constexpr UINT ParticleInstanceDataSlot = 14;
 
 	// RHI 상태 초기 설정 (Opaque Pass 기본값)
-	RHIDevice->OMSetDepthStencilState(EComparisonFunc::LessEqual); // 깊이 쓰기 ON
+	// RHIDevice->OMSetDepthStencilState(EComparisonFunc::LessEqual); // 깊이 쓰기 ON
 
 	// PS 리소스 초기화
 	ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
@@ -1464,7 +1464,7 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 					{
 						DiffuseTextureSRV = TextureData->GetShaderResourceView();
 						PixelConst.bHasDiffuseTexture = (DiffuseTextureSRV != nullptr);
-						UE_LOG("[SceneRenderer] Diffuse SRV: %s", DiffuseTextureSRV ? "Valid" : "NULL");
+						// UE_LOG("[SceneRenderer] Diffuse SRV: %s", DiffuseTextureSRV ? "Valid" : "NULL");
 					}
 					else
 					{

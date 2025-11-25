@@ -13,6 +13,7 @@
 #include "Modules/ParticleModuleSizeMultiplyLife.h"
 #include "Modules/ParticleModuleRotation.h"
 #include "Modules/ParticleModuleRotationRate.h"
+#include "Modules/ParticleModuleMesh.h"
 
 IMPLEMENT_CLASS(UParticleLODLevel)
 
@@ -300,7 +301,7 @@ void UParticleLODLevel::RemoveModule(UParticleModule* Module)
     UE_LOG("RemoveModule: Module deleted");
 
     // 캐시 재구성
-    RebuildModuleCaches();
+    //RebuildModuleCaches();
     UE_LOG("RemoveModule: Caches rebuilt. AllModulesCache size: %d", AllModulesCache.Num());
 }
 
@@ -308,9 +309,10 @@ void UParticleLODLevel::RebuildModuleCaches()
 {
     SpawnModules.Empty();
     UpdateModules.Empty();
-    
+
     RequiredModule = nullptr;
     SpawnModule = nullptr;
+    TypeDataModule = nullptr;
 
     for (int32 i = 0; i < AllModulesCache.Num(); i++)
     {
@@ -325,7 +327,11 @@ void UParticleLODLevel::RebuildModuleCaches()
         {
             SpawnModule = Spawn;
         }
-        
+        else if (UParticleModuleTypeDataBase* TypeData = Cast<UParticleModuleTypeDataBase>(Module))
+        {
+            TypeDataModule = TypeData;
+        }
+
         if (Module->bSpawnModule)
         {
             SpawnModules.Add(Module);
@@ -333,7 +339,7 @@ void UParticleLODLevel::RebuildModuleCaches()
         if (Module->bUpdateModule)
         {
             UpdateModules.Add(Module);
-        } 
+        }
     }
 }
 
@@ -394,9 +400,17 @@ void UParticleLODLevel::ParseAndAddModule(JSON& ModuleJson)
         auto* Location = Cast<UParticleModuleLocation>(AddModule(UParticleModuleLocation::StaticClass()));
         if (Location)
         {
+            int32 DistType = 0;
+            FJsonSerializer::ReadInt32(ModuleJson, "DistributionType", DistType);
+            Location->DistributionType = (ELocationDistributionType)DistType;
+
             FJsonSerializer::ReadVector(ModuleJson, "StartLocation_Min", Location->StartLocation.MinValue);
             FJsonSerializer::ReadVector(ModuleJson, "StartLocation_Max", Location->StartLocation.MaxValue);
             FJsonSerializer::ReadBool(ModuleJson, "StartLocation_bUseRange", Location->StartLocation.bUseRange);
+            FJsonSerializer::ReadVector(ModuleJson, "BoxExtent", Location->BoxExtent);
+            FJsonSerializer::ReadFloat(ModuleJson, "SphereRadius", Location->SphereRadius);
+            FJsonSerializer::ReadFloat(ModuleJson, "CylinderRadius", Location->CylinderRadius);
+            FJsonSerializer::ReadFloat(ModuleJson, "CylinderHeight", Location->CylinderHeight);
         }
         NewModule = Location;
     }
@@ -464,6 +478,17 @@ void UParticleLODLevel::ParseAndAddModule(JSON& ModuleJson)
         }
         NewModule = RotationRate;
     }
+    else if (ModuleType == "Mesh")
+    {
+        auto* Mesh = Cast<UParticleModuleMesh>(AddModule(UParticleModuleMesh::StaticClass()));
+        if (Mesh)
+        {
+            FJsonSerializer::ReadString(ModuleJson, "MeshAssetPath", Mesh->MeshAssetPath);
+            FJsonSerializer::ReadString(ModuleJson, "OverrideMaterialPath", Mesh->OverrideMaterialPath);
+            FJsonSerializer::ReadBool(ModuleJson, "bUseMeshMaterials", Mesh->bUseMeshMaterials);
+        }
+        NewModule = Mesh;
+    }
 
     if (NewModule)
     {
@@ -511,9 +536,14 @@ JSON UParticleLODLevel::SerializeModule(UParticleModule* Module)
     else if (auto* Location = Cast<UParticleModuleLocation>(Module))
     {
         ModuleJson["Type"] = "Location";
+        ModuleJson["DistributionType"] = (int)Location->DistributionType;
         ModuleJson["StartLocation_Min"] = FJsonSerializer::VectorToJson(Location->StartLocation.MinValue);
         ModuleJson["StartLocation_Max"] = FJsonSerializer::VectorToJson(Location->StartLocation.MaxValue);
         ModuleJson["StartLocation_bUseRange"] = Location->StartLocation.bUseRange;
+        ModuleJson["BoxExtent"] = FJsonSerializer::VectorToJson(Location->BoxExtent);
+        ModuleJson["SphereRadius"] = Location->SphereRadius;
+        ModuleJson["CylinderRadius"] = Location->CylinderRadius;
+        ModuleJson["CylinderHeight"] = Location->CylinderHeight;
     }
     else if (auto* ColorOverLife = Cast<UParticleModuleColorOverLife>(Module))
     {
@@ -562,6 +592,13 @@ JSON UParticleLODLevel::SerializeModule(UParticleModule* Module)
         ModuleJson["StartRotationRate_Min"] = RotationRate->StartRotationRate.MinValue;
         ModuleJson["StartRotationRate_Max"] = RotationRate->StartRotationRate.MaxValue;
         ModuleJson["StartRotationRate_bUseRange"] = RotationRate->StartRotationRate.bUseRange;
+    }
+    else if (auto* Mesh = Cast<UParticleModuleMesh>(Module))
+    {
+        ModuleJson["Type"] = "Mesh";
+        ModuleJson["MeshAssetPath"] = Mesh->MeshAssetPath;
+        ModuleJson["OverrideMaterialPath"] = Mesh->OverrideMaterialPath;
+        ModuleJson["bUseMeshMaterials"] = Mesh->bUseMeshMaterials;
     }
     else
     {

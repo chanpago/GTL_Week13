@@ -4,6 +4,7 @@
 #include "ParticleLODLevel.h"
 #include "Modules/ParticleModule.h"
 #include "Modules/ParticleModuleRequired.h"
+#include "Modules/ParticleModuleMesh.h"
 
 IMPLEMENT_CLASS(UParticleEmitter)
 
@@ -61,11 +62,19 @@ void UParticleEmitter::CacheEmitterModuleInfo()
     }
 
     // TypeData가 파티클 구조 확장 요구하면 반영
-    // ✅ TypeDataModule이 nullptr일 수 있으므로 체크만 하고 사용 안함
     if (LOD0->TypeDataModule)
     {
-        // TypeDataModule 관련 처리는 나중에 구현
-        // Offset = FMath::Max(Offset, LOD0->TypeDataModule->GetRequiredParticleBytes());
+        // TypeDataModule 적용 (Mesh 모듈 등)
+        if (UParticleModuleMesh* MeshModule = Cast<UParticleModuleMesh>(LOD0->TypeDataModule))
+        {
+            MeshModule->ApplyToEmitter(this);
+        }
+    }
+    else
+    {
+        // TypeDataModule이 없으면 기본 Sprite로 복원
+        RenderType = EParticleType::Sprite;
+        Mesh = nullptr;
     }
 
     ParticleSizeBytes = Offset;

@@ -6,6 +6,11 @@
 
 IMPLEMENT_CLASS(UParticleModuleLocation)
 
+UParticleModuleLocation::UParticleModuleLocation()
+{
+    bSpawnModule = true;
+}
+
 void UParticleModuleLocation::Spawn(FParticleEmitterInstance* Owner, int32 Offset, float SpawnTime, FBaseParticle* ParticleBase)
 {
     if (!ParticleBase)

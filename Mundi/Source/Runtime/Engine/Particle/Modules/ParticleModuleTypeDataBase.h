@@ -5,6 +5,7 @@
 // 파티클의 렌더링 방식을 정의
 class UParticleModuleTypeDataBase : public UParticleModule
 {
+    DECLARE_CLASS(UParticleModuleTypeDataBase, UParticleModule)
 public:
     // 렌더링 타입
     EParticleType TypeDataType = EParticleType::Sprite;

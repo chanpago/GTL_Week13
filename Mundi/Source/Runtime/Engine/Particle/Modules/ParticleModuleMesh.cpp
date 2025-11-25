@@ -25,12 +25,18 @@ void UParticleModuleMesh::SetMesh(UStaticMesh* InMesh, UParticleEmitter* OwnerEm
         return;
     }
 
-    OwnerEmitter->RenderType = EParticleType::Mesh;
-    OwnerEmitter->Mesh = Mesh;
-    OwnerEmitter->bUseMeshMaterials = bUseMeshMaterials;
-
-    if (!Mesh)
+    // Mesh가 있을 때만 RenderType을 Mesh로 설정
+    if (Mesh)
     {
+        OwnerEmitter->RenderType = EParticleType::Mesh;
+        OwnerEmitter->Mesh = Mesh;
+        OwnerEmitter->bUseMeshMaterials = bUseMeshMaterials;
+    }
+    else
+    {
+        // Mesh가 없으면 Sprite로 복원
+        OwnerEmitter->RenderType = EParticleType::Sprite;
+        OwnerEmitter->Mesh = nullptr;
         return;
     }
 
@@ -53,20 +59,12 @@ void UParticleModuleMesh::SetMesh(UStaticMesh* InMesh, UParticleEmitter* OwnerEm
 
 void UParticleModuleMesh::SetOverrideMaterial(UMaterialInterface* InMaterial, UParticleEmitter* OwnerEmitter, bool bUpdatePath)
 {
+    OverrideMaterial = InMaterial;
+
     if (bUpdatePath)
     {
         OverrideMaterialPath = (InMaterial && !InMaterial->GetFilePath().empty()) ? InMaterial->GetFilePath() : FString();
     }
-
-    if (!OwnerEmitter)
-    {
-        return;
-    }
-
-    //if (UParticleModuleRequired* Required = OwnerEmitter->GetModule<UParticleModuleRequired>())
-    //{
-    //    // Required->Material = InMaterial;
-    //}
 }
 
 void UParticleModuleMesh::ApplyToEmitter(UParticleEmitter* OwnerEmitter)

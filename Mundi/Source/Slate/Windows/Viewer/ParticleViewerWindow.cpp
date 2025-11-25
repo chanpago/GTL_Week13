@@ -78,6 +78,7 @@ bool SParticleViewerWindow::Initialize(float StartX, float StartY, float Width, 
     PreviewWorld->SetWorldType(EWorldType::PreviewMinimal);
     PreviewWorld->Initialize();
     PreviewWorld->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_EditorIcon);
+    PreviewWorld->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_Grid);
 
     PreviewWorld->GetGizmoActor()->SetSpace(EGizmoSpace::Local);
 
@@ -86,6 +87,7 @@ bool SParticleViewerWindow::Initialize(float StartX, float StartY, float Width, 
     {
         PreviewWorld->GetRenderSettings().SetShowFlags(InWorld->GetRenderSettings().GetShowFlags());
         PreviewWorld->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_EditorIcon);
+        PreviewWorld->GetRenderSettings().DisableShowFlag(EEngineShowFlags::SF_Grid);
     }
 
     // 2. Viewport 생성
@@ -496,7 +498,24 @@ void SParticleViewerWindow::OnRender()
                     {
                         ImGui::Text("Use Local Space");
                         ImGui::NextColumn();
-                        ImGui::Checkbox("##UseLocalSpace", &RequiredModule->bUseLocalSpace);
+
+                        if (ImGui::Checkbox("##UseLocalSpace", &RequiredModule->bUseLocalSpace))
+                        {
+                            // 값이 변경되면 파티클 시스템 재시작
+                            if (CurrentParticleSystem && PreviewComponent)
+                            {
+                                CurrentParticleSystem->BuildRuntimeCache();
+                                PreviewComponent->ResetAndActivate();
+                            }
+                        }
+
+                        if (ImGui::IsItemHovered())
+                        {
+                            ImGui::SetTooltip(RequiredModule->bUseLocalSpace
+                                ? "Local Space: Particles follow the actor (e.g., rocket engine)"
+                                : "World Space: Particles stay in place after spawn (e.g., explosion)");
+                        }
+
                         ImGui::NextColumn();
                     }
 
@@ -526,40 +545,123 @@ void SParticleViewerWindow::OnRender()
                 else if (auto* SpawnModule = Cast<UParticleModuleSpawn>(SelectedModule))
                 {
                     ImGui::Text("Spawn Settings");
-                    ImGui::DragFloat("Spawn Rate Min", &SpawnModule->SpawnRate.MinValue, 0.1f, 0.0f, 1000.0f);
-                    ImGui::DragFloat("Spawn Rate Max", &SpawnModule->SpawnRate.MaxValue, 0.1f, 0.0f, 1000.0f);
+                    if (SpawnModule->SpawnRate.bUseRange)
+                    {
+                        ImGui::DragFloat("Spawn Rate Min", &SpawnModule->SpawnRate.MinValue, 0.1f, 0.0f, 1000.0f);
+                        ImGui::DragFloat("Spawn Rate Max", &SpawnModule->SpawnRate.MaxValue, 0.1f, 0.0f, 1000.0f);
+                    }
+                    else
+                    {
+                        ImGui::DragFloat("Spawn Rate", &SpawnModule->SpawnRate.MinValue, 0.1f, 0.0f, 1000.0f);
+                    }
                     ImGui::Checkbox("Use Range", &SpawnModule->SpawnRate.bUseRange);
                 }
                 else if (auto* LifetimeModule = Cast<UParticleModuleLifetime>(SelectedModule))
                 {
                     ImGui::Text("Lifetime Settings");
-                    ImGui::DragFloat("Lifetime Min", &LifetimeModule->Lifetime.MinValue, 0.01f, 0.0f, 100.0f);
-                    ImGui::DragFloat("Lifetime Max", &LifetimeModule->Lifetime.MaxValue, 0.01f, 0.0f, 100.0f);
+                    if (LifetimeModule->Lifetime.bUseRange)
+                    {
+                        ImGui::DragFloat("Lifetime Min", &LifetimeModule->Lifetime.MinValue, 0.01f, 0.0f, 100.0f);
+                        ImGui::DragFloat("Lifetime Max", &LifetimeModule->Lifetime.MaxValue, 0.01f, 0.0f, 100.0f);
+                    }
+                    else
+                    {
+                        ImGui::DragFloat("Lifetime", &LifetimeModule->Lifetime.MinValue, 0.01f, 0.0f, 100.0f);
+                    }
                     ImGui::Checkbox("Use Range", &LifetimeModule->Lifetime.bUseRange);
                 }
                 else if (auto* SizeModule = Cast<UParticleModuleSize>(SelectedModule))
                 {
                     ImGui::Text("Size Settings");
-                    ImGui::DragFloat3("Start Size Min", &SizeModule->StartSize.MinValue.X, 1.0f, 0.0f, 1000.0f);
-                    ImGui::DragFloat3("Start Size Max", &SizeModule->StartSize.MaxValue.X, 1.0f, 0.0f, 1000.0f);
+                    if (SizeModule->StartSize.bUseRange)
+                    {
+                        ImGui::DragFloat3("Start Size Min", &SizeModule->StartSize.MinValue.X, 1.0f, 0.0f, 1000.0f);
+                        ImGui::DragFloat3("Start Size Max", &SizeModule->StartSize.MaxValue.X, 1.0f, 0.0f, 1000.0f);
+                    }
+                    else
+                    {
+                        ImGui::DragFloat3("Start Size", &SizeModule->StartSize.MinValue.X, 1.0f, 0.0f, 1000.0f);
+                    }
                     ImGui::Checkbox("Use Range", &SizeModule->StartSize.bUseRange);
+                }
+                else if (auto* LocationModule = Cast<UParticleModuleLocation>(SelectedModule))
+                {
+                    ImGui::Text("Location Settings");
+
+                    // Distribution Type
+                    const char* DistTypes[] = { "Point", "Box", "Sphere", "Cylinder" };
+                    int CurrentDistType = (int)LocationModule->DistributionType;
+                    if (ImGui::Combo("Distribution Type", &CurrentDistType, DistTypes, IM_ARRAYSIZE(DistTypes)))
+                    {
+                        LocationModule->DistributionType = (ELocationDistributionType)CurrentDistType;
+                    }
+
+                    ImGui::Spacing();
+
+                    // 타입별 파라미터
+                    switch (LocationModule->DistributionType)
+                    {
+                    case ELocationDistributionType::Point:
+                        ImGui::DragFloat3("Start Location Min", &LocationModule->StartLocation.MinValue.X, 1.0f, -1000.0f, 1000.0f);
+                        ImGui::DragFloat3("Start Location Max", &LocationModule->StartLocation.MaxValue.X, 1.0f, -1000.0f, 1000.0f);
+                        ImGui::Checkbox("Use Range", &LocationModule->StartLocation.bUseRange);
+                        break;
+
+                    case ELocationDistributionType::Box:
+                        ImGui::DragFloat3("Box Extent", &LocationModule->BoxExtent.X, 1.0f, 0.0f, 1000.0f);
+                        break;
+
+                    case ELocationDistributionType::Sphere:
+                        ImGui::DragFloat("Sphere Radius", &LocationModule->SphereRadius, 1.0f, 0.0f, 1000.0f);
+                        break;
+
+                    case ELocationDistributionType::Cylinder:
+                        ImGui::DragFloat("Cylinder Radius", &LocationModule->CylinderRadius, 1.0f, 0.0f, 1000.0f);
+                        ImGui::DragFloat("Cylinder Height", &LocationModule->CylinderHeight, 1.0f, 0.0f, 1000.0f);
+                        break;
+                    }
                 }
                 else if (auto* VelocityModule = Cast<UParticleModuleVelocity>(SelectedModule))
                 {
                     ImGui::Text("Velocity Settings");
-                    ImGui::DragFloat3("Start Velocity Min", &VelocityModule->StartVelocity.MinValue.X, 1.0f, -1000.0f, 1000.0f);
-                    ImGui::DragFloat3("Start Velocity Max", &VelocityModule->StartVelocity.MaxValue.X, 1.0f, -1000.0f, 1000.0f);
+                    if (VelocityModule->StartVelocity.bUseRange)
+                    {
+                        ImGui::DragFloat3("Start Velocity Min", &VelocityModule->StartVelocity.MinValue.X, 1.0f,
+                                          -1000.0f, 1000.0f);
+                        ImGui::DragFloat3("Start Velocity Max", &VelocityModule->StartVelocity.MaxValue.X, 1.0f,
+                                          -1000.0f, 1000.0f);
+                    }
+                    else
+                    {
+                        ImGui::DragFloat3("Start Velocity", &VelocityModule->StartVelocity.MinValue.X, 1.0f, -1000.0f,
+                                          1000.0f);
+                    }
                     ImGui::Checkbox("Use Range", &VelocityModule->StartVelocity.bUseRange);
                     ImGui::DragFloat3("Gravity", &VelocityModule->Gravity.X, 1.0f, -10000.0f, 10000.0f);
                 }
                 else if (auto* ColorModule = Cast<UParticleModuleColor>(SelectedModule))
                 {
                     ImGui::Text("Color Settings");
-                    ImGui::ColorEdit3("Start Color Min", &ColorModule->StartColor.MinValue.R);
-                    ImGui::ColorEdit3("Start Color Max", &ColorModule->StartColor.MaxValue.R);
+                    if (ColorModule->StartColor.bUseRange)
+                    {
+                        ImGui::ColorEdit3("Start Color Min", &ColorModule->StartColor.MinValue.R);
+                        ImGui::ColorEdit3("Start Color Max", &ColorModule->StartColor.MaxValue.R);
+                    }
+                    else
+                    {
+                        ImGui::ColorEdit3("Start Color", &ColorModule->StartColor.MinValue.R);
+                    }
                     ImGui::Checkbox("Use Range", &ColorModule->StartColor.bUseRange);
-                    ImGui::DragFloat("Start Alpha Min", &ColorModule->StartAlpha.MinValue, 0.01f, 0.0f, 1.0f);
-                    ImGui::DragFloat("Start Alpha Max", &ColorModule->StartAlpha.MaxValue, 0.01f, 0.0f, 1.0f);
+
+                    if (ColorModule->StartAlpha.bUseRange)
+                    {
+                        ImGui::DragFloat("Start Alpha Min", &ColorModule->StartAlpha.MinValue, 0.01f, 0.0f, 1.0f);
+                        ImGui::DragFloat("Start Alpha Max", &ColorModule->StartAlpha.MaxValue, 0.01f, 0.0f, 1.0f);
+                    }
+                    else
+                    {
+                        ImGui::DragFloat("Start Alpha", &ColorModule->StartAlpha.MinValue, 0.01f, 0.0f, 1.0f);
+                    }
                 }
                 else if (auto* ColorOverLifeModule = Cast<UParticleModuleColorOverLife>(SelectedModule))
                 {
@@ -569,8 +671,15 @@ void SParticleViewerWindow::OnRender()
                     ImGui::Checkbox("Use Color Over Life", &ColorOverLifeModule->bUseColorOverLife);
                     if (ColorOverLifeModule->bUseColorOverLife)
                     {
-                        ImGui::ColorEdit3("Color Min", &ColorOverLifeModule->ColorOverLife.MinValue.R);
-                        ImGui::ColorEdit3("Color Max", &ColorOverLifeModule->ColorOverLife.MaxValue.R);
+                        if (ColorOverLifeModule->ColorOverLife.bUseRange)
+                        {
+                            ImGui::ColorEdit3("Color Min", &ColorOverLifeModule->ColorOverLife.MinValue.R);
+                            ImGui::ColorEdit3("Color Max", &ColorOverLifeModule->ColorOverLife.MaxValue.R);
+                        }
+                        else
+                        {
+                            ImGui::ColorEdit3("Color", &ColorOverLifeModule->ColorOverLife.MinValue.R);
+                        }
                         ImGui::Checkbox("Color Use Range", &ColorOverLifeModule->ColorOverLife.bUseRange);
                     }
 
@@ -578,8 +687,17 @@ void SParticleViewerWindow::OnRender()
                     ImGui::Checkbox("Use Alpha Over Life", &ColorOverLifeModule->bUseAlphaOverLife);
                     if (ColorOverLifeModule->bUseAlphaOverLife)
                     {
-                        ImGui::DragFloat("Alpha Min", &ColorOverLifeModule->AlphaOverLife.MinValue, 0.01f, 0.0f, 1.0f);
-                        ImGui::DragFloat("Alpha Max", &ColorOverLifeModule->AlphaOverLife.MaxValue, 0.01f, 0.0f, 1.0f);
+                        if (ColorOverLifeModule->AlphaOverLife.bUseRange)
+                        {
+                            ImGui::DragFloat("Alpha Min", &ColorOverLifeModule->AlphaOverLife.MinValue, 0.01f, 0.0f,
+                                             1.0f);
+                            ImGui::DragFloat("Alpha Max", &ColorOverLifeModule->AlphaOverLife.MaxValue, 0.01f, 0.0f,
+                                             1.0f);
+                        }
+                        else
+                        {
+                            ImGui::DragFloat("Alpha", &ColorOverLifeModule->AlphaOverLife.MinValue, 0.01f, 0.0f, 1.0f);
+                        }
                         ImGui::Checkbox("Alpha Use Range", &ColorOverLifeModule->AlphaOverLife.bUseRange);
                     }
                 }
@@ -613,8 +731,18 @@ void SParticleViewerWindow::OnRender()
                     ImGui::Text("Rotation Settings");
                     ImGui::Separator();
 
-                    ImGui::DragFloat("Start Rotation Min (Radians)", &RotationModule->StartRotation.MinValue, 0.01f, -6.28f, 6.28f);
-                    ImGui::DragFloat("Start Rotation Max (Radians)", &RotationModule->StartRotation.MaxValue, 0.01f, -6.28f, 6.28f);
+                    if (RotationModule->StartRotation.bUseRange)
+                    {
+                        ImGui::DragFloat("Start Rotation Min (Radians)", &RotationModule->StartRotation.MinValue, 0.01f,
+                                         -6.28f, 6.28f);
+                        ImGui::DragFloat("Start Rotation Max (Radians)", &RotationModule->StartRotation.MaxValue, 0.01f,
+                                         -6.28f, 6.28f);
+                    }
+                    else
+                    {
+                        ImGui::DragFloat("Start Rotation (Radians)", &RotationModule->StartRotation.MinValue, 0.01f,
+                                         -6.28f, 6.28f);
+                    }
                     ImGui::Checkbox("Use Range", &RotationModule->StartRotation.bUseRange);
 
                     ImGui::Spacing();
@@ -626,14 +754,34 @@ void SParticleViewerWindow::OnRender()
                     ImGui::Separator();
 
                     ImGui::Text("Initial Rotation");
-                    ImGui::DragFloat("Initial Rotation Min (Rad)", &RotationRateModule->InitialRotation.MinValue, 0.01f, 0.0f, 6.28318f);
-                    ImGui::DragFloat("Initial Rotation Max (Rad)", &RotationRateModule->InitialRotation.MaxValue, 0.01f, 0.0f, 6.28318f);
+                    if (RotationRateModule->InitialRotation.bUseRange)
+                    {
+                        ImGui::DragFloat("Initial Rotation Min (Rad)", &RotationRateModule->InitialRotation.MinValue,
+                                         0.01f, 0.0f, 6.28318f);
+                        ImGui::DragFloat("Initial Rotation Max (Rad)", &RotationRateModule->InitialRotation.MaxValue,
+                                         0.01f, 0.0f, 6.28318f);
+                    }
+                    else
+                    {
+                        ImGui::DragFloat("Initial Rotation (Rad)", &RotationRateModule->InitialRotation.MinValue, 0.01f,
+                                         0.0f, 6.28318f);
+                    }
                     ImGui::Checkbox("Use Initial Rotation Range", &RotationRateModule->InitialRotation.bUseRange);
 
                     ImGui::Spacing();
                     ImGui::Text("Rotation Speed");
-                    ImGui::DragFloat("Start Rotation Rate Min (Rad/s)", &RotationRateModule->StartRotationRate.MinValue, 0.01f, -10.0f, 10.0f);
-                    ImGui::DragFloat("Start Rotation Rate Max (Rad/s)", &RotationRateModule->StartRotationRate.MaxValue, 0.01f, -10.0f, 10.0f);
+                    if (RotationRateModule->StartRotationRate.bUseRange)
+                    {
+                        ImGui::DragFloat("Start Rotation Rate Min (Rad/s)",
+                                         &RotationRateModule->StartRotationRate.MinValue, 0.01f, -10.0f, 10.0f);
+                        ImGui::DragFloat("Start Rotation Rate Max (Rad/s)",
+                                         &RotationRateModule->StartRotationRate.MaxValue, 0.01f, -10.0f, 10.0f);
+                    }
+                    else
+                    {
+                        ImGui::DragFloat("Start Rotation Rate (Rad/s)", &RotationRateModule->StartRotationRate.MinValue,
+                                         0.01f, -10.0f, 10.0f);
+                    }
                     ImGui::Checkbox("Use Rotation Rate Range", &RotationRateModule->StartRotationRate.bUseRange);
 
                     ImGui::Spacing();
@@ -651,19 +799,29 @@ void SParticleViewerWindow::OnRender()
                         ImGui::Text("Mesh");
                         ImGui::NextColumn();
 
-                        const char* currentMeshName = MeshModule->Mesh
-                            ? MeshModule->Mesh->GetName().c_str()
-                            : "None";
-
-                        ImGui::Text("%s", currentMeshName);
+                        // 현재 선택된 메쉬의 파일명만 추출
+                        FString currentMeshName = "None";
+                        if (MeshModule->Mesh)
+                        {
+                            FString fullPath = MeshModule->Mesh->GetAssetPathFileName();
+                            size_t lastSlash = fullPath.find_last_of("/\\");
+                            if (lastSlash != FString::npos)
+                            {
+                                currentMeshName = fullPath.substr(lastSlash + 1);
+                            }
+                            else
+                            {
+                                currentMeshName = fullPath;
+                            }
+                        }
 
                         ImGui::SetNextItemWidth(-1);
-                        if (ImGui::BeginCombo("##MeshCombo", ""))   // 빈 라벨 + 위에 Text로 이름 표시
+                        if (ImGui::BeginCombo("##MeshCombo", currentMeshName.c_str()))
                         {
                             // None
                             if (ImGui::Selectable("None##MeshNone", MeshModule->Mesh == nullptr))
                             {
-                                // MeshModule->SetMesh(nullptr, SelectedEmitter);
+                                MeshModule->SetMesh(nullptr, SelectedEmitter);
                             }
 
                             ImGui::Separator();
@@ -680,18 +838,31 @@ void SParticleViewerWindow::OnRender()
 
                                 bool isSelected = (MeshModule->Mesh == Mesh);
 
-                                // 미리보기(있으면)
-                                // UTexture* PreviewTex = Mesh->GetPreviewTexture(); // 네가 준비한 API가 있다면
-                                // if (PreviewTex && PreviewTex->GetShaderResourceView())
+                                // 파일 경로에서 파일명만 추출
+                                FString fullPath = Mesh->GetAssetPathFileName();
+                                FString displayName = fullPath;
+                                size_t lastSlash = fullPath.find_last_of("/\\");
+                                if (lastSlash != FString::npos)
                                 {
-                                    // ImGui::Image((void*)PreviewTex->GetShaderResourceView(), ImVec2(30, 30));
-                                    ImGui::SameLine();
+                                    displayName = fullPath.substr(lastSlash + 1);
                                 }
 
-                                if (ImGui::Selectable(Mesh->GetName().c_str(), isSelected))
+                                if (ImGui::Selectable(displayName.c_str(), isSelected))
                                 {
-                                    // 여기서 SetMesh 호출 → Mesh 머티리얼이 Required로 들어감
-                                    // MeshModule->SetMesh(Mesh, SelectedEmitter);
+                                    MeshModule->SetMesh(Mesh, SelectedEmitter);
+
+                                    // PreviewComponent 재시작 (EmitterInstance를 다시 초기화)
+                                    if (PreviewComponent && CurrentParticleSystem)
+                                    {
+                                        CurrentParticleSystem->BuildRuntimeCache();
+                                        PreviewComponent->ResetAndActivate();
+                                    }
+                                }
+
+                                // 툴팁에 전체 경로 표시
+                                if (ImGui::IsItemHovered())
+                                {
+                                    ImGui::SetTooltip("%s", fullPath.c_str());
                                 }
 
                                 ImGui::PopID();
@@ -716,8 +887,102 @@ void SParticleViewerWindow::OnRender()
                             // 체크 켰고, Mesh도 있고, Required도 있으면 즉시 동기화
                             if (bUseMeshMat && MeshModule->Mesh && SelectedEmitter)
                             {
-                                // MeshModule->SetMesh(MeshModule->Mesh, SelectedEmitter);
+                                MeshModule->SetMesh(MeshModule->Mesh, SelectedEmitter);
                             }
+                        }
+
+                        ImGui::NextColumn();
+                    }
+
+                    // Override Material (Use Mesh Materials가 false일 때만 표시)
+                    if (!MeshModule->bUseMeshMaterials)
+                    {
+                        ImGui::Text("Override Material");
+                        ImGui::NextColumn();
+
+                        // 텍스처 미리보기
+                        UTexture* PreviewTexture = MeshModule->OverrideMaterial ? MeshModule->OverrideMaterial->GetTexture(EMaterialTextureSlot::Diffuse) : nullptr;
+                        if (PreviewTexture && PreviewTexture->GetShaderResourceView())
+                        {
+                            ImGui::Image((void*)PreviewTexture->GetShaderResourceView(), ImVec2(128, 128));
+                        }
+                        else
+                        {
+                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+                            ImGui::Button("##matpreview", ImVec2(128, 128));
+                            ImGui::PopStyleColor();
+                        }
+
+                        // 현재 선택된 머티리얼의 파일명만 추출
+                        FString currentMaterialName = "None";
+                        if (MeshModule->OverrideMaterial)
+                        {
+                            FString fullPath = MeshModule->OverrideMaterial->GetFilePath();
+                            size_t lastSlash = fullPath.find_last_of("/\\");
+                            if (lastSlash != FString::npos)
+                            {
+                                currentMaterialName = fullPath.substr(lastSlash + 1);
+                            }
+                            else
+                            {
+                                currentMaterialName = fullPath;
+                            }
+                        }
+
+                        ImGui::SetNextItemWidth(-1);
+                        if (ImGui::BeginCombo("##MaterialCombo", currentMaterialName.c_str()))
+                        {
+                            // None
+                            if (ImGui::Selectable("None##MaterialNone", MeshModule->OverrideMaterial == nullptr))
+                            {
+                                MeshModule->SetOverrideMaterial(nullptr, SelectedEmitter);
+                            }
+
+                            ImGui::Separator();
+
+                            // 모든 Material 리소스 가져오기
+                            TArray<UMaterial*> AllMaterials = UResourceManager::GetInstance().GetAll<UMaterial>();
+
+                            for (int i = 0; i < AllMaterials.Num(); ++i)
+                            {
+                                UMaterial* Material = AllMaterials[i];
+                                if (!Material) continue;
+
+                                ImGui::PushID(i);
+
+                                bool isSelected = (MeshModule->OverrideMaterial == Material);
+
+                                // 파일 경로에서 파일명만 추출
+                                FString fullPath = Material->GetFilePath();
+                                FString displayName = fullPath;
+                                size_t lastSlash = fullPath.find_last_of("/\\");
+                                if (lastSlash != FString::npos)
+                                {
+                                    displayName = fullPath.substr(lastSlash + 1);
+                                }
+
+                                if (ImGui::Selectable(displayName.c_str(), isSelected))
+                                {
+                                    MeshModule->SetOverrideMaterial(Material, SelectedEmitter);
+
+                                    // PreviewComponent 재시작 (EmitterInstance를 다시 초기화)
+                                    if (PreviewComponent && CurrentParticleSystem)
+                                    {
+                                        CurrentParticleSystem->BuildRuntimeCache();
+                                        PreviewComponent->ResetAndActivate();
+                                    }
+                                }
+
+                                // 툴팁에 전체 경로 표시
+                                if (ImGui::IsItemHovered())
+                                {
+                                    ImGui::SetTooltip("%s", fullPath.c_str());
+                                }
+
+                                ImGui::PopID();
+                            }
+
+                            ImGui::EndCombo();
                         }
 
                         ImGui::NextColumn();
@@ -809,9 +1074,19 @@ void SParticleViewerWindow::OnRender()
                         if (OwnerLOD)
                         {
                             UE_LOG("Calling RemoveModule on owner LOD");
+
                             // 모듈 삭제
                             OwnerLOD->RemoveModule(SelectedModule);
                             SelectedModule = nullptr;
+
+                            // 런타임 캐시 재구축 (이 과정에서 CacheEmitterModuleInfo()가 RenderType을 자동으로 복원함)
+                            CurrentParticleSystem->BuildRuntimeCache();
+
+                            // PreviewComponent 재시작 (EmitterInstance를 다시 초기화하여 새로운 RenderType 반영)
+                            if (PreviewComponent)
+                            {
+                                PreviewComponent->ResetAndActivate();
+                            }
                         }
                         else
                         {
@@ -914,6 +1189,74 @@ void SParticleViewerWindow::OnRender()
 
                     ImGui::Separator();
 
+                    // TypeData 모듈 슬롯 (메쉬 모듈용)
+                    if (Emitter->LODLevels.Num() > 0)
+                    {
+                        UParticleLODLevel* LOD = Emitter->LODLevels[0];
+                        if (LOD && LOD->TypeDataModule)
+                        {
+                            UParticleModule* TypeDataModule = LOD->TypeDataModule;
+                            ImGui::PushID(9999); // TypeData 고유 ID
+                            bool isSelected = (SelectedModule == TypeDataModule);
+
+                            // 모듈 이름 추출
+                            const char* fullName = TypeDataModule->GetClass()->Name;
+                            const char* displayName = fullName;
+                            const char* prefix = "UParticleModule";
+                            size_t prefixLen = strlen(prefix);
+                            if (strncmp(fullName, prefix, prefixLen) == 0)
+                            {
+                                displayName = fullName + prefixLen;
+                            }
+
+                            // TypeData 모듈 표시 (회색 배경)
+                            float itemWidth = ImGui::GetContentRegionAvail().x;
+                            float buttonWidth = 20.0f;
+                            float rightMargin = 10.0f;
+                            float nameWidth = itemWidth - buttonWidth * 2 - rightMargin - 8;
+
+                            // 배경색 설정 (어두운 회색)
+                            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+                            ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+                            ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+
+                            if (ImGui::Selectable(displayName, isSelected, 0, ImVec2(nameWidth, 20)))
+                            {
+                                SelectedModule = TypeDataModule;
+                            }
+
+                            ImGui::PopStyleColor(3);
+
+                            // 버튼들
+                            ImGui::SameLine();
+                            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
+
+                            // 활성화 버튼 (항상 활성화 상태)
+                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.6f, 0.0f, 1.0f));
+                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.7f, 0.0f, 1.0f));
+                            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.8f, 0.0f, 1.0f));
+                            if (ImGui::Button("V##TypeData", ImVec2(buttonWidth, 20)))
+                            {
+                                // TypeData는 비활성화 불가
+                            }
+                            ImGui::PopStyleColor(3);
+                            ImGui::PopStyleVar();
+
+                            ImGui::PopID();
+                        }
+                        else if (LOD)
+                        {
+                            // TypeData 모듈이 없을 때 빈 슬롯 표시
+                            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+                            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
+                            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+                            ImGui::Button("##EmptyTypeDataSlot", ImVec2(-1, 30));
+                            ImGui::PopStyleColor(3);
+                        }
+                    }
+
+                    ImGui::Separator();
+
                     // 모듈 리스트
                     if (Emitter->LODLevels.Num() > 0)
                     {
@@ -927,6 +1270,12 @@ void SParticleViewerWindow::OnRender()
                             {
                                 if (UParticleModule* Module = LOD->AllModulesCache[m])
                                 {
+                                    // TypeData 모듈은 이미 위에 표시했으므로 스킵
+                                    if (Cast<UParticleModuleTypeDataBase>(Module))
+                                    {
+                                        continue;
+                                    }
+
                                     ImGui::PushID(m + 1000);
                                     bool isSelected = (SelectedModule == Module);
 
@@ -1079,6 +1428,26 @@ void SParticleViewerWindow::OnRender()
                                 if (ImGui::MenuItem("Rotation Rate"))
                                 {
                                     LOD->AddModule(UParticleModuleRotationRate::StaticClass());
+                                }
+
+                                ImGui::Separator();
+                                ImGui::TextDisabled("렌더링 타입");
+                                ImGui::Separator();
+
+                                if (ImGui::MenuItem("Mesh"))
+                                {
+                                    UParticleModuleMesh* MeshModule = Cast<UParticleModuleMesh>(LOD->AddModule(UParticleModuleMesh::StaticClass()));
+                                    if (MeshModule && SelectedEmitter)
+                                    {
+                                        MeshModule->ApplyToEmitter(SelectedEmitter);
+
+                                        // 런타임 캐시 재구축 및 컴포넌트 재시작
+                                        if (CurrentParticleSystem && PreviewComponent)
+                                        {
+                                            CurrentParticleSystem->BuildRuntimeCache();
+                                            PreviewComponent->ResetAndActivate();
+                                        }
+                                    }
                                 }
 
                                 ImGui::EndPopup();
@@ -1718,7 +2087,7 @@ void SParticleViewerWindow::LoadParticleSystem()
     // 다이얼로그로 로드
     FWideString WideInitialPath = UTF8ToWide(ParticlePath.string());
     std::filesystem::path WidePath = FPlatformProcess::OpenLoadFileDialog(WideInitialPath, L"particle",L"Particle Files");
-    FString PathStr = WidePath.string();
+    FString PathStr = ResolveAssetRelativePath(WidePath.string(), ParticlePath.string());
     
     UParticleSystem* LoadedSystem = RESOURCE.Load<UParticleSystem>(PathStr);
     if (LoadedSystem)

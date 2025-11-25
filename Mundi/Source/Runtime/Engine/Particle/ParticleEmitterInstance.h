@@ -1,6 +1,5 @@
 #pragma once
 #include <random>
-
 #include "ParticleEmitter.h"
 
 class UParticleSystemComponent;
@@ -8,6 +7,7 @@ class UParticleModuleRequired;
 class UParticleModuleSpawn;
 struct FBaseParticle;
 struct FDynamicEmitterReplayDataBase;
+struct FParticleSimulationContext;
 
 // 런타임 Emitter Instance
 struct FParticleEmitterInstance
@@ -81,17 +81,20 @@ struct FParticleEmitterInstance
      * @param InitialLocation 초기 Location 
      * @param InitialVelocity 초기 Velocity
      */
-    void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation, const FVector& InitialVelocity);    
+    void SpawnParticles(int32 Count, float StartTime, float Increment,
+        const FVector& InitialLocation, const FVector& InitialVelocity, const FParticleSimulationContext& InContext);    
 
     /** 파티클 제거 */
     void KillParticle(int32 Index);
 
     /** 파티클 업데이트 */
-    void Tick(float DeltaTime);
+    /** 비동기 Tick */
+    void Tick(const FParticleSimulationContext& Context);
     
     /** LOD에 따른 모듈 캐싱 업데이트 */
     void UpdateModuleCache();
 
+    struct FDynamicEmitterDataBase* CreateDynamicData();
     void BuildReplayData(FDynamicEmitterReplayDataBase& OutData);
 
     bool IsComplete() const;

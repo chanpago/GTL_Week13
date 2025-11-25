@@ -3,6 +3,7 @@
 #include "ParticleHelper.h"
 #include "ParticleLODLevel.h"
 #include "ParticleSystemComponent.h"
+#include "PlatformTime.h"
 #include "Modules/ParticleModuleRequired.h"
 #include "Modules/ParticleModuleSpawn.h"
 
@@ -117,10 +118,10 @@ void FParticleEmitterInstance::FreeParticleMemory()
     MaxActiveParticles = 0;  // ← 여기서 리셋됨!
 }
 
-void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation, const FVector& InitialVelocity)
+void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation, const FVector& InitialVelocity, const FParticleSimulationContext& InContext)
 {
-    UE_LOG("[SpawnParticles] Called with Count: %d, ActiveParticles: %d, MaxActiveParticles: %d",
-           Count, ActiveParticles, MaxActiveParticles);
+    // UE_LOG("[SpawnParticles] Called with Count: %d, ActiveParticles: %d, MaxActiveParticles: %d",
+    //        Count, ActiveParticles, MaxActiveParticles);
 
     if (ActiveParticles >= MaxActiveParticles)
     {
@@ -181,7 +182,7 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
             for (UParticleModule* Module : CurrentLODLevel->SpawnModules)
             {
                 if (!Module || !Module->bEnabled) { continue; }
-                Module->Spawn(this, PayloadOffset, CurrentSpawnTime, Particle);
+                Module->SpawnAsync(this, PayloadOffset, CurrentSpawnTime, Particle, InContext);
             }
         }
         
@@ -210,16 +211,20 @@ void FParticleEmitterInstance::KillParticle(int32 Index)
     ActiveParticles--;
 }
 
-void FParticleEmitterInstance::Tick(float DeltaTime)
+// 비동기 고려된 Tick, 안에서 Component Raw Pointer 절대 사용금지!!!!!!!!
+void FParticleEmitterInstance::Tick(const FParticleSimulationContext& Context)
 {
+    TIME_PROFILE(Particle_EmitterTick)
+    if (!Context.bIsActive && ActiveParticles <= 0) { return; }
     UpdateModuleCache();
-    if (!Template || !Component || !ParticleData)
+    
+    if (!Template || !ParticleData)
     {
         if (!Template) UE_LOG("[ParticleEmitterInstance::Tick] Template is NULL!");
-        if (!Component) UE_LOG("[ParticleEmitterInstance::Tick] Component is NULL!");
         if (!ParticleData) UE_LOG("[ParticleEmitterInstance::Tick] ParticleData is NULL!");
         return;
     }
+    
     if (!CurrentLODLevel || !CurrentLODLevel->bEnabled)
     {
         if (!CurrentLODLevel) UE_LOG("[ParticleEmitterInstance::Tick] CurrentLODLevel is NULL!");
@@ -237,20 +242,20 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
     float RandomValue = GetRandomFloat();
 
     // 아직 안 끝났을 때만 스폰 시도
-    if (!bEmitterFinished)
+    if (!bEmitterFinished && !Context.bSuppressSpawning)
     {
         // [A] Continuous Spawn
         float SpawnRate = CachedSpawnModule ? CachedSpawnModule->GetSpawnRate(EmitterTime, RandomValue)
                             : (CachedRequiredModule ? CachedRequiredModule->SpawnRateBase : 0.0f);
 
         float OldSpawnFraction = SpawnFraction;
-        SpawnFraction += SpawnRate * DeltaTime;
+        SpawnFraction += SpawnRate * Context.DeltaTime;
         int32 NumToSpawn = static_cast<int32>(SpawnFraction);
 
         if (NumToSpawn > 0)
         {
-            UE_LOG("[ParticleEmitterInstance::Tick] SPAWNING! NumToSpawn: %d, MaxActiveParticles: %d, ActiveParticles: %d",
-                   NumToSpawn, MaxActiveParticles, ActiveParticles);
+            // UE_LOG("[ParticleEmitterInstance::Tick] SPAWNING! NumToSpawn: %d, MaxActiveParticles: %d, ActiveParticles: %d",
+            //       NumToSpawn, MaxActiveParticles, ActiveParticles);
 
             SpawnFraction -= static_cast<float>(NumToSpawn);
 
@@ -258,23 +263,23 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
             float Increment = 1.0f / RateDivisor; // 파티클 1개당 걸리는 시간
             float StartTime = (1.0f - OldSpawnFraction) * Increment; // 첫 번째 파티클이 태어날 시간
 
-            SpawnParticles(NumToSpawn, StartTime, Increment, Component->GetWorldLocation(), FVector::Zero());
+            SpawnParticles(NumToSpawn, StartTime, Increment, Context.ComponentLocation, FVector::Zero(), Context);
 
-            UE_LOG("[ParticleEmitterInstance::Tick] AFTER SPAWN: ActiveParticles: %d", ActiveParticles);
+            // UE_LOG("[ParticleEmitterInstance::Tick] AFTER SPAWN: ActiveParticles: %d", ActiveParticles);
         }
 
         // [B] 버스트 스폰 (Burst)
         if (CachedSpawnModule)
         {
             float OldTime = EmitterTime;
-            float NewTime = EmitterTime + DeltaTime;
+            float NewTime = EmitterTime + Context.DeltaTime;
 
             int32 BurstCount = CachedSpawnModule->GetBurstCount(OldTime, NewTime, RandomValue);
 
             if (BurstCount > 0)
             {
                 // 버스트는 시간차 없이(0.0f) 한 번에 생성
-                SpawnParticles(BurstCount, 0.0f, 0.0f, Component->GetWorldLocation(), FVector::Zero());
+                SpawnParticles(BurstCount, 0.0f, 0.0f, Context.ComponentLocation, FVector::Zero(), Context);
             }
         }
     }
@@ -287,11 +292,11 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
         DECLARE_PARTICLE_PTR(Particle, ParticleData, ParticleStride, i)
 
         Particle->OldLocation = Particle->Location;
-        Particle->Location += Particle->Velocity * DeltaTime;
+        Particle->Location += Particle->Velocity * Context.DeltaTime;
 
         if (Particle->OneOverMaxLifetime > 0.0f)
         {
-            Particle->RelativeTime += Particle->OneOverMaxLifetime * DeltaTime;
+            Particle->RelativeTime += Particle->OneOverMaxLifetime * Context.DeltaTime;
         }
 
         if (Particle->RelativeTime >= 1.0f)
@@ -307,13 +312,13 @@ void FParticleEmitterInstance::Tick(float DeltaTime)
     for (UParticleModule* Module : CurrentLODLevel->UpdateModules)
     {
         if (!Module || !Module->bEnabled) { continue; }
-        Module->Update(this, 0, DeltaTime);
+        Module->UpdateAsync(this, 0, Context);
     }
 
     // ============================================================
     // Emitter Time Update
     // ============================================================
-    EmitterTime += DeltaTime;
+    EmitterTime += Context.DeltaTime;
     
     if (CachedRequiredModule && CachedRequiredModule->EmitterDuration > 0.0f)
     {
@@ -338,6 +343,59 @@ void FParticleEmitterInstance::UpdateModuleCache()
 
     CachedRequiredModule = CurrentLODLevel->RequiredModule;
     CachedSpawnModule = CurrentLODLevel->SpawnModule;
+}
+
+FDynamicEmitterDataBase* FParticleEmitterInstance::CreateDynamicData()
+{
+    if (ActiveParticles <= 0) return nullptr;
+
+    const EParticleType Type = GetDynamicType();
+    FDynamicEmitterDataBase* NewData = nullptr;
+
+    if (Type == EParticleType::Sprite)
+    {
+        auto* SpriteData = new FDynamicSpriteEmitterData();
+        SpriteData->EmitterType = Type;
+        SpriteData->SortMode = CachedRequiredModule->SortMode;
+        SpriteData->SortPriority = 0;
+        
+        if (CachedRequiredModule)
+        {
+            SpriteData->SortMode = CachedRequiredModule->SortMode;
+            SpriteData->bUseLocalSpace = CachedRequiredModule->bUseLocalSpace;
+        }
+
+        // 데이터 채우기 (Memcpy)
+        BuildReplayData(SpriteData->Source);
+        NewData = SpriteData;
+    }
+    else if (Type == EParticleType::Mesh)
+    {
+        auto* MeshData = new FDynamicMeshEmitterData();
+        MeshData->EmitterType = Type;
+        MeshData->SortMode = CachedRequiredModule->SortMode;
+        MeshData->SortPriority = 0;
+        
+        if (CachedRequiredModule)
+        {
+            MeshData->SortMode = CachedRequiredModule->SortMode;
+        }
+
+        // 데이터 채우기
+        BuildReplayData(MeshData->Source);
+
+        if (MeshData->Source.Mesh)
+        {
+            NewData = MeshData;
+        }
+        else
+        {
+            delete MeshData;
+            NewData = nullptr;
+        }
+    }
+
+    return NewData;
 }
 
 void FParticleEmitterInstance::BuildReplayData(FDynamicEmitterReplayDataBase& OutData)

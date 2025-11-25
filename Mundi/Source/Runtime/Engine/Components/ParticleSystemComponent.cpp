@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "ParticleSystemComponent.h"
 #include "MeshBatchElement.h"
 #include "PlatformTime.h"
@@ -7,6 +7,8 @@
 #include "Source/Runtime/Engine/Particle/ParticleEmitterInstance.h"
 #include "Source/Runtime/Engine/Particle/ParticleLODLevel.h"
 #include "Source/Runtime/Engine/Particle/ParticleStats.h"
+#include "Source/Runtime/Engine/Particle/Modules/ParticleModuleMesh.h"
+#include "Source/Runtime/Engine/Particle/Modules/ParticleModuleLocation.h"
 
 // ============================================================================
 // Constructor & Destructor
@@ -67,6 +69,9 @@ void UParticleSystemComponent::InitParticles()
 
 void UParticleSystemComponent::DestroyParticles()
 {
+    // 삭제하기 전에 비동기 작업이 끝날 때까지 기다림
+    AsyncUpdater.EnsureCompletion();
+    
     for (FParticleEmitterInstance* Inst : EmitterInstances)
     {
         if (Inst)
@@ -76,7 +81,6 @@ void UParticleSystemComponent::DestroyParticles()
         }
     }
     EmitterInstances.Empty();
-    ClearEmitterRenderData();
 }
 
 void UParticleSystemComponent::BeginPlay()
@@ -95,42 +99,60 @@ void UParticleSystemComponent::EndPlay()
 // ============================================================================
 // Update
 // ============================================================================
-
 void UParticleSystemComponent::TickComponent(float DeltaTime)
 {
     Super::TickComponent(DeltaTime);
 
-    if (!bIsActive || !Template) return;
+    if (!Template) return;
 
-    uint32 FrameParticleCount = 0;
-    bool bAllEmittersComplete = true;
-    for (FParticleEmitterInstance* Inst : EmitterInstances)
+    AccumulatedDeltaTime += DeltaTime;
+    
+    // [Main Thread] 비동기 관리자에게 작업 요청 & 결과 동기화
+    FParticleSimulationContext Context;
+    Context.DeltaTime = AccumulatedDeltaTime;
+    Context.ComponentLocation = GetWorldLocation();
+    Context.ComponentRotation = GetWorldRotation();
+    Context.bIsActive = bIsActive;
+    Context.bSuppressSpawning = bSuppressSpawning;
+
+    if (bUseAsyncSimulation)
     {
-        TIME_PROFILE(Particle_EmitterTick)
-        Inst->Tick(DeltaTime);
-        FrameParticleCount += Inst->ActiveParticles;
-
-        if (!Inst->IsComplete())
+        if (!AsyncUpdater.IsBusy())
         {
-            bAllEmittersComplete = false;
+            // 워커가 놀고 있으면 누적된 시간만큼 일 시킴
+            AsyncUpdater.KickOff(EmitterInstances, Context);
+            AccumulatedDeltaTime = 0;
         }
     }
+    else
+    {
+        AsyncUpdater.KickOffSync(EmitterInstances, Context);
+        AccumulatedDeltaTime = 0;
+    }
 
-    FParticleStatManager::GetInstance().AddParticleCount(FrameParticleCount);
+    // [Main Thread] 캐싱된 통계 데이터 사용
+    const FParticleFrameStats& Stats = AsyncUpdater.LastFrameStats;
+    FParticleStatManager::GetInstance().AddParticleCount(Stats.TotalActiveParticles);
 
-    if (bAllEmittersComplete)
+    // 종료 처리
+    if (bIsActive && Stats.bAllEmittersComplete)
     {
         OnParticleSystemFinished.Broadcast(this);
-        DeactivateSystem();
+        DeactivateSystem(); 
+    }
 
-        if (bAutoDestroy) { GetOwner()->Destroy(); }
+    if (!bIsActive && !Stats.bHasActiveParticles)
+    {
+        if (bAutoDestroy) 
+        { 
+            GetOwner()->Destroy(); 
+        } 
     }
 }
 
 // ============================================================================
 // Rendering
 // ============================================================================
-
 void UParticleSystemComponent::CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
 {
     if (!IsVisible())
@@ -139,90 +161,26 @@ void UParticleSystemComponent::CollectMeshBatches(TArray<FMeshBatchElement>& Out
     }
     TIME_PROFILE(Particle_CollectBatches)
 
+    AsyncUpdater.TrySync();
     // EmitterInstance -> DynamicEmitterReplayDatabase
-    BuildEmitterRenderData();
+    TArray<FDynamicEmitterDataBase*>& CurrentData = AsyncUpdater.RenderData;
+    if (CurrentData.IsEmpty()) return;
 
-    if (EmitterRenderData.IsEmpty())
-        return;
-
-    // DaynamicEmitterReplayDatabase -> MeshBatchElement
-    BuildSpriteParticleBatch(OutMeshBatchElements, View);
-    BuildMeshParticleBatch(OutMeshBatchElements, View);
-
-    // 이번 프레임 끝에 DynamicData 파괴
-    ClearEmitterRenderData();
+    // DynamicEmitterReplayDatabase -> MeshBatchElement
+    BuildSpriteParticleBatch(CurrentData, OutMeshBatchElements, View);
+    BuildMeshParticleBatch(CurrentData, OutMeshBatchElements, View);
 }
 
 void UParticleSystemComponent::DuplicateSubObjects()
 {
     Super::DuplicateSubObjects();
     EmitterInstances.Empty();
-    EmitterRenderData.Empty();
     ParticleVertexBuffer = nullptr;
     ParticleIndexBuffer = nullptr;
 }
 
-void UParticleSystemComponent::BuildEmitterRenderData()
-{
-    // 1) 이전 프레임 데이터 정리
-    ClearEmitterRenderData();
 
-    if (!EmitterInstances.IsEmpty())
-    {
-        // 2) 각 Instance -> DynamicData 생성
-        for (int32 EmitterIdx = 0; EmitterIdx < EmitterInstances.Num(); ++EmitterIdx)
-        {
-            FParticleEmitterInstance* Inst = EmitterInstances[EmitterIdx];
-            if (!Inst || Inst->ActiveParticles <= 0) continue;
-
-            const EParticleType Type = Inst->GetDynamicType();
-            FDynamicEmitterDataBase* NewData = nullptr;
-
-            if (Type == EParticleType::Sprite)
-            {
-                auto* SpriteData = new FDynamicSpriteEmitterData();
-                SpriteData->EmitterType = Type;
-                SpriteData->EmitterIndex = EmitterIdx;
-                SpriteData->SortMode = Inst->CachedRequiredModule->SortMode;
-                SpriteData->SortPriority = 0;
-
-                if (Inst->CachedRequiredModule)
-                {
-                    SpriteData->bUseLocalSpace = Inst->CachedRequiredModule->bUseLocalSpace;
-                }
-
-                Inst->BuildReplayData(SpriteData->Source);
-                NewData = SpriteData;
-            }
-            else if (Type == EParticleType::Mesh)
-            {
-                auto* MeshData = new FDynamicMeshEmitterData();
-                MeshData->EmitterType = Type;
-                MeshData->EmitterIndex = EmitterIdx;
-                MeshData->SortMode = Inst->CachedRequiredModule->SortMode;
-                MeshData->SortPriority = 0;
-
-                Inst->BuildReplayData(MeshData->Source);
-
-                if (MeshData->Source.Mesh)
-                {
-                    NewData = MeshData;
-                }
-                else
-                {
-                    delete MeshData;
-                }
-            }
-
-            if (NewData)
-            {
-                EmitterRenderData.Add(NewData);
-            }
-        }
-    }
-}
-
-void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
+void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FDynamicEmitterDataBase*>& EmitterRenderData, TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
 {
     if (EmitterRenderData.IsEmpty())
         return;
@@ -549,7 +507,7 @@ void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FMeshBatchElement
     }
 }
 
-void UParticleSystemComponent::BuildMeshParticleBatch(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
+void UParticleSystemComponent::BuildMeshParticleBatch(TArray<FDynamicEmitterDataBase*>& EmitterRenderData, TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View)
 {
     if (EmitterRenderData.IsEmpty())
         return;
@@ -614,12 +572,16 @@ void UParticleSystemComponent::BuildMeshParticleBatch(TArray<FMeshBatchElement>&
                 continue;
 
             FVector ParticleWorldPos = Particle->Location;
-            if (MeshData->bUseLocalSpace)
-            {
-                ParticleWorldPos = ComponentWorld.TransformPosition(ParticleWorldPos);
-            }
+            FMatrix ParticleWorld;
 
-            FMatrix ParticleWorld = FMatrix::MakeScale(Particle->Size) * FMatrix::MakeTranslation(ParticleWorldPos) * ComponentWorld;
+            if (MeshData->bUseLocalSpace)  // Local Space: 로컬 좌표 + 컴포넌트 변환 (컴포넌트 종속)
+            {
+                ParticleWorld = FMatrix::MakeScale(Particle->Size) * FMatrix::MakeTranslation(ParticleWorldPos) * ComponentWorld;
+            }
+            else  // World Space: 이미 월드 좌표이므로 그대로 사용 (독립적)
+            {
+                ParticleWorld = FMatrix::MakeScale(Particle->Size) * FMatrix::MakeTranslation(ParticleWorldPos);
+            }
 
             FMeshBatchElement& Batch = OutMeshBatchElements[OutMeshBatchElements.Add(FMeshBatchElement())];
 
@@ -648,7 +610,8 @@ UMaterialInterface* UParticleSystemComponent::ResolveEmitterMaterial(const FDyna
 {
     UParticleEmitter* SourceEmitter = nullptr;
     UParticleModuleRequired* RequiredModule = nullptr;
-
+    UParticleModuleMesh* MeshModule = nullptr;
+    
     if (Template &&
         DynData.EmitterIndex >= 0 &&
         DynData.EmitterIndex < Template->Emitters.Num())
@@ -657,21 +620,27 @@ UMaterialInterface* UParticleSystemComponent::ResolveEmitterMaterial(const FDyna
         if (SourceEmitter && !SourceEmitter->LODLevels.IsEmpty())
         {
             if (auto* LOD0 = SourceEmitter->LODLevels[0])
+            {
                 RequiredModule = LOD0->RequiredModule;
+                MeshModule = Cast<UParticleModuleMesh>(LOD0->TypeDataModule);
+            }
         }
     }
-
-    if (RequiredModule && RequiredModule->Material)
-        return RequiredModule->Material;
+    
 
     // 만약 MeshEmitter + bUseMeshMaterials -> StaticMesh 재질
-    if (DynData.EmitterType == EParticleType::Mesh &&
-        SourceEmitter && SourceEmitter->bUseMeshMaterials)
+    if (DynData.EmitterType == EParticleType::Mesh && MeshModule)
     {
-        auto* MeshData = static_cast<const FDynamicMeshEmitterData*>(&DynData);
-        if (MeshData->Source.Mesh)
+        // Override Material 사용 (bUseMeshMaterials = false)
+        if (!MeshModule->bUseMeshMaterials && MeshModule->OverrideMaterial)
         {
-            const auto& Groups = MeshData->Source.Mesh->GetMeshGroupInfo();
+            return MeshModule->OverrideMaterial;
+        }
+
+        // Mesh 기본 Material 사용 (bUseMeshMaterials = true)
+        if (MeshModule->bUseMeshMaterials && MeshModule->Mesh)
+        {
+            const auto& Groups = MeshModule->Mesh->GetMeshGroupInfo();
             if (!Groups.IsEmpty())
             {
                 const FString& MatName = Groups[0].InitialMaterialName;
@@ -681,6 +650,12 @@ UMaterialInterface* UParticleSystemComponent::ResolveEmitterMaterial(const FDyna
             }
         }
     }
+
+    if (RequiredModule && RequiredModule->Material)
+    {
+        return RequiredModule->Material;
+    }
+    
     return FallbackMaterial;
 }
 
@@ -820,23 +795,181 @@ void UParticleSystemComponent::ReleaseParticleBuffers()
     ParticleIndexCount = 0;
 }
 
-void UParticleSystemComponent::ClearEmitterRenderData()
+
+void UParticleSystemComponent::RenderDebugVolume(URenderer* Renderer) const
 {
-    for (FDynamicEmitterDataBase* Data : EmitterRenderData)
+    if (!Template) return;
+
+    const FTransform WorldTransform = GetWorldTransform();
+    TArray<FVector> StartPoints;
+    TArray<FVector> EndPoints;
+    TArray<FVector4> Colors;
+
+    // 각 Emitter의 Location 모듈 찾아서 범위 그리기
+    for (const auto* Emitter : Template->Emitters)
     {
-        if (Data)
+        if (!Emitter || Emitter->LODLevels.IsEmpty()) continue;
+
+        const UParticleLODLevel* LOD = Emitter->LODLevels[0];
+        if (!LOD) continue;
+
+        // Location 모듈 찾기
+        UParticleModuleLocation* LocationModule = nullptr;
+        for (auto* Module : LOD->AllModulesCache)
         {
-            if (auto* Sprite = dynamic_cast<FDynamicSpriteEmitterData*>(Data))
+            if (auto* LocMod = Cast<UParticleModuleLocation>(Module))
             {
-                Sprite->Source.DataContainer.Free();
+                LocationModule = LocMod;
+                break;
             }
-            else if (auto* Mesh = dynamic_cast<FDynamicMeshEmitterData*>(Data))
+        }
+
+        if (!LocationModule) continue;
+
+        const FVector4 DebugColor(0.0f, 1.0f, 0.0f, 1.0f); // 초록색
+
+        switch (LocationModule->DistributionType)
+        {
+        case ELocationDistributionType::Box:
+        {
+            // Box 8개 꼭지점
+            const FVector Extent = LocationModule->BoxExtent;
+            FVector LocalCorners[8] = {
+                {-Extent.X, -Extent.Y, -Extent.Z}, {+Extent.X, -Extent.Y, -Extent.Z},
+                {-Extent.X, +Extent.Y, -Extent.Z}, {+Extent.X, +Extent.Y, -Extent.Z},
+                {-Extent.X, -Extent.Y, +Extent.Z}, {+Extent.X, -Extent.Y, +Extent.Z},
+                {-Extent.X, +Extent.Y, +Extent.Z}, {+Extent.X, +Extent.Y, +Extent.Z},
+            };
+
+            FVector WorldCorners[8];
+            for (int i = 0; i < 8; i++)
             {
-                Mesh->Source.DataContainer.Free();
+                WorldCorners[i] = WorldTransform.TransformPosition(LocalCorners[i]);
             }
 
-            delete Data;
+            // 12개 엣지
+            static const int Edges[12][2] = {
+                {0,1},{1,3},{3,2},{2,0}, // bottom
+                {4,5},{5,7},{7,6},{6,4}, // top
+                {0,4},{1,5},{2,6},{3,7}  // verticals
+            };
+
+            for (int i = 0; i < 12; ++i)
+            {
+                StartPoints.Add(WorldCorners[Edges[i][0]]);
+                EndPoints.Add(WorldCorners[Edges[i][1]]);
+                Colors.Add(DebugColor);
+            }
+        }
+        break;
+
+        case ELocationDistributionType::Sphere:
+        {
+            // Sphere를 원으로 표현 (3개 원: XY, YZ, XZ 평면)
+            const float Radius = LocationModule->SphereRadius;
+            const int Segments = 32;
+
+            // XY 평면 원
+            for (int i = 0; i < Segments; ++i)
+            {
+                float angle1 = (float)i / Segments * 2.0f * PI;
+                float angle2 = (float)(i + 1) / Segments * 2.0f * PI;
+
+                FVector p1(Radius * cosf(angle1), Radius * sinf(angle1), 0.0f);
+                FVector p2(Radius * cosf(angle2), Radius * sinf(angle2), 0.0f);
+
+                StartPoints.Add(WorldTransform.TransformPosition(p1));
+                EndPoints.Add(WorldTransform.TransformPosition(p2));
+                Colors.Add(DebugColor);
+            }
+
+            // YZ 평면 원
+            for (int i = 0; i < Segments; ++i)
+            {
+                float angle1 = (float)i / Segments * 2.0f * PI;
+                float angle2 = (float)(i + 1) / Segments * 2.0f * PI;
+
+                FVector p1(0.0f, Radius * cosf(angle1), Radius * sinf(angle1));
+                FVector p2(0.0f, Radius * cosf(angle2), Radius * sinf(angle2));
+
+                StartPoints.Add(WorldTransform.TransformPosition(p1));
+                EndPoints.Add(WorldTransform.TransformPosition(p2));
+                Colors.Add(DebugColor);
+            }
+
+            // XZ 평면 원
+            for (int i = 0; i < Segments; ++i)
+            {
+                float angle1 = (float)i / Segments * 2.0f * PI;
+                float angle2 = (float)(i + 1) / Segments * 2.0f * PI;
+
+                FVector p1(Radius * cosf(angle1), 0.0f, Radius * sinf(angle1));
+                FVector p2(Radius * cosf(angle2), 0.0f, Radius * sinf(angle2));
+
+                StartPoints.Add(WorldTransform.TransformPosition(p1));
+                EndPoints.Add(WorldTransform.TransformPosition(p2));
+                Colors.Add(DebugColor);
+            }
+        }
+        break;
+
+        case ELocationDistributionType::Cylinder:
+        {
+            // Cylinder: 상단/하단 원 + 수직선
+            const float Radius = LocationModule->CylinderRadius;
+            const float HalfHeight = LocationModule->CylinderHeight * 0.5f;
+            const int Segments = 32;
+
+            // 상단 원 (Z = +HalfHeight)
+            for (int i = 0; i < Segments; ++i)
+            {
+                float angle1 = (float)i / Segments * 2.0f * PI;
+                float angle2 = (float)(i + 1) / Segments * 2.0f * PI;
+
+                FVector p1(Radius * cosf(angle1), Radius * sinf(angle1), HalfHeight);
+                FVector p2(Radius * cosf(angle2), Radius * sinf(angle2), HalfHeight);
+
+                StartPoints.Add(WorldTransform.TransformPosition(p1));
+                EndPoints.Add(WorldTransform.TransformPosition(p2));
+                Colors.Add(DebugColor);
+            }
+
+            // 하단 원 (Z = -HalfHeight)
+            for (int i = 0; i < Segments; ++i)
+            {
+                float angle1 = (float)i / Segments * 2.0f * PI;
+                float angle2 = (float)(i + 1) / Segments * 2.0f * PI;
+
+                FVector p1(Radius * cosf(angle1), Radius * sinf(angle1), -HalfHeight);
+                FVector p2(Radius * cosf(angle2), Radius * sinf(angle2), -HalfHeight);
+
+                StartPoints.Add(WorldTransform.TransformPosition(p1));
+                EndPoints.Add(WorldTransform.TransformPosition(p2));
+                Colors.Add(DebugColor);
+            }
+
+            // 수직선 4개 (상단-하단 연결)
+            for (int i = 0; i < 4; ++i)
+            {
+                float angle = (float)i / 4.0f * 2.0f * PI;
+                FVector pTop(Radius * cosf(angle), Radius * sinf(angle), HalfHeight);
+                FVector pBottom(Radius * cosf(angle), Radius * sinf(angle), -HalfHeight);
+
+                StartPoints.Add(WorldTransform.TransformPosition(pTop));
+                EndPoints.Add(WorldTransform.TransformPosition(pBottom));
+                Colors.Add(DebugColor);
+            }
+        }
+        break;
+
+        case ELocationDistributionType::Point:
+            // Point는 범위가 없으므로 그리지 않음
+            break;
         }
     }
-    EmitterRenderData.Empty();
+
+    if (!StartPoints.IsEmpty())
+    {
+        Renderer->AddLines(StartPoints, EndPoints, Colors);
+    }
 }

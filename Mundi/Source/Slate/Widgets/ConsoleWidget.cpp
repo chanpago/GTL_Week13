@@ -150,6 +150,11 @@ void UConsoleWidget::RenderToolbar()
 
 void UConsoleWidget::RenderLogOutput()
 {
+	if (Items.Num() > 1000)
+	{
+		Items.erase(Items.begin(), Items.end() - 1000);
+	}
+	
 	// Reserve space for input at bottom
 	const float footer_height_to_reserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
 
