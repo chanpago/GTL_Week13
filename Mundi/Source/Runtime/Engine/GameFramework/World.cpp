@@ -290,6 +290,8 @@ UWorld* UWorld::DuplicateWorldForPIE(UWorld* InEditorWorld)
 
 	//ULevel* NewLevel = ULevelService::CreateNewLevel();
 	UWorld* PIEWorld = NewObject<UWorld>(); // 레벨도 새로 생성됨
+	PIEWorld->Partition = std::make_unique<UWorldPartitionManager>();
+
 	PIEWorld->bPie = true;
 	
 	FWorldContext PIEWorldContext = FWorldContext(PIEWorld, EWorldType::Game);
@@ -312,6 +314,7 @@ UWorld* UWorld::DuplicateWorldForPIE(UWorld* InEditorWorld)
 			continue;
 		}
 
+		NewActor->RegisterAllComponents(PIEWorld);
 		// PlayerCameraManager 복사
 		if (InEditorWorld->PlayerCameraManager == SourceActor)
 		{

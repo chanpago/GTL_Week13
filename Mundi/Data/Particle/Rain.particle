@@ -41,6 +41,12 @@
                     "StartLocation_bUseRange" : false,
                     "Type" : "Location",
                     "bEnabled" : true
+                  }, {
+                    "StartColor_Max" : [1.000000, 0.536680, 0.536680, 1.000000],
+                    "StartColor_Min" : [1.000000, 0.000000, 0.000000, 1.000000],
+                    "StartColor_bUseRange" : true,
+                    "Type" : "Color",
+                    "bEnabled" : true
                   }],
                 "RequiredModule" : {
                   "DiffuseTexture" : "Data/Bubble.PNG",
