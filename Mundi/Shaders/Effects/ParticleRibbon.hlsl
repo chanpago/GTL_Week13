@@ -109,9 +109,9 @@ float4 mainPS(PSInput In) : SV_TARGET
     float4 tex = RibbonTex.Sample(RibbonSampler, uv);
     if (length(tex.rgb) < 0.001f && tex.a < 0.001f)
     {
-        tex = float4(1.0f, 1.0f, 0.0f, 1.0f); // 기본 노란색
+        tex = float4(1.0f, 1.0f, 1.0f, 1.0f);
     }
     
-    float4 col = tex; // * In.Color;
+    float4 col = tex * In.Color;
     return col;
 }

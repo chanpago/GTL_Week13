@@ -22,7 +22,7 @@
                     "Type" : "Velocity",
                     "bEnabled" : true
                   }, {
-                    "TilingDistance" : 10.000000,
+                    "TilingDistance" : 0.000000,
                     "TrailLifetime" : 1.000000,
                     "Type" : "Ribbon",
                     "Width" : 10.000000,
