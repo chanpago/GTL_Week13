@@ -22,7 +22,7 @@ public:
     UStaticMesh* Mesh = nullptr;
     UMaterialInterface* OverrideMaterial = nullptr;
     bool bUseMeshMaterials = true;
-    bool bLighting = false;
+    bool bLighting = true;
     // 이 타입에 필요한 파티클 데이터 크기 반환
     virtual int32 GetRequiredParticleBytes() const override
     {

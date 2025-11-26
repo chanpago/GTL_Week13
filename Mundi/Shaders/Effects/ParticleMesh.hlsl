@@ -9,7 +9,7 @@
 // #define LIGHTING_MODEL_PHONG 1
 
 #ifndef PARTICLE_LIGHTING
-#define PARTICLE_LIGHTING 0  // 기본값: 조명 비적용
+#define PARTICLE_LIGHTING 1  
 #endif
 
 // Material 구조체

@@ -937,8 +937,8 @@ void FSceneRenderer::RenderOpaquePass(EViewMode InRenderViewMode)
 void FSceneRenderer::RenderParticlePass()
 {
 	GPU_TIME_PROFILE("Particle_Draw")
-	
-	if (Proxies.Particles.empty()) 
+
+	if (Proxies.Particles.empty())
 		return;
 
 	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTargetWithId); // Scene+Depth
@@ -946,7 +946,25 @@ void FSceneRenderer::RenderParticlePass()
 	RHIDevice->RSSetState(ERasterizerMode::Solid);
 	RHIDevice->OMSetDepthStencilState(EComparisonFunc::LessEqualReadOnly);
 	RHIDevice->OMSetBlendState(true);
-	
+
+	// ParticleMesh 라이팅을 위한 상수버퍼 바인딩
+	FLightManager* LightManager = World->GetLightManager();
+	if (LightManager)
+	{
+		// 라이트 버퍼 업데이트 - LightBuffer (b8), PointLight/SpotLight SRV (t3, t4), Shadow SRV (t8, t9, t10)
+		LightManager->UpdateLightBuffer(RHIDevice);
+	}
+
+	// CameraBuffer (b7) 바인딩
+	CameraBufferType CameraBuffer;
+	CameraBuffer.CameraPosition = View->ViewLocation;
+	RHIDevice->SetAndUpdateConstantBuffer(CameraBuffer);
+
+	// TileCullingBuffer (b11) 바인딩 - bUseTileCulling = 0으로 설정하여 타일 컬링 비활성화
+	FTileCullingBufferType TileCullingBuffer{};
+	TileCullingBuffer.bUseTileCulling = 0; // 파티클은 타일 컬링 사용 안함
+	RHIDevice->SetAndUpdateConstantBuffer(TileCullingBuffer);
+
 	// PS에서 SceneDepthSampling
 	ID3D11ShaderResourceView* SceneDepthSRV = RHIDevice->GetSRV(RHI_SRV_Index::SceneDepth);
 	if (SceneDepthSRV)
@@ -957,7 +975,7 @@ void FSceneRenderer::RenderParticlePass()
 			RHIDevice->GetDeviceContext()->PSSetSamplers(2, 1, &DepthSampler);
 		}
 	}
-	
+
 	MeshBatchElements.Empty();
 	for (UParticleSystemComponent* ParticleComp : Proxies.Particles)
 	{
