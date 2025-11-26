@@ -20,17 +20,17 @@ public:
     bool IsShowFlagEnabled(EEngineShowFlags Flag) const { return HasShowFlag(ShowFlags, Flag); }
 
     // FXAA parameters
-    void SetFXAAEdgeThresholdMin(float Value) { FXAAEdgeThresholdMin = Value; }
-    float GetFXAAEdgeThresholdMin() const { return FXAAEdgeThresholdMin; }
+    void SetFXAASpanMax(float Value) { FXAASpanMax = Value; }
+    float GetFXAASpanMax() const { return FXAASpanMax; }
 
-    void SetFXAAEdgeThresholdMax(float Value) { FXAAEdgeThresholdMax = Value; }
-    float GetFXAAEdgeThresholdMax() const { return FXAAEdgeThresholdMax; }
+    void SetFXAAReduceMul(float Value) { FXAAReduceMul = Value; }
+    float GetFXAAReduceMul() const { return FXAAReduceMul; }
 
-    void SetFXAAQualitySubPix(float Value) { FXAAQualitySubPix = Value; }
-    float GetFXAAQualitySubPix() const { return FXAAQualitySubPix; }
+    void SetFXAAReduceMin(float Value) { FXAAReduceMin = Value; }
+    float GetFXAAReduceMin() const { return FXAAReduceMin; }
 
-    void SetFXAAQualityIterations(int32 Value) { FXAAQualityIterations = Value; }
-    int32 GetFXAAQualityIterations() const { return FXAAQualityIterations; }
+    void SetFXAASubPixBlend(float Value) { FXAASubPixBlend = Value; }
+    float GetFXAASubPixBlend() const { return FXAASubPixBlend; }
 
     // Tile-based light culling
     void SetTileSize(uint32 Value) { TileSize = Value; }
@@ -44,11 +44,11 @@ private:
     EEngineShowFlags ShowFlags = EEngineShowFlags::SF_DefaultEnabled;
     EViewMode ViewMode = EViewMode::VMI_Lit_Phong;
 
-    // FXAA parameters
-    float FXAAEdgeThresholdMin = 0.0833f;   // 엣지 감지 최소 휘도 차이 (권장: 0.0833)
-    float FXAAEdgeThresholdMax = 0.166f;    // 엣지 감지 최대 휘도 차이 (권장: 0.166)
-    float FXAAQualitySubPix = 0.75f;        // 서브픽셀 품질 (낮을수록 부드러움, 권장: 0.75)
-    int32 FXAAQualityIterations = 12;       // 엣지 탐색 반복 횟수 (권장: 12)
+    // FXAA parameters (NVIDIA FXAA 3.11 style)
+    float FXAASpanMax = 8.0f;               // 최대 탐색 범위 (권장: 8.0)
+    float FXAAReduceMul = 0.125f;           // 감쇠 승수 (권장: 1/8 = 0.125)
+    float FXAAReduceMin = 0.0078125f;       // 최소 감쇠 값 (권장: 1/128 = 0.0078125)
+    float FXAASubPixBlend = 0.75f;          // 서브픽셀 블렌딩 강도 (권장: 0.75~1.0)
 
     // Tile-based light culling
     uint32 TileSize = 16;                   // 타일 크기 (픽셀, 기본값: 16)

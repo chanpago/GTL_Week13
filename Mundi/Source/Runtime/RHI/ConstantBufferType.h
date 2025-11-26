@@ -97,13 +97,13 @@ static_assert(sizeof(FGammaCorrectionBufferType) % 16 == 0, "CB must be 16-byte 
 
 struct FXAABufferType // b2
 {
-    FVector2D ScreenSize; // 화면 해상도 (e.g., float2(1920.0f, 1080.0f))
     FVector2D InvScreenSize; // 1.0f / ScreenSize (픽셀 하나의 크기)
+    float SpanMax;           // 최대 탐색 범위 (8.0f 권장)
+    float ReduceMul;         // 감쇠 승수 (1/8 = 0.125f 권장)
 
-    float EdgeThresholdMin; // 엣지 감지 최소 휘도 차이 (0.0833f 권장)
-    float EdgeThresholdMax; // 엣지 감지 최대 휘도 차이 (0.166f 권장)
-    float QualitySubPix; // 서브픽셀 품질 (낮을수록 부드러움, 0.75 권장)
-    int32_t QualityIterations; // 엣지 탐색 반복 횟수 (12 권장)
+    float ReduceMin;         // 최소 감쇠 값 (1/128 = 0.0078125f 권장)
+    float SubPixBlend;       // 서브픽셀 블렌딩 강도 (0.75~1.0 권장)
+    float Padding[2];        // 16바이트 정렬
 };
 
 // b0 in PS
