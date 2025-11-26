@@ -56,35 +56,14 @@ private:
 	void BuildMeshParticleBatch(TArray<FDynamicEmitterDataBase*>& EmitterRenderData, TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View);
 	void BuildBeamParticleBatch(TArray<FDynamicEmitterDataBase*>& EmitterRenderData, TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View);
 	void BuildRibbonParticleBatch(TArray<FDynamicEmitterDataBase*>& EmitterRenderData, TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View);
-	void BuildMeshParticleBatch_Instanced(
-		TArray<FDynamicEmitterDataBase*>& EmitterRenderData,
-		TArray<FMeshBatchElement>& OutMeshBatchElements,
-		const FSceneView* View);
-	void BuildMeshParticleBatch_Immediate(
-		TArray<FDynamicEmitterDataBase*>& EmitterRenderData,
-		TArray<FMeshBatchElement>& OutMeshBatchElements,
-		const FSceneView* View);
-	void BuildSpriteParticleBatch_Instanced(
-		const TArray<FDynamicEmitterDataBase*>& EmitterRenderData,
-		TArray<FMeshBatchElement>& OutMeshBatchElements,
-		uint32 ClampedCount,
-		const FVector& ViewOrigin,
-		const FVector& ViewDir,
-		const FSceneView* View = nullptr);
-	void BuildSpriteParticleBatch_Immediate(
-		const TArray<FDynamicEmitterDataBase*>& EmitterRenderData,
-		TArray<FMeshBatchElement>& OutMeshBatchElements,
-		uint32 ClampedCount,
-		const FVector& ViewOrigin,
-		const FVector& ViewDir,
-		const FSceneView* View = nullptr);
+	
 	UMaterialInterface* ResolveEmitterMaterial(const FDynamicEmitterDataBase& DynData) const;
 
 	// Resource 관리
 	bool EnsureParticleBuffers(uint32 ParticleCapacity);
 	bool EnsureRibbonBuffers(uint32 MaxSpinePoints);
-	bool EnsureInstanceBuffer(uint32 InstanceCount);
-	bool EnsureMeshInstanceBuffer(uint32 InstanceCount);	
+	bool EnsureMeshBuffer(uint32 InstanceCount);	
+
 	void ReleaseParticleBuffers();
 	void ReleaseInstanceBuffers();
 	void ReleaseRibbonBuffers();
@@ -98,26 +77,22 @@ private:
 	TArray<FParticleEmitterInstance*> EmitterInstances;	
 	
 	// Render Resources
+	// Sprite Resources
 	ID3D11Buffer* ParticleVertexBuffer = nullptr;
 	ID3D11Buffer* ParticleIndexBuffer = nullptr;
 	uint32 ParticleVertexCapacity = 0;
 	uint32 ParticleIndexCount = 0;
 	UMaterialInterface* FallbackMaterial = nullptr;
-	UMaterialInterface* InstanceFallbackMaterial = nullptr;
 
-	// GPU Instancing
-	ID3D11Buffer* ParticleInstanceBuffer = nullptr;
-	ID3D11ShaderResourceView* ParticleInstanceSRV = nullptr;
-	uint32               InstanceCapacity = 0;
+	// Mesh Instancing
 	ID3D11Buffer* MeshInstanceBuffer = nullptr;
-	ID3D11ShaderResourceView* MeshInstanceSRV = nullptr;
-	uint32               MeshInstanceCapacity = 0;
+	uint32 MeshInstanceCapacity = 0;
 
 	// Ribbon Resources
 	ID3D11Buffer* RibbonVertexBuffer = nullptr;
 	ID3D11Buffer* RibbonIndexBuffer = nullptr;
 	uint32 RibbonVertexCapacity = 0;
-	uint32 RibbonIndexCapacity = 0; // 인덱스 개수 용량
+	uint32 RibbonIndexCapacity = 0;
 
 	// Beam Resources
 	TArray<ID3D11Buffer*> PerFrameBeamBuffers;
