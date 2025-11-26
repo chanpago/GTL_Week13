@@ -4,7 +4,7 @@
                 "LODIndex" : 0,
                 "Modules" : [{
                     "Lifetime_Max" : 1.000000,
-                    "Lifetime_Min" : 1.000000,
+                    "Lifetime_Min" : 2.010000,
                     "Lifetime_bUseRange" : false,
                     "Type" : "Lifetime",
                     "bEnabled" : true
@@ -15,16 +15,22 @@
                     "Type" : "Size",
                     "bEnabled" : true
                   }, {
-                    "Gravity" : [0.000000, 0.000000, -980.000000],
-                    "StartVelocity_Max" : [0.000000, 0.000000, 20.000000],
-                    "StartVelocity_Min" : [0.000000, 0.000000, 10.000000],
+                    "Gravity" : [0.000000, 0.000000, 0.000000],
+                    "StartVelocity_Max" : [0.000000, 0.000000, 0.000000],
+                    "StartVelocity_Min" : [0.000000, 0.000000, 0.000000],
                     "StartVelocity_bUseRange" : true,
                     "Type" : "Velocity",
                     "bEnabled" : true
+                  }, {
+                    "TilingDistance" : 10.000000,
+                    "TrailLifetime" : 1.000000,
+                    "Type" : "Ribbon",
+                    "Width" : 10.000000,
+                    "bEnabled" : true,
+                    "bUseCameraFacing" : true
                   }],
                 "RequiredModule" : {
                   "BlendMode" : 5,
-                  "DiffuseTexture" : "Data/cube_texture.png",
                   "EmitterDelay" : 0.000000,
                   "EmitterDuration" : 1.000000,
                   "EmitterLoops" : 0,
@@ -37,7 +43,6 @@
                   "InitialSize_Max" : [50.000000, 50.000000, 1.000000],
                   "InitialSize_Min" : [50.000000, 50.000000, 1.000000],
                   "InitialSize_bUseRange" : false,
-                  "Material" : "texture",
                   "MaxParticles" : 1000,
                   "ScreenAlignment" : 0,
                   "SortMode" : 1,
@@ -49,15 +54,19 @@
                   "bUseLocalSpace" : false
                 },
                 "SpawnModule" : {
+                  "BurstList" : [],
+                  "SpawnRateOverTime_Max" : 0.000000,
+                  "SpawnRateOverTime_Min" : 0.000000,
+                  "SpawnRateOverTime_bUseRange" : false,
                   "SpawnRateType" : 0,
-                  "SpawnRate_Max" : 20.000000,
-                  "SpawnRate_Min" : 20.000000,
+                  "SpawnRate_Max" : 151.199997,
+                  "SpawnRate_Min" : 151.199997,
                   "SpawnRate_bUseRange" : false
                 },
                 "bEnabled" : true
               }],
             "Name" : "UParticleEmitter_13",
-            "RenderType" : 2
+            "RenderType" : 3
           }],
         "Name" : "UParticleSystem_8",
         "Type" : "ParticleSystem"
