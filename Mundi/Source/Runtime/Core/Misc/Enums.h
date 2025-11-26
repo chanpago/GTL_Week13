@@ -260,7 +260,8 @@ enum class EParticleType : uint8
 {
     Sprite,
     Mesh,
-    Beam
+    Beam,
+    Ribbon
 };
 
 enum class EParticleSortMode : uint8

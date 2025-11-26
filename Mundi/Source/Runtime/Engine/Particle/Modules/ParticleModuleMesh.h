@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "ParticleModuleTypeDataBase.h"
-#include "Name.h"
 
 class UStaticMesh;
 class UParticleEmitter;

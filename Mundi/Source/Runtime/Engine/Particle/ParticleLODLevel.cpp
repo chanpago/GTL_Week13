@@ -15,6 +15,7 @@
 #include "Modules/ParticleModuleRotationRate.h"
 #include "Modules/ParticleModuleMesh.h"
 #include "Modules/ParticleModuleBeam.h"
+#include "Modules/ParticleModuleRibbon.h"
 #include "Modules/ParticleModuleSubUV.h"
 #include "Material.h"
 #include "Modules/ParticleModuleCollision.h"
@@ -640,6 +641,18 @@ void UParticleLODLevel::ParseAndAddModule(JSON& ModuleJson)
         }
         NewModule = Beam;
     }
+    else if (ModuleType == "Ribbon")
+    {
+        auto* Ribbon = Cast<UParticleModuleRibbon>(AddModule(UParticleModuleRibbon::StaticClass()));
+        if (Ribbon)
+        {
+            FJsonSerializer::ReadFloat(ModuleJson, "Width", Ribbon->Width);
+            FJsonSerializer::ReadFloat(ModuleJson, "TilingDistance", Ribbon->TilingDistance);
+            FJsonSerializer::ReadFloat(ModuleJson, "TrailLifetime", Ribbon->TrailLifetime);
+            FJsonSerializer::ReadBool(ModuleJson, "bUseCameraFacing", Ribbon->bUseCameraFacing);
+        }
+        NewModule = Ribbon;
+    }
     else if (ModuleType == "SubUV")
     {
         auto* SubUV = Cast<UParticleModuleSubUV>(AddModule(UParticleModuleSubUV::StaticClass()));
@@ -825,6 +838,14 @@ JSON UParticleLODLevel::SerializeModule(UParticleModule* Module)
         ModuleJson["SourceOffset"] = FJsonSerializer::VectorToJson(Beam->SourceOffset);
         ModuleJson["TargetOffset"] = FJsonSerializer::VectorToJson(Beam->TargetOffset);
         ModuleJson["bUseRandomOffset"] = Beam->bUseRandomOffset;
+    }
+    else if (auto* Ribbon = Cast<UParticleModuleRibbon>(Module))
+    {
+        ModuleJson["Type"] = "Ribbon";
+        ModuleJson["Width"] = Ribbon->Width;
+        ModuleJson["TilingDistance"] = Ribbon->TilingDistance;
+        ModuleJson["TrailLifetime"] = Ribbon->TrailLifetime;
+        ModuleJson["bUseCameraFacing"] = Ribbon->bUseCameraFacing;
     }
     else if (auto* SubUV = Cast<UParticleModuleSubUV>(Module))
     {

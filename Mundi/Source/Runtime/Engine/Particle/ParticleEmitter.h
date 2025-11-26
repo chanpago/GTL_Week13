@@ -25,7 +25,6 @@ public:
     // Mesh 타입인 경우에만 사용
     UStaticMesh* Mesh = nullptr;
     bool bUseMeshMaterials = true; // Mesh의 머티리얼 그대로 쓸지 여부
-    // 나중에 필요하면 Material도 여기 두거나 RequiredModule에서 가져오기~
 
     int32 ParticleSizeBytes = 0;
     int32 MaxParticles = 0;

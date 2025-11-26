@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Vector.h" // uint8
 #include "ParticleDataContainer.h"
 #include "ParticleHelper.h"
@@ -34,6 +34,18 @@ struct FDynamicMeshEmitterReplayData : public FDynamicEmitterReplayDataBase
     bool bLighting = false;
 };
 
+struct FDynamicRibbonEmitterReplayData : public FDynamicEmitterReplayDataBase
+{
+    float Width = 10.0f;             // 리본 두께
+    float TilingDistance = 0.0f;     // 텍스처 타일링 거리 (0이면 Stretch)
+    float TrailLifetime = 1.0f;    // 전체 트레일 수명
+    bool bUseCameraFacing = true;    // 카메라를 바라볼지 여부
+
+    // SubUV 모듈 (있으면 payload에서 SubImageIndex 읽기)
+    class UParticleModuleSubUV* SubUVModule = nullptr;
+    int32 SubUVPayloadOffset = -1;
+};
+
 struct FDynamicEmitterDataBase {
     EParticleType EmitterType = EParticleType::Sprite;
     int32 EmitterIndex = 0; 
@@ -51,6 +63,53 @@ struct FDynamicEmitterDataBase {
     virtual ~FDynamicEmitterDataBase() = default; 
     
     virtual const FDynamicEmitterReplayDataBase* GetSource() const = 0; 
+
+    const FBaseParticle* GetParticle(int32 Idx) const
+    {
+        const FDynamicEmitterReplayDataBase* Src = GetSource();
+        if (!Src || !Src->DataContainer.ParticleData)
+            return nullptr;
+
+        const uint8* BasePtr =
+            Src->DataContainer.ParticleData +
+            Src->ParticleStride * Idx;
+
+        return reinterpret_cast<const FBaseParticle*>(BasePtr);
+    }
+
+    FVector GetParticlePosition(int32 Idx) const
+    {
+        if (const FBaseParticle* P = GetParticle(Idx))
+            return P->Location;
+        return FVector::Zero();
+    }
+
+    float GetParticleAge(int32 Idx) const
+    {
+        if (const FBaseParticle* P = GetParticle(Idx))
+            return P->RelativeTime;
+        return 0.0f;
+    }
+};
+
+struct FDynamicRibbonEmitterData : public FDynamicEmitterDataBase
+{
+    FDynamicRibbonEmitterReplayData Source;
+
+    FDynamicRibbonEmitterData()
+    {
+        EmitterType = EParticleType::Ribbon;
+    }
+
+    ~FDynamicRibbonEmitterData() override
+    {
+        Source.DataContainer.Free();
+    }
+
+    virtual const FDynamicEmitterReplayDataBase* GetSource() const override
+    {
+        return &Source;
+    }
 };
 
 // FDynamicSpriteEmitterDataBase 에서 헷갈려서 아래 네이밍으로 바꿈
@@ -133,34 +192,6 @@ struct FDynamicTranslucentEmitterDataBase : public FDynamicEmitterDataBase
             {
                 return CachedSortKeys[A] > CachedSortKeys[B];
             });
-    }
-
-    const FBaseParticle* GetParticle(int32 Idx) const
-    {
-        const FDynamicEmitterReplayDataBase* Src = GetSource();
-        if (!Src || !Src->DataContainer.ParticleData)
-            return nullptr;
-
-        const uint8* BasePtr =
-            Src->DataContainer.ParticleData +
-            Src->ParticleStride * Idx;
-
-        return reinterpret_cast<const FBaseParticle*>(BasePtr);
-    }
-
-    FVector GetParticlePosition(int32 Idx) const
-    {
-
-        if (const FBaseParticle* P = GetParticle(Idx))
-            return P->Location;
-        return FVector::Zero();
-    }
-
-    float GetParticleAge(int32 Idx) const
-    {
-        if (const FBaseParticle* P = GetParticle(Idx))
-            return P->RelativeTime;
-        return 0.0f;
     }
 };
 

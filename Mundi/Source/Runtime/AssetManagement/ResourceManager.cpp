@@ -531,6 +531,7 @@ void UResourceManager::InitShaderILMap()
     layout.Add({ "TEXCOORD", 4, DXGI_FORMAT_R32G32B32_FLOAT,          0, 52,
                  D3D11_INPUT_PER_VERTEX_DATA, 0 });  // SubImageIndex (SubUV)
     ShaderToInputLayoutMap["Shaders/Effects/ParticleSprite.hlsl"] = layout;
+    ShaderToInputLayoutMap["Shaders/Effects/ParticleRibbon.hlsl"] = layout;
     layout.clear();
 
     // GPU instancing shader procedurally builds quad vertices (SV_VertexID), so no input layout is needed.
