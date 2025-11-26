@@ -298,11 +298,22 @@ void USlateManager::OpenParticleViewerWithSystem(UParticleSystem* ParticleSystem
 {
     if (!ParticleViewerWindow)
     {
-        OpenParticleViewer();
+        ParticleViewerWindow = new SParticleViewerWindow();
+        g_ParticleViewerWindow = ParticleViewerWindow;
+
+        const float toolbarHeight = 50.0f;
+        const float availableHeight = Rect.GetHeight() - toolbarHeight;
+        const float w = Rect.GetWidth() * 0.85f;
+        const float h = availableHeight * 0.85f;
+        const float x = Rect.Left + (Rect.GetWidth() - w) * 0.5f;
+        const float y = Rect.Top + toolbarHeight + (availableHeight - h) * 0.5f;
+
+        ParticleViewerWindow->Initialize(x, y, w, h, World, Device);
     }
 
-    if (ParticleViewerWindow && ParticleSystem)
+    if (ParticleViewerWindow)
     {
+        // ParticleSystem이 nullptr이어도 LoadParticleSystem이 새로 생성함
         ParticleViewerWindow->LoadParticleSystem(ParticleSystem);
         if (!SavePath.empty()) { ParticleViewerWindow->SetSavePath(SavePath); }
     }

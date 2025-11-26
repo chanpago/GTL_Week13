@@ -2433,10 +2433,45 @@ void SParticleViewerWindow::OnRenderViewport()
 
 void SParticleViewerWindow::CreateParticleSystem()
 {
+	if (!PreviewWorld) { return; }
+
+	// 기존 시스템 정리
+	if (SavePath.empty() && CurrentParticleSystem)
+	{
+		ObjectFactory::DeleteObject(CurrentParticleSystem);
+		CurrentParticleSystem = nullptr;
+	}
+
 	// 빈 ParticleSystem 생성
-	//UParticleSystem* NewSystem = NewObject<UParticleSystem>();
-	//LoadParticleSystem(NewSystem);
+	UParticleSystem* NewSystem = NewObject<UParticleSystem>();
+	CurrentParticleSystem = NewSystem;
 	SavePath.clear();
+
+	// 기존 PreviewActor가 있으면 제거
+	if (PreviewActor)
+	{
+		PreviewActor->EndPlay();
+		PreviewActor->Destroy();
+		PreviewActor = nullptr;
+		PreviewComponent = nullptr;
+	}
+
+	// 새 Actor 생성
+	PreviewActor = PreviewWorld->SpawnActor<AActor>();
+	PreviewActor->ObjectName = FName("ParticlePreviewActor");
+	PreviewActor->SetActorLocation(FVector(0, 0, 0));
+
+	// ParticleSystemComponent 생성 및 추가
+	PreviewComponent = Cast<UParticleSystemComponent>(PreviewActor->AddNewComponent(UParticleSystemComponent::StaticClass()));
+	PreviewComponent->SetTemplate(NewSystem);
+
+	// Actor의 BeginPlay 호출
+	PreviewActor->BeginPlay();
+
+	// 컴포넌트 초기화 및 활성화
+	PreviewComponent->ResetAndActivate();
+
+	UE_LOG("New particle system created");
 }
 
 void SParticleViewerWindow::LoadParticleSystem()
@@ -2458,7 +2493,14 @@ void SParticleViewerWindow::LoadParticleSystem()
 
 void SParticleViewerWindow::LoadParticleSystem(UParticleSystem* ParticleSystem)
 {
-	if (!PreviewWorld || !ParticleSystem) { return; }
+	if (!PreviewWorld) { return; }
+
+	// ParticleSystem이 nullptr이면 새로 생성
+	if (!ParticleSystem)
+	{
+		CreateParticleSystem();
+		return;
+	}
 
 	// 별도로 저장되지 않을 때만 Delete (ResourceManager가 관리하고 있지 않은 상태)
 	if (SavePath.empty() && CurrentParticleSystem)
