@@ -88,10 +88,9 @@
                     "bMultiplyZ" : true
                   }],
                 "RequiredModule" : {
-                  "BlendMode" : 5,
                   "DiffuseTexture" : "Data/Spark.png",
                   "EmitterDelay" : 0.000000,
-                  "EmitterDuration" : 1.000000,
+                  "EmitterDuration" : 2.980000,
                   "EmitterLoops" : 0,
                   "InitialColor_Max" : [1.000000, 1.000000, 1.000000, 1.000000],
                   "InitialColor_Min" : [1.000000, 1.000000, 1.000000, 1.000000],
@@ -109,8 +108,6 @@
                   "SpawnRateBase" : 10.000000,
                   "SubImages_Horizontal" : 1,
                   "SubImages_Vertical" : 1,
-                  "bKillOnCompleted" : false,
-                  "bKillOnDeactivate" : true,
                   "bUseLocalSpace" : false
                 },
                 "SpawnModule" : {

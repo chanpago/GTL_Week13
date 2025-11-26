@@ -32,7 +32,7 @@ void UParticleModuleSubUV::Spawn(FParticleEmitterInstance* Owner, int32 Offset, 
     float* SubImageIndexPtr = reinterpret_cast<float*>(ParticleBytes + Offset);
     *SubImageIndexPtr = InitialIndex;
 
-    UE_LOG("SubUV Spawn: Index=%f", InitialIndex);
+    // UE_LOG("SubUV Spawn: Index=%f", InitialIndex);
 }
 
 void UParticleModuleSubUV::Update(FParticleEmitterInstance* Owner, int32 Offset, float DeltaTime)
@@ -58,7 +58,7 @@ void UParticleModuleSubUV::Update(FParticleEmitterInstance* Owner, int32 Offset,
         FBaseParticle* FirstParticle = reinterpret_cast<FBaseParticle*>(Owner->ParticleData);
         if (&Particle == FirstParticle)
         {
-            UE_LOG("SubUV Update: RelativeTime=%f, NewIndex=%f", Particle.RelativeTime, NewIndex);
+            // UE_LOG("SubUV Update: RelativeTime=%f, NewIndex=%f", Particle.RelativeTime, NewIndex);
         }
     }
     END_UPDATE_LOOP;
@@ -81,7 +81,7 @@ float UParticleModuleSubUV::CalculateSubImageIndex(FParticleEmitterInstance* Own
     static int32 CalcLogCounter = 0;
     if (CalcLogCounter++ % 60 == 0)
     {
-        UE_LOG("SubUV Calculate: NX=%d, NY=%d, TotalFrames=%d", NX, NY, TotalFrames);
+        // UE_LOG("SubUV Calculate: NX=%d, NY=%d, TotalFrames=%d", NX, NY, TotalFrames);
     }
 
     if (TotalFrames <= 1)
@@ -134,8 +134,8 @@ float UParticleModuleSubUV::CalculateSubImageIndex(FParticleEmitterInstance* Own
         static int32 LinearLogCounter = 0;
         if (LinearLogCounter++ % 60 == 0)
         {
-            UE_LOG("SubUV Linear: t=%f, bUseRange=%d, MinVal=%f, NormalizedIndex=%f, Index=%f",
-                t, SubImageIndex.bUseRange, SubImageIndex.MinValue, NormalizedIndex, Index);
+            // UE_LOG("SubUV Linear: t=%f, bUseRange=%d, MinVal=%f, NormalizedIndex=%f, Index=%f",
+            //     t, SubImageIndex.bUseRange, SubImageIndex.MinValue, NormalizedIndex, Index);
         }
         break;
     }

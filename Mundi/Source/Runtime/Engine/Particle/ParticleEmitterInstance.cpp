@@ -15,6 +15,8 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
 {
     Template = InTemplate;
     Component = InComponent;
+    LoopCount = 0;
+    EmitterTime = 0.0f;
 
     UpdateModuleCache();
 
@@ -22,7 +24,6 @@ void FParticleEmitterInstance::Init(UParticleEmitter* InTemplate, UParticleSyste
     {
         MaxActiveParticles = CachedRequiredModule->MaxParticles;
         EmitterDuration = CachedRequiredModule->EmitterDuration;
-        LoopCount = CachedRequiredModule->EmitterLoops;
 
         // TEMPORARY FIX: MaxParticles가 0이면 기본값 사용
         if (MaxActiveParticles == 0)
@@ -410,16 +411,22 @@ void FParticleEmitterInstance::Tick(const FParticleSimulationContext& Context)
     // Emitter Time Update
     // ============================================================
     EmitterTime += Context.DeltaTime;
-    
+
     if (CachedRequiredModule && CachedRequiredModule->EmitterDuration > 0.0f)
     {
+        // 이미터 시간이 수명을 초과했는지 확인
         if (EmitterTime >= CachedRequiredModule->EmitterDuration)
         {
-            // 무한 루프(0)거나 아직 횟수가 남았으면 리셋
-            if (CachedRequiredModule->EmitterLoops == 0 || LoopCount < CachedRequiredModule->EmitterLoops)
+            // 루프 조건 확인
+            bool bShouldLoop = (CachedRequiredModule->EmitterLoops == 0) || 
+                               (LoopCount < CachedRequiredModule->EmitterLoops - 1);
+
+            if (bShouldLoop)
             {
-                EmitterTime = 0.0f;
-                LoopCount++;
+                // Duration이 1.0초인데 EmitterTime이 1.05초가 됐다면,
+                // 다음 루프의 0.05초 시점에서 시작해야 파티클 간격이 일정하게 유지
+                EmitterTime -= CachedRequiredModule->EmitterDuration;
+                LoopCount++; 
             }
         }
     }
