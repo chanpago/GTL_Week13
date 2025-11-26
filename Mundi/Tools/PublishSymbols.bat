@@ -43,12 +43,13 @@ echo [Git] Repository: %GIT_URL%
 :: [Setup 3] Source Indexing
 :: Inject source repository info into PDB files.
 :: ========================================================
-REM 1. Get Git Root Path (e.g., .../GTL_Week12) - This serves as the base path
-pushd "%~dp0..\..\.."
+REM 1. Get Git Root Path (CORRECTED: Up 2 levels only)
+REM Assuming batch is in Mundi/Tools/ or similar depth
+pushd "%~dp0..\.."
 set "REPO_ROOT=%CD%"
 popd
 
-REM 2. Get Project Directory (e.g., .../GTL_Week12/Mundi) - Where to search for sources
+REM 2. Get Project Directory (Where to search for sources)
 pushd "%~dp0..\.."
 set "SEARCH_DIR=%CD%"
 popd
@@ -68,18 +69,19 @@ if exist "%PDBSTR_EXE%" (
         echo SRCSRV: source files ---------------------------------------
     ) > "!SRCSRV_INI!"
 
-    REM 3. Iterate through all source files and map them relative to the Repo Root
+    REM 3. Iterate through all source files
     for /r "%SEARCH_DIR%" %%f in (*.cpp *.h *.inl) do (
         set "FULL_PATH=%%f"
         
         REM Calculate relative path by removing the Repo Root path
-        REM Result example: \Mundi\Source\Actor.cpp
+        REM Before: ...\GTL_Week12\Mundi\... -> \GTL_Week12\Mundi\... (WRONG)
+        REM Now:    ...\GTL_Week12\Mundi\... -> \Mundi\... (CORRECT)
         set "REL_PATH=!FULL_PATH:%REPO_ROOT%=!"
         
         REM Convert backslashes to forward slashes for the URL
         set "URL_PATH=!REL_PATH:\=/!"
         
-        REM Write mapping: LocalAbsolutePath*MYSERVER/RelativePath
+        REM Write mapping
         echo !FULL_PATH!*MYSERVER!URL_PATH! >> "!SRCSRV_INI!"
     )
 
