@@ -69,6 +69,13 @@ void FParticleAsyncUpdater::EnsureCompletion()
     }
 }
 
+void FParticleAsyncUpdater::ResetStats()
+{
+    LastFrameStats.bAllEmittersComplete = false; 
+    LastFrameStats.bHasActiveParticles = false;
+    LastFrameStats.TotalActiveParticles = 0;
+}
+
 void FParticleAsyncUpdater::Sync()
 {
 }

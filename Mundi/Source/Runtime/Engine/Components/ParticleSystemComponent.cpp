@@ -77,6 +77,7 @@ void UParticleSystemComponent::InitParticles()
         }
     }
 
+    AsyncUpdater.ResetStats();
     if (bAutoActivate) { ActivateSystem(); }
     UE_LOG("[ParticleSystemComponent::InitParticles] Completed. EmitterInstances: %d", EmitterInstances.Num());
 }

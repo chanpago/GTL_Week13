@@ -131,7 +131,7 @@ private:
 	bool bAutoDestroy = false;
 	bool bSuppressSpawning = true; // True면 새 파티클 생성 멈추기
 	UPROPERTY(EditAnywhere, Category = "Particle", Tooltip="비동기 활성화")
-	bool bUseAsyncSimulation = false; // 비동기 시뮬레이션 활성화
+	bool bUseAsyncSimulation = true; // 비동기 시뮬레이션 활성화
 
 	int MaxDebugParticles = 10000;
 };

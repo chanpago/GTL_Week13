@@ -53,6 +53,7 @@ public:
     void KickOff(const TArray<FParticleEmitterInstance*>& Instances, const FParticleSimulationContext& Context);
     void KickOffSync(const TArray<FParticleEmitterInstance*>& Instances, const FParticleSimulationContext& Context);
     void EnsureCompletion();
+    void ResetStats();
 
     // 결과 동기화
     void Sync();
