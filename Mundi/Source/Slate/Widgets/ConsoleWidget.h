@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <mutex>
 #include "Widget.h"
 #include "Vector.h"
 #include "ImGui/imgui.h"
@@ -42,6 +43,7 @@ private:
 	ImGuiTextFilter Filter;
 
 	bool bIsWindowPinned;    // 콘솔 창 고정(핀) 상태
+	std::mutex LogMutex;
 
 	// Helper methods
 	static int TextEditCallbackStub(ImGuiInputTextCallbackData* data);

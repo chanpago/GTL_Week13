@@ -66,6 +66,7 @@ bool UStaticMesh::Load(const FString& InFilePath, ID3D11Device* InDevice, EVerte
         if (SkeletalData->Vertices.empty() || SkeletalData->Indices.empty())
         {
             UE_LOG("ERROR: Failed to load FBX mesh from '%s'", InFilePath.c_str());
+            delete SkeletalData;
             return false;
         }
 

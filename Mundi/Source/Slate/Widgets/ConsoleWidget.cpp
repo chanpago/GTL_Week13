@@ -9,6 +9,7 @@
 #include <cctype>
 #include <cstring>
 #include <algorithm>
+#include <mutex>
 
 #include "Source/Runtime/Debug/CrashHandler.h"
 
@@ -29,11 +30,21 @@ UConsoleWidget::UConsoleWidget()
 
 UConsoleWidget::~UConsoleWidget()
 {
-	// Clear the GlobalConsole pointer to prevent dangling pointer access
 	if (UGlobalConsole::GetConsoleWidget() == this)
 	{
 		UGlobalConsole::SetConsoleWidget(nullptr);
 	}
+
+	// (혹시 마지막으로 들어온 로그가 락을 잡고 있을 수 있으니 락 걸고 삭제)
+	{
+		std::lock_guard<std::mutex> lock(LogMutex);
+		Items.Empty();
+		HelpCommandList.Empty();
+		History.Empty();
+	}
+    
+	// 3. ImGui 필터 정리
+	Filter.Clear();
 }
 
 void UConsoleWidget::Initialize()
@@ -44,6 +55,7 @@ void UConsoleWidget::Initialize()
 	HelpCommandList.Add("HELP");
 	HelpCommandList.Add("HISTORY");
 	HelpCommandList.Add("CLEAR");
+	HelpCommandList.Add("CRASH");
 	HelpCommandList.Add("CLASSIFY");
 	HelpCommandList.Add("STAT");
 	HelpCommandList.Add("STAT FPS");
@@ -150,6 +162,8 @@ void UConsoleWidget::RenderToolbar()
 
 void UConsoleWidget::RenderLogOutput()
 {
+	std::lock_guard<std::mutex> lock(LogMutex);
+	// 2. 인덱스로 계산해서 지운다.
 	if (Items.Num() > 1000)
 	{
 		Items.erase(Items.begin(), Items.end() - 1000);
@@ -249,7 +263,8 @@ void UConsoleWidget::AddLog(const char* fmt, ...)
 	{
 		USlateManager::GetInstance().ForceOpenConsole();
 	}
-
+	
+	std::lock_guard<std::mutex> lock(LogMutex); 
 	Items.Add(FString(buf));
 	ScrollToBottom = true;
 }
@@ -265,12 +280,14 @@ void UConsoleWidget::VAddLog(const char* fmt, va_list args)
 		USlateManager::GetInstance().ForceOpenConsole();
 	}
 
+	std::lock_guard<std::mutex> lock(LogMutex); 
 	Items.Add(FString(buf));
 	ScrollToBottom = true;
 }
 
 void UConsoleWidget::ClearLog()
 {
+	std::lock_guard<std::mutex> lock(LogMutex);
 	Items.Empty();
 }
 

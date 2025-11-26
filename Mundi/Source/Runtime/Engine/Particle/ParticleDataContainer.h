@@ -17,7 +17,9 @@ struct FParticleDataContainer
 
     void Allocate(int32 InParticleBytes, int32 InIndexCount)
     {
-        const uint32 Alignment = 16;
+        Free();
+
+        constexpr uint32 Alignment = 16;
         const uint32 ParticleSection = AlignUp(InParticleBytes, Alignment);
         const uint32 IndexSection = AlignUp(InIndexCount * sizeof(uint16), Alignment);
 

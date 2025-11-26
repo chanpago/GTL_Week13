@@ -120,6 +120,14 @@ struct FDynamicRibbonEmitterData : public FDynamicEmitterDataBase
 // 정렬 속성 상속을 위한 중간 struct
 struct FDynamicTranslucentEmitterDataBase : public FDynamicEmitterDataBase
 {
+    ~FDynamicTranslucentEmitterDataBase()
+    {
+        CachedSortKeys.clear();
+        CachedSortKeys.shrink_to_fit();
+        AsyncSortedIndices.clear();
+        AsyncSortedIndices.shrink_to_fit();
+    }
+    
     TArray<float> CachedSortKeys;
 
     virtual const FDynamicEmitterReplayDataBase* GetSource() const = 0;

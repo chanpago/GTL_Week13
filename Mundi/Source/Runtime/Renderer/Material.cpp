@@ -159,8 +159,9 @@ UMaterialInstanceDynamic* UMaterialInstanceDynamic::Create(UMaterialInterface* I
 		UE_LOG("Creating a MID from another MID is not supported.");
 		return nullptr;
 	}
-
-	return new UMaterialInstanceDynamic(InParentMaterial);
+	UMaterialInstanceDynamic* MID = NewObject<UMaterialInstanceDynamic>();
+	MID->ParentMaterial = InParentMaterial;
+	return MID;
 }
 
 void UMaterialInstanceDynamic::Serialize(const bool bInIsLoading, JSON& InOutHandle)

@@ -5,7 +5,24 @@
 
 FParticleAsyncUpdater::~FParticleAsyncUpdater()
 {
-    if (TaskHandle.valid()) TaskHandle.wait();
+    if (TaskHandle.valid())
+    {
+        // 1. 작업이 끝날 때까지 기다림
+        TaskHandle.wait();
+
+        // 2. ★ 중요 ★ 결과물을 꺼내야 함!
+        // 이걸 안 하면 future 안에 들어있던 포인터 뭉치가 그냥 증발(Leak)함
+        FAsyncSimulationResult PendingResult = TaskHandle.get();
+
+        // 3. 꺼낸 데이터(막 생성된 따끈따끈한 릭 유발자들)를 수동으로 삭제
+        for (FDynamicEmitterDataBase* Data : PendingResult.RenderData)
+        {
+            if (Data) delete Data;
+        }
+        PendingResult.RenderData.Empty();
+    }
+
+    // 4. 기존에 멤버변수로 들고 있던 데이터 삭제
     InternalClearRenderData();
 }
 
@@ -19,7 +36,7 @@ void FParticleAsyncUpdater::KickOff(const TArray<FParticleEmitterInstance*>& Ins
         
         // 데이터 교체 (Swap)
         InternalClearRenderData();
-        RenderData = Result.RenderData;
+        RenderData = std::move(Result.RenderData);
         LastFrameStats = Result.Stats;
     }
     
@@ -38,7 +55,7 @@ void FParticleAsyncUpdater::KickOffSync(const TArray<FParticleEmitterInstance*>&
     }
     FAsyncSimulationResult Result = DoSimulationWork(Instances, Context);
     // 새 데이터로 교체
-    RenderData = Result.RenderData;
+    RenderData = std::move(Result.RenderData);
 
     // 통계 갱신
     LastFrameStats = Result.Stats;
@@ -69,7 +86,7 @@ bool FParticleAsyncUpdater::TrySync()
 
         // 데이터 교체
         InternalClearRenderData();
-        RenderData = Result.RenderData;
+        RenderData = std::move(Result.RenderData);
         LastFrameStats = Result.Stats;
             
         return true;

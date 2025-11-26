@@ -37,7 +37,7 @@ UParticleSystemComponent::UParticleSystemComponent()
 
 UParticleSystemComponent::~UParticleSystemComponent()
 {
-    DestroyParticles();
+    UParticleSystemComponent::DestroyParticles();
     ReleaseParticleBuffers();
     ReleaseInstanceBuffers();
     ReleaseRibbonBuffers();
@@ -306,7 +306,7 @@ void UParticleSystemComponent::BuildSpriteParticleBatch(TArray<FDynamicEmitterDa
 }
 
 void UParticleSystemComponent::BuildSpriteParticleBatch_Instanced(
-    TArray<FDynamicEmitterDataBase*>& EmitterRenderData,
+    const TArray<FDynamicEmitterDataBase*>& EmitterRenderData,
     TArray<FMeshBatchElement>& OutMeshBatchElements,
     uint32 ClampedCount,
     const FVector& ViewOrigin,
@@ -324,7 +324,7 @@ void UParticleSystemComponent::BuildSpriteParticleBatch_Instanced(
     if (FAILED(Context->Map(ParticleInstanceBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped)))
         return;
 
-    FParticleInstanceData* Instances = reinterpret_cast<FParticleInstanceData*>(Mapped.pData);
+    FParticleInstanceData* Instances = static_cast<FParticleInstanceData*>(Mapped.pData);
 
     struct FInstancedSpriteCommand
     {
@@ -434,7 +434,7 @@ void UParticleSystemComponent::BuildSpriteParticleBatch_Instanced(
 
 
 void UParticleSystemComponent::BuildSpriteParticleBatch_Immediate(
-    TArray<FDynamicEmitterDataBase*>& EmitterRenderData,
+    const TArray<FDynamicEmitterDataBase*>& EmitterRenderData,
     TArray<FMeshBatchElement>& OutMeshBatchElements,
     uint32 ClampedCount,
     const FVector& ViewOrigin,

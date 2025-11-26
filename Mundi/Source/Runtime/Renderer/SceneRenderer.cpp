@@ -943,7 +943,7 @@ void FSceneRenderer::RenderParticlePass()
 
 	RHIDevice->OMSetRenderTargets(ERTVMode::SceneColorTargetWithId); // Scene+Depth
 
-	RHIDevice->RSSetState(ERasterizerMode::Solid_NoCull);
+	RHIDevice->RSSetState(ERasterizerMode::Solid);
 	RHIDevice->OMSetDepthStencilState(EComparisonFunc::LessEqualReadOnly);
 	RHIDevice->OMSetBlendState(true);
 	

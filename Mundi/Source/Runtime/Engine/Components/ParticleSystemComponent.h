@@ -61,14 +61,14 @@ private:
 		TArray<FMeshBatchElement>& OutMeshBatchElements,
 		const FSceneView* View);
 	void BuildSpriteParticleBatch_Instanced(
-		TArray<FDynamicEmitterDataBase*>& EmitterRenderData,
+		const TArray<FDynamicEmitterDataBase*>& EmitterRenderData,
 		TArray<FMeshBatchElement>& OutMeshBatchElements,
 		uint32 ClampedCount,
 		const FVector& ViewOrigin,
 		const FVector& ViewDir,
 		const FSceneView* View = nullptr);
 	void BuildSpriteParticleBatch_Immediate(
-		TArray<FDynamicEmitterDataBase*>& EmitterRenderData,
+		const TArray<FDynamicEmitterDataBase*>& EmitterRenderData,
 		TArray<FMeshBatchElement>& OutMeshBatchElements,
 		uint32 ClampedCount,
 		const FVector& ViewOrigin,
