@@ -101,27 +101,17 @@ float4 mainPS(PSInput In) : SV_TARGET
             float4 c1 = RibbonTex.Sample(RibbonSampler, uv1);
             float4 tex = lerp(c0, c1, alpha);
             float4 finalColor = tex * In.Color;
-
-            // 알파가 0에 가까우면 discard
-            // 근데 굳이 해야할 필요 못느끼겠음 어차피 사라지는데 이게 뭐하는짓임?
-            if (finalColor.a < 0.01)
-            {
-                discard;
-            }
-            
-            finalColor = float4(1.0, 1.0, 0.0, 1.0);
             
             return finalColor;
         }
     }
 
     float4 tex = RibbonTex.Sample(RibbonSampler, uv);
-    float4 col = tex * In.Color;
-
-    if (col.a < 0.01f)
-        discard;
-
-    return float4(1.0, 1.0, 0.0, 1.0);
+    if (length(tex.rgb) < 0.001f && tex.a < 0.001f)
+    {
+        tex = float4(1.0f, 1.0f, 0.0f, 1.0f); // 기본 노란색
+    }
     
+    float4 col = tex; // * In.Color;
     return col;
 }
