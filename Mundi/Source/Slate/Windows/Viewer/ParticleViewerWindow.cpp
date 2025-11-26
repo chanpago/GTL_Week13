@@ -2579,6 +2579,18 @@ void SParticleViewerWindow::RenderToolbar()
 	{
 		CreateNewEmitter();
 	}
+	ImGui::SameLine();
+	if (ImGui::Button(bPaused ? "Resume" : "Pause"))
+	{
+		bPaused = !bPaused;
+		if (PreviewComponent)
+		{
+			if (bPaused)
+				PreviewComponent->PauseSimulation();
+			else
+				PreviewComponent->ResumeSimulation();
+		}
+	}
 	ImGui::Separator();
 }
 

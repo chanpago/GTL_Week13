@@ -105,10 +105,11 @@ private:
     // Cached center region for viewport                                                           
     FRect CenterRect;                                                                              
     
-    // Window state                                                                                
-    bool bIsOpen = true;                                                                           
-    bool bInitialPlacementDone = false;                                                            
-    bool bRequestFocus = false;                                                                    
+    // Window state
+    bool bIsOpen = true;
+    bool bInitialPlacementDone = false;
+    bool bRequestFocus = false;
+    bool bPaused = false;                                                                    
                                                                                                    
 public:
     bool IsOpen() const { return bIsOpen; }
