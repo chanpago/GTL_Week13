@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "ParticleEmitterInstance.h"
 #include "ParticleHelper.h"
 #include "ParticleLODLevel.h"
@@ -487,16 +487,12 @@ FDynamicEmitterDataBase* FParticleEmitterInstance::CreateDynamicData()
         BeamData->SortMode = CachedRequiredModule->SortMode;
         BeamData->SortPriority = 0;
         BeamData->bUseLocalSpace = CachedRequiredModule->bUseLocalSpace;
+    }
     else if (Type == EParticleType::Ribbon)
     {
         // RIBBON
         auto* RibbonData = new FDynamicRibbonEmitterData();
         RibbonData->EmitterType = Type;
-
-        // 데이터 채우기
-        BuildReplayData(BeamData->Source);
-        NewData = BeamData;
-    }
 
         // 데이터 채우기
         BuildReplayData(RibbonData->Source);

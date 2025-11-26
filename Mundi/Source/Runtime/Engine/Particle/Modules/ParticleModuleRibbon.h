@@ -14,6 +14,7 @@ class UParticleModuleRibbon : public UParticleModuleTypeDataBase
 public:
 	UParticleModuleRibbon();
     void ApplyToEmitter(UParticleEmitter* OwnerEmitter);
+    virtual int32 GetRequiredBytesPerParticle() const override { return sizeof(FRibbonTrailPayload); }
 
     // 리본 전체 기본 폭 (World Space)
     float Width;

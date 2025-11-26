@@ -22,5 +22,6 @@ void UParticleModuleRibbon::ApplyToEmitter(UParticleEmitter* OwnerEmitter)
     {
         return;
     }
+
     OwnerEmitter->RenderType = EParticleType::Ribbon;
 }
