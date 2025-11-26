@@ -479,10 +479,30 @@ void UResourceManager::InitShaderILMap()
    
     ShaderToInputLayoutMap["Shaders/Effects/Decal.hlsl"] = layout;
 	ShaderToInputLayoutMap["Shaders/Materials/UberLit.hlsl"] = layout;
-    ShaderToInputLayoutMap["Shaders/Effects/ParticleMesh.hlsl"] = layout;
 	ShaderToInputLayoutMap["Shaders/Materials/Fireball.hlsl"] = layout; // Use same vertex format as UberLit
 	ShaderToInputLayoutMap["Shaders/Shadow/PointLightShadow.hlsl"] = layout;  // Shadow map rendering uses same vertex format
 	ShaderToInputLayoutMap["Shaders/Shadows/DepthOnly_VS.hlsl"] = layout;
+    layout.clear();
+
+    layout.Add({ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 });
+    layout.Add({ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 });
+    layout.Add({ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 });
+    layout.Add({ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0 });
+    layout.Add({ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 48, D3D11_INPUT_PER_VERTEX_DATA, 0 });
+
+    layout.Add({ "INSTANCE_WORLD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0,  D3D11_INPUT_PER_INSTANCE_DATA, 1 });
+    layout.Add({ "INSTANCE_WORLD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D11_INPUT_PER_INSTANCE_DATA, 1 });
+    layout.Add({ "INSTANCE_WORLD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D11_INPUT_PER_INSTANCE_DATA, 1 });
+    layout.Add({ "INSTANCE_WORLD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D11_INPUT_PER_INSTANCE_DATA, 1 });
+
+    layout.Add({ "INSTANCE_INVWORLD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 64,  D3D11_INPUT_PER_INSTANCE_DATA, 1 });
+    layout.Add({ "INSTANCE_INVWORLD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 80, D3D11_INPUT_PER_INSTANCE_DATA, 1 });
+    layout.Add({ "INSTANCE_INVWORLD", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 96, D3D11_INPUT_PER_INSTANCE_DATA, 1 });
+    layout.Add({ "INSTANCE_INVWORLD", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 112, D3D11_INPUT_PER_INSTANCE_DATA, 1 });
+
+    layout.Add({ "INSTANCE_COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 128, D3D11_INPUT_PER_INSTANCE_DATA, 1 });
+
+    ShaderToInputLayoutMap["Shaders/Effects/ParticleMesh.hlsl"] = layout;
     layout.clear();
 
     layout.Add({ "WORLDPOSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 });
@@ -532,10 +552,6 @@ void UResourceManager::InitShaderILMap()
                  D3D11_INPUT_PER_VERTEX_DATA, 0 });  // SubImageIndex (SubUV)
     ShaderToInputLayoutMap["Shaders/Effects/ParticleSprite.hlsl"] = layout;
     ShaderToInputLayoutMap["Shaders/Effects/ParticleRibbon.hlsl"] = layout;
-    layout.clear();
-
-    // GPU instancing shader procedurally builds quad vertices (SV_VertexID), so no input layout is needed.
-    ShaderToInputLayoutMap["Shaders/Effects/ParticleSprite_Instanced.hlsl"] = layout;
     layout.clear();
 
     // ────────────────────────────────

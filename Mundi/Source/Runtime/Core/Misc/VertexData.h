@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Archive.h"
 #include "Vector.h"
 #include "Name.h"

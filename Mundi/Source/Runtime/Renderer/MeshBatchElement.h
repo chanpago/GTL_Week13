@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "pch.h"
 
 #include "Source/Runtime/Engine/Particle/Modules/ParticleModuleRequired.h"
@@ -80,9 +80,10 @@ struct FMeshBatchElement
 	
 	// --- 4. GPU Instancing 여부 ---
 	bool bInstancedDraw = false;
+	ID3D11Buffer* InstanceVertexBuffer = nullptr;
+	uint32 InstanceStride = 0;
 	uint32 InstanceCount = 0;
 	uint32 InstanceStart = 0;
-	ID3D11ShaderResourceView* InstancingShaderResourceView = nullptr;
 
 	// --- 기본 생성자 ---
 	FMeshBatchElement() = default;

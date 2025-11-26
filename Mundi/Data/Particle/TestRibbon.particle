@@ -4,13 +4,13 @@
                 "LODIndex" : 0,
                 "Modules" : [{
                     "Lifetime_Max" : 1.000000,
-                    "Lifetime_Min" : 1.000000,
+                    "Lifetime_Min" : 3.130000,
                     "Lifetime_bUseRange" : false,
                     "Type" : "Lifetime",
                     "bEnabled" : true
                   }, {
                     "StartSize_Max" : [10.000000, 10.000000, 10.000000],
-                    "StartSize_Min" : [10.000000, 10.000000, 10.000000],
+                    "StartSize_Min" : [100.000000, 100.000000, 100.000000],
                     "StartSize_bUseRange" : false,
                     "Type" : "Size",
                     "bEnabled" : true
@@ -22,7 +22,7 @@
                     "Type" : "Velocity",
                     "bEnabled" : false
                   }, {
-                    "TilingDistance" : 0.000000,
+                    "TilingDistance" : 85.000000,
                     "TrailLifetime" : 1.000000,
                     "Type" : "Ribbon",
                     "Width" : 10.000000,

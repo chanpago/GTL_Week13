@@ -1397,7 +1397,8 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 	{
 		// --- 필수 요소 유효성 검사 ---
 		const bool bMissingShaders = (!Batch.VertexShader || !Batch.PixelShader);
-		const bool bNeedsGeometryBuffers = !Batch.bInstancedDraw;
+		const bool bNeedsGeometryBuffers = (!Batch.VertexBuffer || !Batch.IndexBuffer || Batch.VertexStride == 0) ||
+			(Batch.bInstancedDraw && (!Batch.InstanceVertexBuffer || Batch.InstanceStride == 0));
 		const bool bMissingGeometry = bNeedsGeometryBuffers && (!Batch.VertexBuffer || !Batch.IndexBuffer || Batch.VertexStride == 0);
 		const bool bInvalidInstancing = Batch.bInstancedDraw && Batch.InstanceCount == 0;
 		if (bMissingShaders || bMissingGeometry || bInvalidInstancing)
@@ -1507,16 +1508,7 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 			CurrentSkinNormalMatrixSRV = Batch.GPUSkinNormalMatrixSRV;
 		}
 
-		if (Batch.bInstancedDraw)
-		{
-			if (Batch.InstancingShaderResourceView != CurrentInstancingSRV)
-			{
-				ID3D11ShaderResourceView* SRV = Batch.InstancingShaderResourceView;
-				RHIDevice->GetDeviceContext()->VSSetShaderResources(ParticleInstanceDataSlot, 1, &SRV);
-				CurrentInstancingSRV = SRV;
-			}
-		}
-		else if (CurrentInstancingSRV)
+		if (CurrentInstancingSRV)
 		{
 			ID3D11ShaderResourceView* SRV = nullptr;
 			RHIDevice->GetDeviceContext()->VSSetShaderResources(ParticleInstanceDataSlot, 1, &SRV);
@@ -1529,16 +1521,29 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 			Batch.VertexStride != CurrentVertexStride ||
 			Batch.PrimitiveTopology != CurrentTopology)
 		{
-			UINT Stride = Batch.VertexBuffer ? Batch.VertexStride : 0;
-			UINT Offset = 0;
+			if (Batch.bInstancedDraw)
+			{
+				// 두 개의 VB: 0 = mesh, 1 = instance
+				ID3D11Buffer* vbs[2] = { Batch.VertexBuffer, Batch.InstanceVertexBuffer };
+				UINT strides[2] = { Batch.VertexStride, Batch.InstanceStride };
+				UINT offsets[2] = { 0, Batch.InstanceStart * Batch.InstanceStride }; // InstanceStart 오프셋
 
-			// Vertex/Index 버퍼 바인딩
-			RHIDevice->GetDeviceContext()->IASetVertexBuffers(0, 1, &Batch.VertexBuffer, &Stride, &Offset);
-			DXGI_FORMAT IndexFormat = Batch.IndexBuffer ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_UNKNOWN;
-			RHIDevice->GetDeviceContext()->IASetIndexBuffer(Batch.IndexBuffer, IndexFormat, 0);
+				RHIDevice->GetDeviceContext()->IASetVertexBuffers(0, 2, vbs, strides, offsets);
 
-			// 토폴로지 설정 (이전 코드의 5번에서 이동하여 최적화)
-			RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(Batch.PrimitiveTopology);
+				DXGI_FORMAT IndexFormat = Batch.IndexBuffer ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_UNKNOWN;
+				RHIDevice->GetDeviceContext()->IASetIndexBuffer(Batch.IndexBuffer, IndexFormat, 0);
+				RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(Batch.PrimitiveTopology);
+			}
+			else
+			{
+				// 기존 non-instanced path
+				UINT stride = Batch.VertexStride;
+				UINT offset = 0;
+				RHIDevice->GetDeviceContext()->IASetVertexBuffers(0, 1, &Batch.VertexBuffer, &stride, &offset);
+				DXGI_FORMAT IndexFormat = Batch.IndexBuffer ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_UNKNOWN;
+				RHIDevice->GetDeviceContext()->IASetIndexBuffer(Batch.IndexBuffer, IndexFormat, 0);
+				RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(Batch.PrimitiveTopology);
+			}
 
 			// 현재 IA 상태 캐싱
 			CurrentVertexBuffer = Batch.VertexBuffer;
@@ -1576,7 +1581,6 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 			RHIDevice->SetAndUpdateConstantBuffer(ParticleEmitterType);
 		}
 		
-		// 5. 드로우 콜 실행
 		if (Batch.bInstancedDraw)
 		{
 			if (Batch.IndexBuffer && Batch.VertexBuffer && Batch.VertexStride > 0)
