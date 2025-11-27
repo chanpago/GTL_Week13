@@ -1617,12 +1617,12 @@ void FSceneRenderer::DrawMeshBatches(TArray<FMeshBatchElement>& InMeshBatches, b
 			SubUVBuffer.Padding0 = 0.0f;
 			RHIDevice->SetAndUpdateConstantBuffer(SubUVBuffer);
 
-			static int32 DebugCounter = 0;
-			if (DebugCounter++ % 60 == 0)
-			{
-				UE_LOG("SubUV Constant Buffer: H=%d, V=%d, InterpMethod=%d",
-					SubUVBuffer.SubImages_Horizontal, SubUVBuffer.SubImages_Vertical, SubUVBuffer.InterpMethod);
-			}
+			// static int32 DebugCounter = 0;
+			// if (DebugCounter++ % 60 == 0)
+			// {
+			// 	UE_LOG("SubUV Constant Buffer: H=%d, V=%d, InterpMethod=%d",
+			// 		SubUVBuffer.SubImages_Horizontal, SubUVBuffer.SubImages_Vertical, SubUVBuffer.InterpMethod);
+			// }
 		}
 		else
 		{
