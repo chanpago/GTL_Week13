@@ -969,6 +969,7 @@
     <ClInclude Include="Source\Runtime\Engine\Physics\FKShapeElem.h" />
     <ClInclude Include="Source\Runtime\Engine\Physics\PhysicalMaterial.h" />
     <ClInclude Include="Source\Runtime\Engine\Physics\PhysicsAsset.h" />
+    <ClInclude Include="Source\Runtime\Engine\Physics\PhysicsTypes.h" />
     <ClInclude Include="Source\Runtime\Engine\Physics\PhysScene.h" />
     <ClInclude Include="Source\Runtime\Engine\Scripting\GameObject.h" />
     <ClInclude Include="Source\Runtime\Engine\Scripting\LuaBindHelpers.h" />

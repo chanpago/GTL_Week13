@@ -3,11 +3,13 @@
 
 class UPrimitiveComponent;
 class UBodySetup;
-
-class PxRigidActor; // 임시
 struct FPhysScene;
 
-
+// PhysX의 PxRigidActor 전방 선언
+namespace physx
+{
+    class PxRigidActor;
+}
 
 
 /**
@@ -24,9 +26,8 @@ struct FBodyInstance
     void AddForce(const FVector& Force);
     FTransform GetWorldTransform() const;
 
-
 public:
-    UPrimitiveComponent* OwnerComponent = nullptr;
-    UBodySetup*          BodySetup      = nullptr;
-    PxRigidActor*        RigidActor     = nullptr;
+    UPrimitiveComponent*        OwnerComponent = nullptr;
+    UBodySetup*                 BodySetup      = nullptr;
+    physx::PxRigidActor*        RigidActor     = nullptr;
 };
