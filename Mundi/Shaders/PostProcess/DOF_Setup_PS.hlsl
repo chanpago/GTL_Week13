@@ -88,25 +88,12 @@ PS_OUTPUT mainPS(PS_INPUT input)
         MaxFarBlurSize
     );
 
-    // 5. Near/Far 분리
-    if (CoC > 0.0)
-    {
-        // 원경 (Far Field) - 초점보다 멀리
-        output.FarField = float4(sceneColor.rgb, CoC);
-        output.NearField = float4(0, 0, 0, 0);
-    }
-    else if (CoC < 0.0)
-    {
-        // 근경 (Near Field) - 초점보다 가까이
-        output.FarField = float4(0, 0, 0, 0);
-        output.NearField = float4(sceneColor.rgb, abs(CoC));
-    }
-    else
-    {
-        // 초점 영역 - 선명 (둘 다 0)
-        output.FarField = float4(0, 0, 0, 0);
-        output.NearField = float4(0, 0, 0, 0);
-    }
+    // 5. Near/Far 분리 (순수 저장, Blur에서 CoC 가중치 처리)
+    float farCoc = max(CoC, 0.0);
+    float nearCoc = max(-CoC, 0.0);
+
+    output.FarField = float4(sceneColor.rgb, farCoc);
+    output.NearField = float4(sceneColor.rgb, nearCoc);
 
     return output;
 }

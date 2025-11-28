@@ -30,59 +30,62 @@ struct PS_OUTPUT
     float4 Color : SV_Target0;
 };
 
-// Separable Gaussian Blur (Variable Kernel Size)
+// Separable Gaussian Blur with CoC Weighting (Intensity Leakage 방지)
 PS_OUTPUT mainPS(PS_INPUT input)
 {
     PS_OUTPUT output;
 
     // 1. 중앙 샘플
     float4 centerSample = g_InputTex.Sample(g_LinearClampSample, input.texCoord);
-    float coc = centerSample.a;  // Alpha 채널에 CoC 저장되어 있음
+    float centerCoc = centerSample.a;
 
     // 2. CoC가 0이면 블러 불필요 (선명 영역)
-    if (coc < 0.001)
+    if (centerCoc < 0.001)
     {
         output.Color = centerSample;
         return output;
     }
 
-    // 3. Variable Kernel Size (CoC에 비례)
-    // CoC는 0~1 정규화 값이므로 BlurRadius를 곱해 픽셀 단위로 변환
-    float kernelRadius = coc * BlurRadius;  // 0~1 * MaxBlurSize = 픽셀
-    kernelRadius = max(kernelRadius, 1.0);  // 최소 1 픽셀
+    // 3. Variable Kernel Size
+    float kernelRadius = centerCoc * BlurRadius;
+    kernelRadius = max(kernelRadius, 1.0);
 
-    // 4. Gaussian Blur (13-tap)
-    float2 texelSize = ScreenSize.zw;  // 1.0 / ScreenSize
+    // 4. Gaussian Blur with CoC Weighting
+    float2 texelSize = ScreenSize.zw;
     float2 blurStep = BlurDirection * texelSize;
 
-    float4 colorSum = float4(0, 0, 0, 0);
+    float3 colorSum = float3(0, 0, 0);
     float weightSum = 0.0;
 
-    // Center
-    colorSum += centerSample * GAUSSIAN_WEIGHTS_13[0];
-    weightSum += GAUSSIAN_WEIGHTS_13[0];
+    // Center (CoC 가중치 적용)
+    float centerWeight = GAUSSIAN_WEIGHTS_13[0] * centerCoc;
+    colorSum += centerSample.rgb * centerWeight;
+    weightSum += centerWeight;
 
     // ±1 ~ ±6
     [unroll]
     for (int i = 1; i < 7; i++)
     {
-        float offset = float(i) * (kernelRadius / 6.0);  // 스케일링
+        float offset = float(i) * (kernelRadius / 6.0);
         float2 sampleOffset = blurStep * offset;
-        float weight = GAUSSIAN_WEIGHTS_13[i];
+        float baseWeight = GAUSSIAN_WEIGHTS_13[i];
 
         // Positive direction
         float4 samplePos = g_InputTex.Sample(g_LinearClampSample, input.texCoord + sampleOffset);
-        colorSum += samplePos * weight;
-        weightSum += weight;
+        float weightPos = baseWeight * samplePos.a;  // CoC 가중치
+        colorSum += samplePos.rgb * weightPos;
+        weightSum += weightPos;
 
         // Negative direction
         float4 sampleNeg = g_InputTex.Sample(g_LinearClampSample, input.texCoord - sampleOffset);
-        colorSum += sampleNeg * weight;
-        weightSum += weight;
+        float weightNeg = baseWeight * sampleNeg.a;  // CoC 가중치
+        colorSum += sampleNeg.rgb * weightNeg;
+        weightSum += weightNeg;
     }
 
-    // 5. Normalize
-    output.Color = colorSum / weightSum;
+    // 5. Normalize (CoC=0인 샘플은 자동으로 제외됨)
+    float3 blurredColor = (weightSum > 0.001) ? (colorSum / weightSum) : centerSample.rgb;
+    output.Color = float4(blurredColor, centerCoc);
 
     return output;
 }

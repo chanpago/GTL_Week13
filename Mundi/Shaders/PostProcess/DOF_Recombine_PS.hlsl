@@ -103,7 +103,7 @@ PS_OUTPUT mainPS(PS_INPUT input)
         return output;
     }
 
-    // 5. Blurred Field 샘플링 (texCoord 그대로 사용 - DOF 텍스처와 같은 UV 비율)
+    // 5. Blurred Field 샘플링 (Blur에서 이미 정규화됨)
     float4 farField = g_FarFieldTex.Sample(g_LinearClampSample, input.texCoord);
     float4 nearField = g_NearFieldTex.Sample(g_LinearClampSample, input.texCoord);
 
@@ -112,15 +112,15 @@ PS_OUTPUT mainPS(PS_INPUT input)
 
     if (CoC > 0.0)
     {
-        // 원경 (Far Field) - 초점보다 멀리
-        float blendFactor = saturate(CoC);  // 0~1
-        finalColor = lerp(sceneColor, farField, blendFactor);
+        // 원경 (Far Field)
+        float blendFactor = saturate(CoC);
+        finalColor = lerp(sceneColor, float4(farField.rgb, 1.0), blendFactor);
     }
     else  // CoC < 0.0
     {
-        // 근경 (Near Field) - 초점보다 가까이
-        float blendFactor = saturate(abs(CoC));  // 0~1
-        finalColor = lerp(sceneColor, nearField, blendFactor);
+        // 근경 (Near Field)
+        float blendFactor = saturate(abs(CoC));
+        finalColor = lerp(sceneColor, float4(nearField.rgb, 1.0), blendFactor);
     }
 
     output.Color = finalColor;
