@@ -17,7 +17,9 @@
 #include "Source/Editor/PlatformProcess.h"
 #include "Source/Runtime/Core/Misc/PathUtils.h"
 #include <filesystem>
-#include "Source/Runtime/Engine/GameFramework/CameraActor.h" "
+#include "Source/Runtime/Engine/GameFramework/CameraActor.h"
+#include "Source/Runtime/Engine/Physics/PhysicsAsset.h"
+
 SSkeletalMeshViewerWindow::SSkeletalMeshViewerWindow()
 {
     CenterRect = FRect(0, 0, 0, 0);
@@ -621,98 +623,12 @@ void SSkeletalMeshViewerWindow::OnRender()
 
             ImGui::Separator();
 
-            // 3. 하단: "Animation Browser"를 위한 자식 창 (남은 공간 모두 사용)
-            ImGui::BeginChild("AnimBrowserChild", ImVec2(0, 0), true);
+            // 3. 하단: "Asset Browser"를 위한 자식 창 (남은 공간 모두 사용)
+            ImGui::BeginChild("AssetBrowserChild", ImVec2(0, 0), true);
             {
-                // --- Animation Browser 헤더 ---
-                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.25f, 0.50f, 0.35f, 0.8f));
-                ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4);
-                ImGui::Indent(8.0f);
-                ImGui::Text("Animation Browser");
-                ImGui::Unindent(8.0f);
-                ImGui::PopStyleColor();
-
-                ImGui::Spacing();
-                ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.35f, 0.60f, 0.45f, 0.7f));
-                ImGui::Separator();
-                ImGui::PopStyleColor();
-                ImGui::Spacing();
-
-                // --- 에셋 리스트 (스크롤 가능) ---
-                TArray<UAnimSequence*> AnimSequences = UResourceManager::GetInstance().GetAll<UAnimSequence>();
-
-                // Get current skeleton bone names for compatibility check
-                TArray<FName> SkeletonBoneNames;
-                if (ActiveState->CurrentMesh)
-                {
-                    const FSkeleton* Skeleton = ActiveState->CurrentMesh->GetSkeleton();
-                    if (Skeleton)
-                    {
-                        for (const FBone& Bone : Skeleton->Bones)
-                        {
-                            SkeletonBoneNames.Add(Bone.Name);
-                        }
-                    }
-                }
-
-                // If no skeleton loaded, show message to load mesh first
-                if (SkeletonBoneNames.Num() == 0)
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
-                    ImGui::TextWrapped("Load a skeletal mesh first to see compatible animations.");
-                    ImGui::PopStyleColor();
-                }
-                else
-                {
-                    // Filter compatible animations
-                    TArray<UAnimSequence*> CompatibleAnims;
-                    for (UAnimSequence* Anim : AnimSequences)
-                    {
-                        if (!Anim) continue;
-
-                        if (Anim->IsCompatibleWith(SkeletonBoneNames))
-                        {
-                            CompatibleAnims.Add(Anim);
-                        }
-                    }
-
-                    if (CompatibleAnims.IsEmpty())
-                    {
-                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
-                        ImGui::TextWrapped("No compatible animations found for this skeleton.");
-                        ImGui::PopStyleColor();
-                    }
-                    else
-                    {
-                        for (UAnimSequence* Anim : CompatibleAnims)
-                        {
-                            if (!Anim) continue;
-
-                            FString AssetName = Anim->GetFilePath();
-                            size_t lastSlash = AssetName.find_last_of("/\\");
-                            if (lastSlash != FString::npos)
-                            {
-                                AssetName = AssetName.substr(lastSlash + 1);
-                            }
-
-                            bool bIsSelected = (ActiveState->CurrentAnimation == Anim);
-
-                            if (ImGui::Selectable(AssetName.c_str(), bIsSelected))
-                            {
-                                if (ActiveState->PreviewActor && ActiveState->PreviewActor->GetSkeletalMeshComponent())
-                                {
-                                    ActiveState->PreviewActor->GetSkeletalMeshComponent()->SetAnimation(Anim);
-                                }
-                                ActiveState->CurrentAnimation = Anim;
-                                ActiveState->CurrentAnimTime = 0.0f;
-                                ActiveState->bIsPlaying = false;
-                                ActiveState->bIsPlayingReverse = false;
-                            }
-                        }
-                    }
-                }
+                DrawAssetBrowserPanel(ActiveState);
             }
-            ImGui::EndChild(); // "AnimBrowserChild"
+            ImGui::EndChild(); // "AssetBrowserChild"
         }
         ImGui::EndChild(); // "RightPanel"
 
@@ -1724,4 +1640,178 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
         ImGui::TextDisabled("(%.2f / %.2f)", State->CurrentAnimTime, PlayLength);
     }
     ImGui::EndChild();
+}
+
+void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
+{
+    if (!State) return;
+
+    // --- Tab Bar for switching between Animation and Physics Asset ---
+    ImGui::PushStyleColor(ImGuiCol_Tab, ImVec4(0.25f, 0.35f, 0.45f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_TabActive, ImVec4(0.35f, 0.50f, 0.65f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_TabHovered, ImVec4(0.30f, 0.45f, 0.60f, 1.0f));
+
+    if (ImGui::BeginTabBar("AssetBrowserTabs", ImGuiTabBarFlags_None))
+    {
+        if (ImGui::BeginTabItem("Animation"))
+        {
+            State->AssetBrowserMode = EAssetBrowserMode::Animation;
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Physics Asset"))
+        {
+            State->AssetBrowserMode = EAssetBrowserMode::PhysicsAsset;
+            ImGui::EndTabItem();
+        }
+
+        ImGui::EndTabBar();
+    }
+
+    ImGui::PopStyleColor(3);
+    ImGui::Spacing();
+
+    // --- Render appropriate browser based on mode ---
+    if (State->AssetBrowserMode == EAssetBrowserMode::Animation)
+    {
+        // --- Animation Browser Content ---
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.25f, 0.50f, 0.35f, 0.8f));
+        ImGui::Text("Animation Assets");
+        ImGui::PopStyleColor();
+
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.35f, 0.60f, 0.45f, 0.7f));
+        ImGui::Separator();
+        ImGui::PopStyleColor();
+        ImGui::Spacing();
+
+        TArray<UAnimSequence*> AnimSequences = UResourceManager::GetInstance().GetAll<UAnimSequence>();
+
+        // Get current skeleton bone names for compatibility check
+        TArray<FName> SkeletonBoneNames;
+        if (State->CurrentMesh)
+        {
+            const FSkeleton* Skeleton = State->CurrentMesh->GetSkeleton();
+            if (Skeleton)
+            {
+                for (const FBone& Bone : Skeleton->Bones)
+                {
+                    SkeletonBoneNames.Add(Bone.Name);
+                }
+            }
+        }
+
+        if (SkeletonBoneNames.Num() == 0)
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+            ImGui::TextWrapped("Load a skeletal mesh first to see compatible animations.");
+            ImGui::PopStyleColor();
+        }
+        else
+        {
+            TArray<UAnimSequence*> CompatibleAnims;
+            for (UAnimSequence* Anim : AnimSequences)
+            {
+                if (!Anim) continue;
+                if (Anim->IsCompatibleWith(SkeletonBoneNames))
+                {
+                    CompatibleAnims.Add(Anim);
+                }
+            }
+
+            if (CompatibleAnims.IsEmpty())
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+                ImGui::TextWrapped("No compatible animations found for this skeleton.");
+                ImGui::PopStyleColor();
+            }
+            else
+            {
+                for (UAnimSequence* Anim : CompatibleAnims)
+                {
+                    if (!Anim) continue;
+
+                    FString AssetName = Anim->GetFilePath();
+                    size_t lastSlash = AssetName.find_last_of("/\\");
+                    if (lastSlash != FString::npos)
+                    {
+                        AssetName = AssetName.substr(lastSlash + 1);
+                    }
+
+                    bool bIsSelected = (State->CurrentAnimation == Anim);
+
+                    if (ImGui::Selectable(AssetName.c_str(), bIsSelected))
+                    {
+                        if (State->PreviewActor && State->PreviewActor->GetSkeletalMeshComponent())
+                        {
+                            State->PreviewActor->GetSkeletalMeshComponent()->SetAnimation(Anim);
+                        }
+                        State->CurrentAnimation = Anim;
+                        State->CurrentAnimTime = 0.0f;
+                        State->bIsPlaying = false;
+                        State->bIsPlayingReverse = false;
+                    }
+                }
+            }
+        }
+    }
+    else if (State->AssetBrowserMode == EAssetBrowserMode::PhysicsAsset)
+    {
+        // --- Physics Asset Browser Content ---
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.50f, 0.35f, 0.25f, 0.8f));
+        ImGui::Text("Physics Assets");
+        ImGui::PopStyleColor();
+
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.60f, 0.45f, 0.35f, 0.7f));
+        ImGui::Separator();
+        ImGui::PopStyleColor();
+        ImGui::Spacing();
+
+        // Get all Physics Assets from ResourceManager
+        TArray<UPhysicsAsset*> PhysicsAssets = UResourceManager::GetInstance().GetAll<UPhysicsAsset>();
+
+        if (PhysicsAssets.IsEmpty())
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+            ImGui::TextWrapped("No physics assets found in the project.");
+            ImGui::PopStyleColor();
+        }
+        else
+        {
+            for (UPhysicsAsset* PhysAsset : PhysicsAssets)
+            {
+                if (!PhysAsset) continue;
+
+                FString AssetName = PhysAsset->GetName().ToString();
+                if (AssetName.empty())
+                {
+                    AssetName = "Unnamed Physics Asset";
+                }
+
+                bool bIsSelected = (State->CurrentPhysicsAsset == PhysAsset);
+
+                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.45f, 0.30f, 0.20f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.55f, 0.40f, 0.30f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.40f, 0.25f, 0.15f, 1.0f));
+
+                if (ImGui::Selectable(AssetName.c_str(), bIsSelected))
+                {
+                    State->CurrentPhysicsAsset = PhysAsset;
+                    // TODO: Apply physics asset to skeletal mesh if needed
+                    // For now, just store the selection
+                }
+
+                ImGui::PopStyleColor(3);
+
+                // Show tooltip on hover
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Physics Asset: %s", AssetName.c_str());
+                    ImGui::EndTooltip();
+                }
+            }
+        }
+    }
 }

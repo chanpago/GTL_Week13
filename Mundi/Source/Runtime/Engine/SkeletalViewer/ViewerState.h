@@ -1,4 +1,10 @@
-#pragma once
+﻿#pragma once
+
+enum class EAssetBrowserMode : uint8
+{
+    Animation,
+    PhysicsAsset
+};
 
 class ASkeletalMeshActor;
 class FViewport;
@@ -6,6 +12,7 @@ class FViewportClient;
 class UAnimSequence;
 class USkeletalMesh;
 class UWorld;
+class UPhysicsAsset;
 
 class ViewerState
 {
@@ -51,4 +58,10 @@ public:
     bool bTimeChanged = false;
     bool bIsRecording = false;
     bool bIsLooping = true;
+
+    // Asset Browser Mode
+    EAssetBrowserMode AssetBrowserMode = EAssetBrowserMode::Animation;
+    
+    // Physics Asset
+    UPhysicsAsset* CurrentPhysicsAsset = nullptr;
 };

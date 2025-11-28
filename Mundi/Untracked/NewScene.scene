@@ -1,0 +1,136 @@
+{
+  "Actors" : {
+    "1571" : {
+      "ObjectName" : "스켈레탈 메시_0",
+      "OwnedComponents" : [{
+          "AnimGraphPath" : "",
+          "Id" : 1572,
+          "MaterialSlots" : [{
+              "Type" : "None"
+            }, {
+              "AssetPath" : "Ch06_body",
+              "Type" : "UMaterial"
+            }, {
+              "AssetPath" : "Ch06_eyelashes",
+              "Type" : "UMaterial"
+            }, {
+              "AssetPath" : "Ch06_body1",
+              "Type" : "UMaterial"
+            }],
+          "ObjectName" : "USkeletalMeshComponent_1",
+          "ParentId" : 0,
+          "RelativeLocation" : [1.532815, -1.532815, 1.173166],
+          "RelativeRotationEuler" : [0.000000, -0.000000, 0.000000],
+          "RelativeScale" : [1.000000, 1.000000, 1.000000],
+          "SkeletalMesh" : "Data/FBX/James_Mixamo_Idle.fbx",
+          "Type" : "USkeletalMeshComponent",
+          "bBlockComponent" : false,
+          "bCastShadows" : true,
+          "bGenerateOverlapEvents" : true,
+          "bHiddenInGame" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bTickEnabled" : true
+        }],
+      "RootComponentId" : 1572,
+      "Tag" : "",
+      "Type" : "ASkeletalMeshActor",
+      "bActorHiddenInGame" : false,
+      "bActorIsActive" : true
+    },
+    "942" : {
+      "ObjectName" : "ADirectionalLightActor_1",
+      "OwnedComponents" : [{
+          "CascadedAreaColorDebugValue" : 0.000000,
+          "CascadedAreaShadowDebugValue" : -1,
+          "CascadedCount" : 4,
+          "CascadedLinearBlendingValue" : 0.500000,
+          "CascadedOverlapValue" : 0.200000,
+          "Id" : 943,
+          "Intensity" : 1.000000,
+          "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+          "ObjectName" : "UDirectionalLightComponent_1",
+          "ParentId" : 0,
+          "RelativeLocation" : [0.000000, 0.000000, 0.000000],
+          "RelativeRotationEuler" : [-62.900280, 16.769619, -62.900280],
+          "RelativeScale" : [1.000000, 1.000000, 1.000000],
+          "ShadowBias" : 0.000010,
+          "ShadowResolutionScale" : 2048,
+          "ShadowSharpen" : 0.500000,
+          "ShadowSlopeBias" : 0.000010,
+          "Temperature" : 6500.000000,
+          "Type" : "UDirectionalLightComponent",
+          "bCascaded" : true,
+          "bCastShadows" : true,
+          "bHiddenInGame" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bTickEnabled" : true
+        }],
+      "RootComponentId" : 943,
+      "Tag" : "",
+      "Type" : "ADirectionalLightActor",
+      "bActorHiddenInGame" : false,
+      "bActorIsActive" : true
+    },
+    "944" : {
+      "ObjectName" : "AAmbientLightActor_1",
+      "OwnedComponents" : [{
+          "Id" : 945,
+          "Intensity" : 0.100000,
+          "LightColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+          "ObjectName" : "UAmbientLightComponent_1",
+          "ParentId" : 0,
+          "RelativeLocation" : [0.000000, 0.000000, 0.000000],
+          "RelativeRotationEuler" : [0.000000, 0.000000, 0.000000],
+          "RelativeScale" : [1.000000, 1.000000, 1.000000],
+          "ShadowBias" : 0.000010,
+          "ShadowResolutionScale" : 1024,
+          "ShadowSharpen" : 0.500000,
+          "ShadowSlopeBias" : 0.000010,
+          "Temperature" : 6500.000000,
+          "Type" : "UAmbientLightComponent",
+          "bCastShadows" : true,
+          "bHiddenInGame" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bTickEnabled" : true
+        }],
+      "RootComponentId" : 945,
+      "Tag" : "",
+      "Type" : "AAmbientLightActor",
+      "bActorHiddenInGame" : false,
+      "bActorIsActive" : true
+    },
+    "952" : {
+      "ObjectName" : "APlayerCameraManager_1",
+      "OwnedComponents" : [{
+          "Id" : 953,
+          "ObjectName" : "USceneComponent_1",
+          "ParentId" : 0,
+          "RelativeLocation" : [0.000000, 0.000000, 0.000000],
+          "RelativeRotationEuler" : [0.000000, 0.000000, 0.000000],
+          "RelativeScale" : [1.000000, 1.000000, 1.000000],
+          "Type" : "USceneComponent",
+          "bHiddenInGame" : false,
+          "bIsActive" : true,
+          "bIsVisible" : true,
+          "bTickEnabled" : true
+        }],
+      "RootComponentId" : 953,
+      "Tag" : "",
+      "Type" : "APlayerCameraManager",
+      "bActorHiddenInGame" : false,
+      "bActorIsActive" : true
+    }
+  },
+  "NextUUID" : 1574,
+  "PerspectiveCamera" : {
+    "FOV" : [60.000000],
+    "FarClip" : [2000.000000],
+    "Location" : [-5.000000, 5.000000, 5.000000],
+    "NearClip" : [0.100000],
+    "Rotation" : [0.000000, 22.500000, -45.000000]
+  },
+  "Version" : 1
+}

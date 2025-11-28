@@ -81,6 +81,8 @@ private:
 
     void DrawAnimationPanel(ViewerState* State);
 
+    void DrawAssetBrowserPanel(ViewerState* State);
+
     static constexpr float IconSize = 20.0f;
 
     UTexture* IconFirstFrame = nullptr;
