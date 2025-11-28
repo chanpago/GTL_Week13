@@ -8,6 +8,7 @@ void D3D11RHI::Initialize(HWND hWindow)
     CreateDeviceAndSwapChain(hWindow);
     CreateFrameBuffer();
     CreateIdBuffer();
+    CreateDOFResources();  // DOF 렌더 타겟 생성
     CreateRasterizerState();
     CreateBlendState();
     CONSTANT_BUFFER_LIST(CREATE_CONSTANT_BUFFER);
@@ -76,6 +77,7 @@ void D3D11RHI::Release()
     // RTV/DSV/FrameBuffer
     ReleaseFrameBuffer();
     ReleaseIdBuffer();
+    ReleaseDOFResources();  // DOF 렌더 타겟 해제
 
     // Device + SwapChain
     ReleaseDeviceAndSwapChain();
@@ -416,6 +418,18 @@ ID3D11ShaderResourceView* D3D11RHI::GetSRV(RHI_SRV_Index SRVIndex) const
     case RHI_SRV_Index::SceneDepth:
         TempSRV = DepthSRV;
         break;
+    case RHI_SRV_Index::DOFFar:
+        TempSRV = DOFSRVs[0];
+        break;
+    case RHI_SRV_Index::DOFNear:
+        TempSRV = DOFSRVs[1];
+        break;
+    case RHI_SRV_Index::DOFTempH:
+        TempSRV = DOFSRVs[2];
+        break;
+    case RHI_SRV_Index::DOFTempV:
+        TempSRV = DOFSRVs[3];
+        break;
     default:
         TempSRV = nullptr;
         break;
@@ -677,6 +691,69 @@ void D3D11RHI::CreateIdBuffer()
     Device->CreateTexture2D(&TextureDesc, nullptr, &IdStagingBuffer);
 }
 
+void D3D11RHI::CreateDOFResources()
+{
+    DXGI_SWAP_CHAIN_DESC swapDesc;
+    SwapChain->GetDesc(&swapDesc);
+
+    // 1/4 해상도 계산
+    UINT quarterWidth = swapDesc.BufferDesc.Width / 4;
+    UINT quarterHeight = swapDesc.BufferDesc.Height / 4;
+
+    // DOF 텍스처 Description (고정밀도 Float)
+    D3D11_TEXTURE2D_DESC DOFDesc = {};
+    DOFDesc.Width = quarterWidth;
+    DOFDesc.Height = quarterHeight;
+    DOFDesc.MipLevels = 1;
+    DOFDesc.ArraySize = 1;
+    DOFDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;  // RGB=Color, A=CoC
+    DOFDesc.SampleDesc.Count = 1;
+    DOFDesc.SampleDesc.Quality = 0;
+    DOFDesc.Usage = D3D11_USAGE_DEFAULT;
+    DOFDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    DOFDesc.CPUAccessFlags = 0;
+    DOFDesc.MiscFlags = 0;
+
+    // 4개 DOF 버퍼 생성
+    for (uint32 Idx = 0; Idx < NUM_DOF_BUFFERS; ++Idx)
+    {
+        HRESULT Result = Device->CreateTexture2D(&DOFDesc, nullptr, &DOFTextures[Idx]);
+        if (FAILED(Result))
+        {
+            UE_LOG("D3D11RHI: DOF Texture[%d] 생성 실패\n", Idx);
+            return;
+        }
+
+        // RTV 생성
+        D3D11_RENDER_TARGET_VIEW_DESC RtvDesc = {};
+        RtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+        RtvDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+        RtvDesc.Texture2D.MipSlice = 0;
+
+        Result = Device->CreateRenderTargetView(DOFTextures[Idx], &RtvDesc, &DOFRTVs[Idx]);
+        if (FAILED(Result))
+        {
+            UE_LOG("D3D11RHI: DOF RTV[%d] 생성 실패\n", Idx);
+            return;
+        }
+
+        // SRV 생성
+        D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+        SRVDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+        SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+        SRVDesc.Texture2D.MostDetailedMip = 0;
+        SRVDesc.Texture2D.MipLevels = 1;
+
+        Result = Device->CreateShaderResourceView(DOFTextures[Idx], &SRVDesc, &DOFSRVs[Idx]);
+        if (FAILED(Result))
+        {
+            UE_LOG("D3D11RHI: DOF SRV[%d] 생성 실패\n", Idx);
+        }
+    }
+
+    UE_LOG("D3D11RHI: DOF Resources 생성 완료 (%d x %d)\n", quarterWidth, quarterHeight);
+}
+
 void D3D11RHI::CreateRasterizerState()
 {
     D3D11_RASTERIZER_DESC deafultrasterizerdesc = {};
@@ -910,6 +987,33 @@ void D3D11RHI::ReleaseIdBuffer()
     }
 }
 
+void D3D11RHI::ReleaseDOFResources()
+{
+    for (uint32 Idx = 0; Idx < NUM_DOF_BUFFERS; ++Idx)
+    {
+        // SRV 먼저 해제
+        if (DOFSRVs[Idx])
+        {
+            DOFSRVs[Idx]->Release();
+            DOFSRVs[Idx] = nullptr;
+        }
+
+        // RTV 해제
+        if (DOFRTVs[Idx])
+        {
+            DOFRTVs[Idx]->Release();
+            DOFRTVs[Idx] = nullptr;
+        }
+
+        // Texture 해제
+        if (DOFTextures[Idx])
+        {
+            DOFTextures[Idx]->Release();
+            DOFTextures[Idx] = nullptr;
+        }
+    }
+}
+
 void D3D11RHI::ReleaseDeviceAndSwapChain()
 {
     if (SwapChain)
@@ -1017,6 +1121,7 @@ void D3D11RHI::OnResize(UINT NewWidth, UINT NewHeight)
     // 기존 리소스 해제
     ReleaseFrameBuffer();
     ReleaseIdBuffer();
+    ReleaseDOFResources();  // DOF 렌더 타겟 해제
 
     // 스왑체인 버퍼 리사이즈
     HRESULT hr = SwapChain->ResizeBuffers(
@@ -1035,6 +1140,7 @@ void D3D11RHI::OnResize(UINT NewWidth, UINT NewHeight)
     // 새 프레임버퍼/RTV/DSV 생성
     CreateFrameBuffer();
     CreateIdBuffer();
+    CreateDOFResources();  // DOF 렌더 타겟 재생성
 
     // 뷰포트 갱신
     ViewportInfo.TopLeftX = 0.0f;

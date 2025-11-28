@@ -203,6 +203,7 @@ private:
 	void CreateDeviceAndSwapChain(HWND hWindow); // 여기서 디바이스, 디바이스 컨택스트, 스왑체인, 뷰포트를 초기화한다
 	void CreateFrameBuffer();
 	void CreateIdBuffer();
+	void CreateDOFResources();  // DOF 렌더 타겟 생성
 	void CreateRasterizerState();
 	void CreateConstantBuffer(ID3D11Buffer** ConstantBuffer, uint32 Size);
 	void CreateDepthStencilState();
@@ -214,6 +215,7 @@ private:
 	void ReleaseRasterizerState(); // rs
 	void ReleaseFrameBuffer(); // fb, rtv
 	void ReleaseIdBuffer();
+	void ReleaseDOFResources();  // DOF 렌더 타겟 해제
 	void ReleaseDeviceAndSwapChain();
 
 	// FSwapGuard 클래스가 D3D11RHI의 private 멤버에 접근할 수 있도록 허용
@@ -269,6 +271,14 @@ private:
 
 	ID3D11Texture2D* DepthBuffer = nullptr;
 	ID3D11ShaderResourceView* DepthSRV = nullptr;
+
+	// DOF (Depth of Field) 렌더 타겟 (1/4 해상도)
+	static const int NUM_DOF_BUFFERS = 4;
+	ID3D11Texture2D* DOFTextures[NUM_DOF_BUFFERS] = {nullptr};
+	ID3D11RenderTargetView* DOFRTVs[NUM_DOF_BUFFERS] = {nullptr};
+	ID3D11ShaderResourceView* DOFSRVs[NUM_DOF_BUFFERS] = {nullptr};
+	// [0] = Far Field, [1] = Near Field
+	// [2] = Temp Horizontal Blur, [3] = Temp Vertical Blur
 
     // 버퍼 핸들
 	CONSTANT_BUFFER_LIST(DECLARE_CONSTANT_BUFFER)

@@ -95,6 +95,61 @@ struct alignas(16) FGammaCorrectionBufferType
 };
 static_assert(sizeof(FGammaCorrectionBufferType) % 16 == 0, "CB must be 16-byte aligned");
 
+// DOF Setup Pass (b2)
+struct alignas(16) FDOFSetupBufferType
+{
+    float FocalDistance;           // cm (초점 거리)
+    float Fstop;                   // 조리개 값 (2.8, 5.6 등)
+    float SensorWidth;             // mm (센서 너비, 기본 24mm)
+    float FocalRegion;             // cm (완전 선명 영역)
+
+    float NearTransitionRegion;    // cm (근경 블러 전환 영역)
+    float FarTransitionRegion;     // cm (원경 블러 전환 영역)
+    float MaxNearBlurSize;         // pixels (근경 최대 블러)
+    float MaxFarBlurSize;          // pixels (원경 최대 블러)
+
+    float NearClip;
+    float FarClip;
+    int32 IsOrthographic;          // 0 = Perspective, 1 = Orthographic
+    float _Pad0;
+};
+static_assert(sizeof(FDOFSetupBufferType) % 16 == 0, "CB must be 16-byte aligned");
+
+// DOF Blur Pass (b2)
+struct alignas(16) FDOFBlurBufferType
+{
+    FVector2D TexelSize;           // 텍셀 크기 (1/width, 1/height)
+    FVector2D BlurDirection;       // (1,0) = Horizontal, (0,1) = Vertical
+
+    float BlurRadius;              // 블러 반경 스케일
+    int32 KernelSize;              // 커널 크기 (5, 9, 13)
+    FVector2D _Pad0;
+};
+static_assert(sizeof(FDOFBlurBufferType) % 16 == 0, "CB must be 16-byte aligned");
+
+// DOF Recombine Pass (b2)
+struct alignas(16) FDOFRecombineBufferType
+{
+    float FocalDistance;           // Setup과 동일한 CoC 파라미터
+    float Fstop;
+    float SensorWidth;
+    float FocalRegion;
+
+    float NearTransitionRegion;
+    float FarTransitionRegion;
+    float MaxNearBlurSize;
+    float MaxFarBlurSize;
+
+    float NearClip;
+    float FarClip;
+    int32 IsOrthographic;
+    float _Pad0;
+
+    FVector2D QuarterResTexelSize; // 1/4 해상도 텍셀 크기
+    FVector2D _Pad1;
+};
+static_assert(sizeof(FDOFRecombineBufferType) % 16 == 0, "CB must be 16-byte aligned");
+
 struct FXAABufferType // b2
 {
     FVector2D InvScreenSize; // 1.0f / ScreenSize (픽셀 하나의 크기)
@@ -242,6 +297,9 @@ MACRO(FFadeInOutBufferType)         \
 MACRO(FGammaCorrectionBufferType)   \
 MACRO(FVinetteBufferType)           \
 MACRO(FXAABufferType)               \
+MACRO(FDOFSetupBufferType)          \
+MACRO(FDOFBlurBufferType)           \
+MACRO(FDOFRecombineBufferType)      \
 MACRO(FPixelConstBufferType)        \
 MACRO(ViewProjBufferType)           \
 MACRO(ColorBufferType)              \
@@ -268,6 +326,9 @@ CONSTANT_BUFFER_INFO(FFadeInOutBufferType, 2, false, true)
 CONSTANT_BUFFER_INFO(FGammaCorrectionBufferType, 2, false, true)
 CONSTANT_BUFFER_INFO(FVinetteBufferType, 2, false, true)
 CONSTANT_BUFFER_INFO(FXAABufferType, 2, false, true)
+CONSTANT_BUFFER_INFO(FDOFSetupBufferType, 2, false, true)      // b2, PS only (DOF Setup Pass)
+CONSTANT_BUFFER_INFO(FDOFBlurBufferType, 2, false, true)       // b2, PS only (DOF Blur Pass)
+CONSTANT_BUFFER_INFO(FDOFRecombineBufferType, 2, false, true)  // b2, PS only (DOF Recombine Pass)
 CONSTANT_BUFFER_INFO(ColorBufferType, 3, true, true)   // b3 color
 CONSTANT_BUFFER_INFO(FPixelConstBufferType, 4, true, true) // GOURAUD에도 사용되므로 VS도 true
 CONSTANT_BUFFER_INFO(DecalBufferType, 6, true, true)
