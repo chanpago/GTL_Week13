@@ -348,6 +348,9 @@ void SSkeletalMeshViewerWindow::OnRender()
                         }
                     }
 
+                    // Track which bone was right-clicked to open context menu
+                    int RightClickedBoneIndex = -1;
+
                     std::function<void(int32)> DrawNode = [&](int32 Index)
                     {
                         const bool bLeaf = Children[Index].IsEmpty();
@@ -394,6 +397,29 @@ void SSkeletalMeshViewerWindow::OnRender()
                                 ActiveState->ExpandedBoneIndices.erase(Index);
                         }
 
+                        RightClickedBoneIndex = Index;
+                        if (ImGui::BeginPopupContextItem("BoneContextMenu"))
+                        {
+                            if (RightClickedBoneIndex >= 0 && RightClickedBoneIndex < Bones.size())
+                            {
+                                const char* ClickedBoneName = Bones[RightClickedBoneIndex].Name.c_str();
+                                UPhysicsAsset* Phys = ActiveState->CurrentPhysicsAsset;
+                                if (Phys && ImGui::MenuItem("Add Body"))
+                                {
+                                    UBodySetup* NewBody = NewObject<UBodySetup>();
+                                    if (NewBody)
+                                    {
+                                        NewBody->BoneName = FName(ClickedBoneName);
+                                        Phys->BodySetups.Add(NewBody);
+                                        Phys->BuildBodySetupIndexMap();
+
+                                        UE_LOG("Added UBodySetup for bone %s to PhysicsAsset %s", ClickedBoneName, Phys->GetName().ToString().c_str());
+                                    }
+                                }
+                            }
+                            ImGui::EndPopup();
+                        }
+
                         if (ImGui::IsItemClicked())
                         {
                             if (ActiveState->SelectedBoneIndex != Index)
@@ -415,6 +441,20 @@ void SSkeletalMeshViewerWindow::OnRender()
                             }
                         }
                         
+                        // Render matching UBodySetup entry under the bone when node is open (leaf nodes also honor 'open')
+                        if (ActiveState->CurrentPhysicsAsset)
+                        {
+                            UBodySetup* MatchedBody = ActiveState->CurrentPhysicsAsset->FindBodySetup(FName(Label));
+                            if (MatchedBody && open)
+                            {
+                                ImGui::Indent(14.0f);
+                                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.7f, 0.25f, 1.0f));
+                                ImGui::Text("Body: %s", MatchedBody->BoneName.ToString().c_str());
+                                ImGui::PopStyleColor();
+                                ImGui::Unindent(14.0f);
+                            }
+                        }
+
                         if (!bLeaf && open)
                         {
                             for (int32 Child : Children[Index])
@@ -1270,6 +1310,7 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                         bool bPressed = bHover && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
                         bool bDoubleClicked = bHover && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
                             
+
                         // Styling
                         ImU32 FillCol = IM_COL32(100, 100, 255, bHover ? 140 : 100);
                         ImU32 LineCol = IM_COL32(200, 200, 255, 150);
