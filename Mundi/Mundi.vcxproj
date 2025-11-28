@@ -286,6 +286,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <ClCompile Include="PhysXIntegration.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleEventReceiverSpawn.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleRibbon.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Components\ParticleSystemComponent.cpp" />
@@ -849,6 +850,7 @@
     <ClInclude Include="Generated\UTestAutoBindComponent.generated.h" />
     <ClInclude Include="Generated\UTextRenderComponent.generated.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="PhysXIntegration.h" />
     <ClInclude Include="Source\Editor\BlueprintGraph\AnimationGraph.h" />
     <ClInclude Include="Source\Editor\BlueprintGraph\AnimBlueprintCompiler.h" />
     <ClInclude Include="Source\Editor\BlueprintGraph\BlueprintActionDatabase.h" />

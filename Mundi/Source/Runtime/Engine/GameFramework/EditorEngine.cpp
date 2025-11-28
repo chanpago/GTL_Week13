@@ -221,6 +221,8 @@ bool UEditorEngine::Startup(HINSTANCE hInstance)
 
     GPU_PROFILER.Initialize(&RHIDevice);
 
+    InitPhysX();
+
     bRunning = true;
     return true;
 }
