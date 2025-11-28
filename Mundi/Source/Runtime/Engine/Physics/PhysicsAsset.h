@@ -22,7 +22,6 @@ class UPhysicsAsset : public UResourceBase
 {
     DECLARE_CLASS(UPhysicsAsset, UResourceBase)
 public:
-	DECLARE_CLASS(UPhysicsAsset, UResourceBase)
 
     UPhysicsAsset() = default;
     virtual ~UPhysicsAsset() = default;
