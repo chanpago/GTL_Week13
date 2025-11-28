@@ -10,13 +10,13 @@ public:
     UCamMod_DOF() = default;
     virtual ~UCamMod_DOF() = default;
 
-    // DOF 파라미터
-    float FocalDistance = 500.0f;           // cm (초점 거리)
+    // DOF 파라미터 (엔진 단위: m)
+    float FocalDistance = 5.0f;             // m (초점 거리)
     float Fstop = 2.8f;                     // 조리개 값
-    float SensorWidth = 24.0f;              // mm (센서 너비)
-    float FocalRegion = 50.0f;              // cm (완전 선명 영역)
-    float NearTransitionRegion = 200.0f;    // cm (근경 블러 전환)
-    float FarTransitionRegion = 500.0f;     // cm (원경 블러 전환)
+    float SensorWidth = 0.024f;             // m (센서 너비, 24mm)
+    float FocalRegion = 0.5f;               // m (완전 선명 영역)
+    float NearTransitionRegion = 2.0f;      // m (근경 블러 전환)
+    float FarTransitionRegion = 5.0f;       // m (원경 블러 전환)
     float MaxNearBlurSize = 8.0f;           // pixels (근경 최대 블러)
     float MaxFarBlurSize = 8.0f;            // pixels (원경 최대 블러)
 
@@ -33,12 +33,22 @@ public:
         M.Weight = Weight;
         M.SourceObject = this;
 
-        // Payload에 DOF 파라미터 담기
-        // Params0: FocalDistance, Fstop, SensorWidth, FocalRegion
-        M.Payload.Params0 = FVector4(FocalDistance, Fstop, SensorWidth, FocalRegion);
+        // Payload에 DOF 파라미터 담기 (엔진 단위: m)
+        // Params0: FocalDistance(m), Fstop, SensorWidth(m), FocalRegion(m)
+        M.Payload.Params0 = FVector4(
+            FocalDistance,
+            Fstop,
+            SensorWidth,
+            FocalRegion
+        );
 
-        // Params1: NearTrans, FarTrans, MaxNearBlur, MaxFarBlur
-        M.Payload.Params1 = FVector4(NearTransitionRegion, FarTransitionRegion, MaxNearBlurSize, MaxFarBlurSize);
+        // Params1: NearTrans(m), FarTrans(m), MaxNearBlur(px), MaxFarBlur(px)
+        M.Payload.Params1 = FVector4(
+            NearTransitionRegion,
+            FarTransitionRegion,
+            MaxNearBlurSize,
+            MaxFarBlurSize
+        );
 
         Out.Add(M);
     }

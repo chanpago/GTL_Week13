@@ -6,6 +6,7 @@
 #include "Camera/CamMod_LetterBox.h"
 #include "Camera/CamMod_Vignette.h"
 #include "Camera/CamMod_Gamma.h"
+#include "Camera/CamMod_DOF.h"
 #include "SceneView.h"
 #include "CameraActor.h"
 #include "World.h"
@@ -297,6 +298,33 @@ void APlayerCameraManager::StartGamma(float Gamma)
 	GammaModifier->Gamma = Gamma;
 
 	ActiveModifiers.Add(GammaModifier);
+}
+
+void APlayerCameraManager::StartDOF(
+	float FocalDistance,
+	float Fstop,
+	float SensorWidth,
+	float FocalRegion,
+	float NearTransitionRegion,
+	float FarTransitionRegion,
+	float MaxNearBlurSize,
+	float MaxFarBlurSize,
+	int32 InPriority)
+{
+	UCamMod_DOF* DOFModifier = new UCamMod_DOF();
+	DOFModifier->Priority = InPriority;
+	DOFModifier->bEnabled = true;  
+
+	DOFModifier->FocalDistance = FocalDistance;
+	DOFModifier->Fstop = Fstop;
+	DOFModifier->SensorWidth = SensorWidth;
+	DOFModifier->FocalRegion = FocalRegion;
+	DOFModifier->NearTransitionRegion = NearTransitionRegion;
+	DOFModifier->FarTransitionRegion = FarTransitionRegion;
+	DOFModifier->MaxNearBlurSize = MaxNearBlurSize;
+	DOFModifier->MaxFarBlurSize = MaxFarBlurSize;
+
+	ActiveModifiers.Add(DOFModifier);
 }
 
 // CurrentViewInfo를 현재 카메라를 기준으로 설정 (트렌지션 중에는 사이 값으로 설정)

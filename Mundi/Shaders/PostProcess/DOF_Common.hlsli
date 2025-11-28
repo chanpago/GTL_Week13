@@ -23,23 +23,23 @@ float LinearizeDepth(float rawDepth, float nearPlane, float farPlane, int isOrth
 // Circle of Confusion (CoC) 계산
 // 반환값: 양수 = Far Blur (원경), 음수 = Near Blur (근경), 0 = 선명
 float CalculateCoC(
-    float viewDepthCm,           // View-space depth (cm 단위)
-    float focalDistanceCm,       // 초점 거리 (cm)
+    float viewDepth,             // View-space depth (m 단위)
+    float focalDistance,         // 초점 거리 (m)
     float fstop,                 // 조리개 값 (F-stop)
-    float sensorWidthMm,         // 센서 너비 (mm)
-    float focalRegionCm,         // 완전 선명 영역 (cm)
-    float nearTransitionCm,      // 근경 전환 영역 (cm)
-    float farTransitionCm,       // 원경 전환 영역 (cm)
+    float sensorWidth,           // 센서 너비 (m, e.g., 0.024 = 24mm)
+    float focalRegion,           // 완전 선명 영역 (m)
+    float nearTransition,        // 근경 전환 영역 (m)
+    float farTransition,         // 원경 전환 영역 (m)
     float maxNearBlurSize,       // 근경 최대 블러 (정규화, 0~1)
     float maxFarBlurSize         // 원경 최대 블러 (정규화, 0~1)
 )
 {
     // 1. 초점 영역 계산
-    float focalStart = focalDistanceCm - focalRegionCm * 0.5;
-    float focalEnd = focalDistanceCm + focalRegionCm * 0.5;
+    float focalStart = focalDistance - focalRegion * 0.5;
+    float focalEnd = focalDistance + focalRegion * 0.5;
 
     // 2. 초점 영역 내부면 선명
-    if (viewDepthCm >= focalStart && viewDepthCm <= focalEnd)
+    if (viewDepth >= focalStart && viewDepth <= focalEnd)
     {
         return 0.0;
     }
@@ -47,18 +47,18 @@ float CalculateCoC(
     // 3. CoC 계산
     float coc = 0.0;
 
-    if (viewDepthCm < focalStart)
+    if (viewDepth < focalStart)
     {
         // 근경 (Near Field) - 음수 CoC
-        float distance = focalStart - viewDepthCm;
-        float normalizedCoC = saturate(distance / nearTransitionCm);
+        float distance = focalStart - viewDepth;
+        float normalizedCoC = saturate(distance / nearTransition);
         coc = -normalizedCoC * maxNearBlurSize;
     }
-    else  // viewDepthCm > focalEnd
+    else  // viewDepth > focalEnd
     {
         // 원경 (Far Field) - 양수 CoC
-        float distance = viewDepthCm - focalEnd;
-        float normalizedCoC = saturate(distance / farTransitionCm);
+        float distance = viewDepth - focalEnd;
+        float normalizedCoC = saturate(distance / farTransition);
         coc = normalizedCoC * maxFarBlurSize;
     }
 

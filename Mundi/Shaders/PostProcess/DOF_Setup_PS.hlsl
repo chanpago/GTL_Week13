@@ -32,13 +32,13 @@ cbuffer ViewProjBuffer : register(b1)
 
 cbuffer DOFSetupCB : register(b2)
 {
-    float FocalDistance;           // cm
+    float FocalDistance;           // m (meters)
     float Fstop;
-    float SensorWidth;             // mm
-    float FocalRegion;             // cm
+    float SensorWidth;             // m (e.g., 0.024 = 24mm)
+    float FocalRegion;             // m
 
-    float NearTransitionRegion;    // cm
-    float FarTransitionRegion;     // cm
+    float NearTransitionRegion;    // m
+    float FarTransitionRegion;     // m
     float MaxNearBlurSize;         // pixels
     float MaxFarBlurSize;          // pixels
 
@@ -72,13 +72,12 @@ PS_OUTPUT mainPS(PS_INPUT input)
     // 2. 깊이 샘플링 (Point 샘플러로 중앙값)
     float rawDepth = g_SceneDepthTex.Sample(g_PointClampSample, input.texCoord).r;
 
-    // 3. 선형 깊이로 변환 (View-space, cm 단위)
+    // 3. 선형 깊이로 변환 (View-space, m 단위)
     float viewDepth = LinearizeDepth(rawDepth, NearClip, FarClip, IsOrthographic2);
-    float viewDepthCm = viewDepth * 100.0;  // meter -> cm
 
     // 4. CoC 계산
     float CoC = CalculateCoC(
-        viewDepthCm,
+        viewDepth,
         FocalDistance,
         Fstop,
         SensorWidth,

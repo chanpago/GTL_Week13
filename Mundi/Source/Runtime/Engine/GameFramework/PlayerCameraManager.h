@@ -43,8 +43,20 @@ public:
 	int UpdateVignette(int Idx, float InDuration, float Radius, float Softness, float Intensity, float Roundness, const FLinearColor& InColor = FLinearColor::Zero(), int32 InPriority = 0);
 	void AdjustVignette(float InDuration, float Radius, float Softness, float Intensity, float Roundness, const FLinearColor& InColor = FLinearColor::Zero(), int32 InPriority = 0);
 	void DeleteVignette();
-	
-	void StartGamma(float Gamma); 
+
+	void StartGamma(float Gamma);
+
+	void StartDOF(
+		float FocalDistance = 5.0f,          // m (meters)
+		float Fstop = 2.8f,
+		float SensorWidth = 0.024f,          // m (24mm)
+		float FocalRegion = 0.5f,            // m (0.5m = 50cm)
+		float NearTransitionRegion = 2.0f,   // m
+		float FarTransitionRegion = 5.0f,    // m
+		float MaxNearBlurSize = 32.0f,       // pixels
+		float MaxFarBlurSize = 32.0f,        // pixels
+		int32 InPriority = 0
+	); 
 
 public:
 	TArray<UCameraModifierBase*> ActiveModifiers;

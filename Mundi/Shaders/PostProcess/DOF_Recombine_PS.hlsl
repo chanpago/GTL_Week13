@@ -34,13 +34,13 @@ cbuffer ViewProjBuffer : register(b1)
 
 cbuffer DOFRecombineCB : register(b2)
 {
-    float FocalDistance;           // cm
+    float FocalDistance;           // m (meters)
     float Fstop;
-    float SensorWidth;             // mm
-    float FocalRegion;             // cm
+    float SensorWidth;             // m (e.g., 0.024 = 24mm)
+    float FocalRegion;             // m
 
-    float NearTransitionRegion;    // cm
-    float FarTransitionRegion;     // cm
+    float NearTransitionRegion;    // m
+    float FarTransitionRegion;     // m
     float MaxNearBlurSize;         // pixels
     float MaxFarBlurSize;          // pixels
 
@@ -72,10 +72,9 @@ PS_OUTPUT mainPS(PS_INPUT input)
     // 2. Depth 샘플링 및 CoC 계산
     float rawDepth = g_SceneDepthTex.Sample(g_PointClampSample, input.texCoord).r;
     float viewDepth = LinearizeDepth(rawDepth, NearClip, FarClip, IsOrthographic2);
-    float viewDepthCm = viewDepth * 100.0;  // meter -> cm
 
     float CoC = CalculateCoC(
-        viewDepthCm,
+        viewDepth,
         FocalDistance,
         Fstop,
         SensorWidth,
