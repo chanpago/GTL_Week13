@@ -18,6 +18,28 @@
 #include "USlateManager.h"
 #include "BlueprintGraph/AnimBlueprintCompiler.h"
 
+#include "Source/Runtime/Engine/Physics/PhysScene.h"
+#include "Source/Runtime/Engine/Physics/BodyInstance.h"
+#include "Source/Runtime/Engine/Physics/ConstraintInstance.h"
+#include "Source/Runtime/Engine/Physics/BodySetup.h"
+#include "Source/Runtime/Engine/Physics/PhysicsTypes.h"
+#include "Source/Runtime/Engine/Physics/PhysicsAsset.h"
+
+
+static FBodyInstance* FindBodyInstanceByName(const TArray<FBodyInstance*>& Bodies, const FName& BoneName)
+{
+    for (FBodyInstance* BI : Bodies)
+    {
+        if (BI && BI->BodySetup && BI->BodySetup->BoneName == BoneName)
+        {
+            return BI;
+        }
+    }
+    return nullptr;
+}
+
+
+
 USkeletalMeshComponent::USkeletalMeshComponent()
 { 
     SetSkeletalMesh("Data/James/James.fbx");
@@ -363,6 +385,171 @@ void USkeletalMeshComponent::UpdateFinalSkinningMatrices()
         TempFinalSkinningMatrices[BoneIndex] = InvBindPose * ComponentPoseMatrix;
         TempFinalSkinningNormalMatrices[BoneIndex] = TempFinalSkinningMatrices[BoneIndex].Inverse().Transpose();
     }
+}
+
+void USkeletalMeshComponent::InstantiatePhysicsAssetBodies(FPhysScene& PhysScene)
+{
+    // 혹시 이전에 이미 만들어진 바디/조인트가 있으면 정리
+    DestroyPhysicsAssetBodies(PhysScene);
+
+    if (!PhysicsAsset || !SkeletalMesh)
+    {
+        return;
+    }
+
+    // 1) BodySetups -> FBodyInstance 생성
+    for (UBodySetup* Setup : PhysicsAsset->BodySetups)
+    {
+        if (!Setup)
+            continue;
+
+        // BoneName에 해당하는 뼈 찾기
+        int32 BoneIndex = GetBoneIndexByName(Setup->BoneName);
+        if (BoneIndex < 0)
+        {
+            continue; // 스켈레톤에 없는 본이면 스킵
+        }
+        
+        // 현재 애니메이션 포즈 기준 뼈의 월드 트랜스폼
+        FTransform BoneWorldTM = GetBoneWorldTransform(BoneIndex);
+
+        // BodyInstance 생성 및 초기화
+        FBodyInstance* BI = new FBodyInstance();
+        BI->OwnerComponent = this;
+        BI->BodySetup      = Setup;
+
+        // Dynamic 바디로 생성 (질량은 일단 10.0f 같은 기본값, 나중에 Setup에 Mass 넣어도 됨)
+        BI->InitDynamic(PhysScene, BoneWorldTM, /*Mass=*/10.0f);
+
+        Bodies.Add(BI);
+    }
+
+    // 2) Constraints -> FConstraintInstance 생성
+    for (const FPhysicsConstraintSetup& CSetup : PhysicsAsset->Constraints)
+    {
+        // 본 이름을 기반으로 BodyInstance 찾기
+        FBodyInstance* BodyA = FindBodyInstanceByName(Bodies, CSetup.BodyNameA);
+        FBodyInstance* BodyB = FindBodyInstanceByName(Bodies, CSetup.BodyNameB);
+        if (!BodyA || !BodyB)
+        {
+            continue;
+        }
+        
+        FConstraintInstance* CI = new FConstraintInstance();
+        CI->ParentBody = BodyA;
+        CI->ChildBody  = BodyB;
+
+        FConstraintLimitData Limits;
+        Limits.TwistMin         = CSetup.TwistLimitMin;
+        Limits.TwistMax         = CSetup.TwistLimitMax;
+        Limits.Swing1           = CSetup.SwingLimitY;
+        Limits.Swing2           = CSetup.SwingLimitZ;
+        Limits.bEnableCollision = CSetup.bEnableCollision;
+        
+        // 디테일한 부분은 일단 주석처리
+        //Limits.bSoftLimit = CSetup.bSoftLimit;
+        //Limits.Stiffness  = CSetup.Stiffness;
+        //Limits.Damping    = CSetup.Damping;
+
+        // 로컬 프레임은 PhysicsAsset에서 미리 저장해둔 값 사용
+        CI->InitD6(PhysScene, CSetup.LocalFrameA, CSetup.LocalFrameB, Limits);
+
+        Constraints.Add(CI);
+    }
+}
+
+void USkeletalMeshComponent::DestroyPhysicsAssetBodies(FPhysScene& PhysScene)
+{
+    // 1) 조인트 먼저 제거
+    for (FConstraintInstance* CI : Constraints)
+    {
+        if (!CI)
+            continue;
+
+        CI->Terminate(PhysScene); // PxJoint::release() 호출
+        delete CI;
+    }
+    Constraints.Empty();
+
+    // 2) 바디 제거
+    for (FBodyInstance* BI : Bodies)
+    {
+        if (!BI)
+            continue;
+
+        BI->Terminate(PhysScene); // PxRigidActor 제거 + Scene에서 remove
+        delete BI;
+    }
+    Bodies.Empty();
+}
+
+void USkeletalMeshComponent::SyncBodiesFromAnimation(FPhysScene& PhysScene)
+{
+    // 애니메이션 포즈가 이미 계산되어 있다고 가정 (현재 프레임 포즈)
+    // 각 BodyInstance에 대응되는 본의 월드 트랜스폼을 읽어와서
+    // PhysX Actor의 글로벌 포즈로 세팅
+
+    for (FBodyInstance* BI : Bodies)
+    {
+        if (!BI || !BI->BodySetup || !BI->RigidActor)
+            continue;
+
+        int32 BoneIndex = GetBoneIndexByName(BI->BodySetup->BoneName);
+        if (BoneIndex < 0)
+            continue;
+
+        FTransform BoneWorldTM = GetBoneWorldTransform(BoneIndex);
+
+        // Transform을 PhysX 포즈로 변환
+        PxTransform PxPose = ToPx(BoneWorldTM);
+        BI->RigidActor->setGlobalPose(PxPose);
+
+        // Dynamic이면 속도 초기화 (초기 상태에서 튀지 않게)
+        if (PxRigidDynamic* Dyn = BI->RigidActor->is<PxRigidDynamic>())
+        {
+            Dyn->setLinearVelocity(PxVec3(0,0,0));
+            Dyn->setAngularVelocity(PxVec3(0,0,0));
+        }
+    }
+}
+
+void USkeletalMeshComponent::SyncAnimationFromBodies()
+{
+    // PhysX 시뮬레이션이 끝난 후 (PhysScene.StepSimulation 뒤)
+    // 각 BodyInstance에서 월드 트랜스폼을 가져와서
+    // 해당 본의 월드 트랜스폼으로 덮어쓴다.
+
+    for (FBodyInstance* BI : Bodies)
+    {
+        if (!BI || !BI->BodySetup)
+            continue;
+
+        int32 BoneIndex = GetBoneIndexByName(BI->BodySetup->BoneName);
+        if (BoneIndex < 0)
+            continue;
+
+        FTransform WorldTM = BI->GetWorldTransform();
+
+        // 여기서 선택지:
+        // 1) 바로 월드 트랜스폼으로 세팅하는 함수가 있으면 그대로 사용
+        // 2) 부모 본의 월드 트랜스폼을 이용해 로컬로 변환해서
+        //    스켈레톤 로컬 포즈 배열에 넣는 방식
+
+        SetBoneWorldTransform(BoneIndex, WorldTM);
+    }
+
+    // 이후에 스킨 메쉬 업데이트 (변형된 본 행렬로 버텍스 스키닝)
+}
+
+int32 USkeletalMeshComponent::GetBoneIndexByName(const FName& BoneName) const
+{
+    if (!SkeletalMesh || !SkeletalMesh->GetSkeletalMeshData())
+    {
+        return -1;
+    }
+    
+    const FSkeleton& Skeleton = SkeletalMesh->GetSkeletalMeshData()->Skeleton;
+    return Skeleton.FindBoneIndex(BoneName);
 }
 
 // ============================================================

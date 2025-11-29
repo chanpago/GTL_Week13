@@ -4,6 +4,7 @@
 #include "ObjManager.h"
 #include "ResourceManager.h"
 #include "Source/Editor/FBX/FbxLoader.h"
+#include "Source/Runtime/Engine/Physics/BodySetup.h"
 #include <filesystem>
 
 IMPLEMENT_CLASS(UStaticMesh)
@@ -91,6 +92,7 @@ bool UStaticMesh::Load(const FString& InFilePath, ID3D11Device* InDevice, EVerte
         CreateVertexBuffer(StaticMeshAsset, InDevice, InVertexType);
         CreateIndexBuffer(StaticMeshAsset, InDevice);
         CreateLocalBound(StaticMeshAsset);
+        CreateBodySetupFromBounds();
         VertexCount = static_cast<uint32>(StaticMeshAsset->Vertices.size());
         IndexCount = static_cast<uint32>(StaticMeshAsset->Indices.size());
     }
@@ -115,6 +117,7 @@ bool UStaticMesh::Load(FMeshData* InData, ID3D11Device* InDevice, EVertexLayoutT
     CreateVertexBuffer(InData, InDevice, InVertexType);
     CreateIndexBuffer(InData, InDevice);
     CreateLocalBound(InData);
+    CreateBodySetupFromBounds();
 
     VertexCount = static_cast<uint32>(InData->Vertices.size());
     IndexCount = static_cast<uint32>(InData->Indices.size());
@@ -201,6 +204,35 @@ void UStaticMesh::CreateLocalBound(const FStaticMesh* InStaticMesh)
     LocalBound = FAABB(Min, Max);
 }
 
+void UStaticMesh::CreateBodySetupFromBounds()
+{
+    // 기존 BodySetup이 있으면 삭제
+    if (BodySetup)
+    {
+        delete BodySetup;
+        BodySetup = nullptr;
+    }
+
+    // LocalBound가 유효한지 확인
+    FVector Min = LocalBound.Min;
+    FVector Max = LocalBound.Max;
+    if (Min == Max)
+    {
+        return;
+    }
+
+    // BodySetup 생성
+    BodySetup = new UBodySetup();
+
+    // LocalBound 기반으로 박스 콜라이더 생성
+    FKBoxElem BoxElem;
+    BoxElem.Center = (Min + Max) * 0.5f;                    // AABB 중심
+    BoxElem.Extents = (Max - Min) * 0.5f;                   // half-size
+    BoxElem.Rotation = FQuat::Identity();
+
+    BodySetup->AddBox(BoxElem);
+}
+
 void UStaticMesh::ReleaseResources()
 {
     if (VertexBuffer)
@@ -212,5 +244,10 @@ void UStaticMesh::ReleaseResources()
     {
         IndexBuffer->Release();
         IndexBuffer = nullptr;
+    }
+    if (BodySetup)
+    {
+        delete BodySetup;
+        BodySetup = nullptr;
     }
 }

@@ -15,6 +15,9 @@ struct FConstraintLimitData
     bool  bSoftLimit = false;
     float Stiffness  = 0.0f;
     float Damping    = 0.0f;
+
+    // 이 플래그가 있으면 관절로 연결된 두 바디는 서로 충돌하지 않게 만듦
+    bool  bEnableCollision = false;   
 };
 
 // FVector -> PxVec3

@@ -4,6 +4,7 @@
 #include "AABB.h"
 #include "UStaticMeshComponent.generated.h"
 
+class FPhysScene;
 class UStaticMesh;
 class UShader;
 class UTexture;
@@ -24,6 +25,9 @@ protected:
 	~UStaticMeshComponent() override;
 
 public:
+	void BeginPlay() override;
+	void TickComponent(float DeltaTime) override;
+
 	void OnStaticMeshReleased(UStaticMesh* ReleasedMesh);
 
 	void CollectMeshBatches(TArray<FMeshBatchElement>& OutMeshBatchElements, const FSceneView* View) override;
@@ -38,10 +42,21 @@ public:
 
 	void DuplicateSubObjects() override;
 
+	void InitPhysics(FPhysScene& PhysScene);
+
+	class UBodySetup* GetBodySetup() const;
+
 protected:
 	void OnTransformUpdated() override;
 
 protected:
 	UPROPERTY(EditAnywhere, Category="Static Mesh", Tooltip="Static mesh asset to render")
 	UStaticMesh* StaticMesh = nullptr;
+
+	// Physics 설정
+	UPROPERTY(EditAnywhere, Category="Physics", Tooltip="Enable physics simulation for this mesh")
+	bool bSimulatePhysics = false;
+
+	UPROPERTY(EditAnywhere, Category="Physics", Tooltip="If true, this is a static collider (immovable). If false, it's dynamic (affected by gravity/forces)")
+	bool bIsStaticPhysics = true;
 };

@@ -78,6 +78,11 @@ void FConstraintInstance::InitD6(FPhysScene& World, const FTransform& ParentFram
 
     Joint->setTwistLimit(Twist);
     Joint->setSwingLimit(Swing);
+
+    // ★ 여기서 "연결된 두 Body는 서로 충돌할지" 결정
+    // 기본은 ragdoll에서 자기 관절끼리는 충돌 OFF가 일반적
+    // bEnableCollision = false면 같은 조인트에 연결된 두 콜라이더끼리는 충돌 안 함
+    Joint->setConstraintFlag(PxConstraintFlag::eCOLLISION_ENABLED, Limits.bEnableCollision);
 }
 
 void FConstraintInstance::Terminate(FPhysScene& World)

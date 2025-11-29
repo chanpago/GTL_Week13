@@ -160,8 +160,66 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
         return;
     }
     
-    // TODO: 마찬가지로 나중에 BodySetup->AggGeom 기반으로 생성
+    // BodySetup->AggGeom 기반으로 Shape 생성
+    if (BodySetup)
     {
+        const FKAggregateGeom& Agg = BodySetup->AggGeom;
+
+        // 1) 스피어들
+        for (const FKSphereElem& Sphere : Agg.SphereElements)
+        {
+            FTransform LocalXform(Sphere.Center, FQuat::Identity(), FVector(1,1,1));
+            PxTransform LocalPose = ToPx(LocalXform);
+
+            PxSphereGeometry Geom(Sphere.Radius);
+            PxShape* Shape = Physics->createShape(Geom, *Material);
+            if (Shape)
+            {
+                Shape->setLocalPose(LocalPose);
+                StaticActor->attachShape(*Shape);
+                Shape->release();
+            }
+        }
+
+        // 2) 박스들
+        for (const FKBoxElem& Box : Agg.BoxElements)
+        {
+            FTransform LocalXform(Box.Center, Box.Rotation, FVector(1,1,1));
+            PxTransform LocalPose = ToPx(LocalXform);
+
+            PxBoxGeometry Geom(Box.Extents.X, Box.Extents.Y, Box.Extents.Z);
+            PxShape* Shape = Physics->createShape(Geom, *Material);
+            if (Shape)
+            {
+                Shape->setLocalPose(LocalPose);
+                StaticActor->attachShape(*Shape);
+                Shape->release();
+            }
+        }
+
+        // 3) 캡슐(Sphyl)들
+        for (const FKSphylElem& Sphyl : Agg.SphylElements)
+        {
+            // Z축 캡슐 → PhysX X축 캡슐로 보정
+            FQuat ZToX = FQuat::FromAxisAngle(FVector(0, 1, 0), -XM_PIDIV2);
+            FQuat PhysRot = Sphyl.Rotation * ZToX;
+
+            FTransform LocalXform(Sphyl.Center, PhysRot, FVector(1,1,1));
+            PxTransform LocalPose = ToPx(LocalXform);
+
+            PxCapsuleGeometry Geom(Sphyl.Radius, Sphyl.HalfLength);
+            PxShape* Shape = Physics->createShape(Geom, *Material);
+            if (Shape)
+            {
+                Shape->setLocalPose(LocalPose);
+                StaticActor->attachShape(*Shape);
+                Shape->release();
+            }
+        }
+    }
+    else
+    {
+        // BodySetup이 없으면 임시 박스 하나 생성
         PxBoxGeometry BoxGeom(0.5f, 0.5f, 0.5f);
         PxShape* Shape = Physics->createShape(BoxGeom, *Material);
         if (Shape)

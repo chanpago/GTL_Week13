@@ -83,6 +83,13 @@ UWorld::~UWorld()
 
 	GridActor = nullptr;
 	GizmoActor = nullptr;
+
+	// 물리 씬 정리
+	if (PhysScene)
+	{
+		PhysScene->Shutdown();
+		PhysScene.reset();
+	}
 }
 
 void UWorld::Initialize()
@@ -93,6 +100,9 @@ void UWorld::Initialize()
 	{
 		Partition = std::make_unique<UWorldPartitionManager>();
 	}
+
+	// 에디터 월드에서는 PhysScene을 생성하지 않음
+	// 물리 시뮬레이션은 PIE에서만 동작 (DuplicateWorldForPIE에서 생성)
 
 	// 기본 씬을 생성합니다.
 	CreateLevel();
@@ -276,6 +286,12 @@ void UWorld::Tick(float DeltaSeconds)
 		LuaManager->Tick(GetDeltaTime(EDeltaTime::Game));
 	}
 
+	// 물리 시뮬레이션 (PIE에서만)
+	if (PhysScene && bPie)
+	{
+		PhysScene->StepSimulation(GetDeltaTime(EDeltaTime::Game));
+	}
+
 	// 지연 삭제 처리
 	ProcessPendingKillActors();
 }
@@ -291,6 +307,10 @@ UWorld* UWorld::DuplicateWorldForPIE(UWorld* InEditorWorld)
 	//ULevel* NewLevel = ULevelService::CreateNewLevel();
 	UWorld* PIEWorld = NewObject<UWorld>(); // 레벨도 새로 생성됨
 	PIEWorld->Partition = std::make_unique<UWorldPartitionManager>();
+
+	// 물리 씬 초기화
+	PIEWorld->PhysScene = std::make_unique<FPhysScene>();
+	PIEWorld->PhysScene->Initialize();
 
 	PIEWorld->bPie = true;
 	
@@ -314,6 +334,7 @@ UWorld* UWorld::DuplicateWorldForPIE(UWorld* InEditorWorld)
 			continue;
 		}
 
+		NewActor->SetWorld(PIEWorld);
 		NewActor->RegisterAllComponents(PIEWorld);
 		// PlayerCameraManager 복사
 		if (InEditorWorld->PlayerCameraManager == SourceActor)

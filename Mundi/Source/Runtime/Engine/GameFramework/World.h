@@ -5,6 +5,7 @@
 #include "Level.h"
 #include "Gizmo/GizmoActor.h"
 #include "LightManager.h"
+#include "Source/Runtime/Engine/Physics/PhysScene.h"
 
 // Forward Declarations
 class UResourceManager;
@@ -97,6 +98,7 @@ public:
     ULevel* GetLevel() const { return Level.get(); }
     FLightManager* GetLightManager() const { return LightManager.get(); }
     FLuaManager* GetLuaManager() const { return LuaManager.get(); }
+    FPhysScene* GetPhysScene() { return PhysScene.get(); }
 
     class UCameraComponent* GetWorldCamera(); 
     ACameraActor* GetEditorCameraActor() { return MainEditorCameraActor; }
@@ -162,6 +164,9 @@ private:
 
     /** === 루아 매니저 ===*/
     std::unique_ptr<FLuaManager> LuaManager;
+
+    /** === 물리 씬 ===*/
+    std::unique_ptr<FPhysScene> PhysScene;
     
     /** === GameMode === */
     AGameModeBase* GameMode = nullptr;

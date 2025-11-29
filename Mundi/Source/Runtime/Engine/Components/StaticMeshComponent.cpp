@@ -10,6 +10,11 @@
 #include "Material.h"
 #include "SceneView.h"
 #include "LuaBindHelpers.h"
+#include "Source/Runtime/Engine/Physics/BodyInstance.h"
+#include "Source/Runtime/Engine/Physics/PhysScene.h"
+#include "World.h"
+#include "Source/Runtime/Engine/Physics/BodySetup.h"
+
 // IMPLEMENT_CLASS is now auto-generated in .generated.cpp
 UStaticMeshComponent::UStaticMeshComponent()
 {
@@ -17,6 +22,43 @@ UStaticMeshComponent::UStaticMeshComponent()
 }
 
 UStaticMeshComponent::~UStaticMeshComponent() = default;
+
+void UStaticMeshComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// 물리 시뮬레이션이 꺼져있으면 등록하지 않음
+	if (!bSimulatePhysics)
+	{
+		return;
+	}
+
+	// Dynamic인 경우 틱 활성화 (Transform 동기화 필요)
+	if (!bIsStaticPhysics)
+	{
+		bCanEverTick = true;
+		bTickEnabled = true;
+	}
+
+	// 물리 씬에 등록
+	UWorld* World = GetWorld();
+	if (World && World->GetPhysScene())
+	{
+		InitPhysics(*World->GetPhysScene());
+	}
+}
+
+void UStaticMeshComponent::TickComponent(float DeltaTime)
+{
+	Super::TickComponent(DeltaTime);
+
+	// Dynamic 물리 오브젝트의 Transform을 PhysX 결과와 동기화
+	if (bSimulatePhysics && !bIsStaticPhysics && BodyInstance && BodyInstance->RigidActor)
+	{
+		FTransform PhysTransform = BodyInstance->GetWorldTransform();
+		SetWorldTransform(PhysTransform);
+	}
+}
 
 void UStaticMeshComponent::OnStaticMeshReleased(UStaticMesh* ReleasedMesh)
 {
@@ -210,9 +252,60 @@ void UStaticMeshComponent::OnTransformUpdated()
 void UStaticMeshComponent::DuplicateSubObjects()
 {
 	Super::DuplicateSubObjects();
+
+	// BodyInstance는 PIE에서 새로 생성해야 하므로 nullptr로 초기화
+	BodyInstance = nullptr;
+}
+
+void UStaticMeshComponent::InitPhysics(FPhysScene& PhysScene)
+{
+	if (!BodyInstance)
+		BodyInstance = new FBodyInstance();
+
+	BodyInstance->OwnerComponent = this;
+	BodyInstance->BodySetup = GetBodySetup(); // StaticMesh에서 가져오기
+
+	FTransform WorldTM = GetWorldTransform();
+
+	if (bIsStaticPhysics)
+	{
+		BodyInstance->InitStatic(PhysScene, WorldTM);
+	}
+	else
+	{
+		// Dynamic의 경우 BodySetup에서 Mass를 가져오거나 기본값 사용
+		float Mass = 10.0f;
+		if (BodyInstance->BodySetup)
+		{
+			Mass = BodyInstance->BodySetup->Mass;
+		}
+		BodyInstance->InitDynamic(PhysScene, WorldTM, Mass);
+	}
+}
+
+UBodySetup* UStaticMeshComponent::GetBodySetup() const
+{
+	if (StaticMesh)
+	{
+		return StaticMesh->BodySetup;
+	}
+	return nullptr;
 }
 
 void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 {
 	Super::Serialize(bInIsLoading, InOutHandle);
+
+	if (bInIsLoading)
+	{
+		// 역직렬화 (로드)
+		FJsonSerializer::ReadBool(InOutHandle, "bSimulatePhysics", bSimulatePhysics, false, false);
+		FJsonSerializer::ReadBool(InOutHandle, "bIsStaticPhysics", bIsStaticPhysics, true, false);
+	}
+	else
+	{
+		// 직렬화 (저장)
+		InOutHandle["bSimulatePhysics"] = bSimulatePhysics;
+		InOutHandle["bIsStaticPhysics"] = bIsStaticPhysics;
+	}
 }

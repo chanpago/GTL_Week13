@@ -46,6 +46,7 @@ private:
 	void CreateIndexBuffer(FStaticMesh* InStaticMesh, ID3D11Device* InDevice);
     void CreateLocalBound(const FMeshData* InMeshData);
     void CreateLocalBound(const FStaticMesh* InStaticMesh);
+    void CreateBodySetupFromBounds();
     void ReleaseResources();
 
 public:

@@ -7,6 +7,10 @@ class UAnimationGraph;
 class UAnimationAsset;
 class UAnimSequence;
 class UAnimInstance;
+class FBodyInstance;
+class FConstraintInstance;
+class FPhysScene;
+class UPhysicsAsset;
 struct FPendingAnimNotify;
 
 UCLASS(DisplayName="스켈레탈 메시 컴포넌트", Description="스켈레탈 메시를 렌더링하는 컴포넌트입니다")
@@ -18,20 +22,22 @@ public:
     USkeletalMeshComponent();
     ~USkeletalMeshComponent() override = default;
 
+public:
+    void BeginPlay() override;
+    void TickComponent(float DeltaTime) override;
+    
     // Serialize to persist AnimGraphPath and reuse base behavior
     void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
 public:
-    void BeginPlay() override;
-    void TickComponent(float DeltaTime) override;
+
     void SetSkeletalMesh(const FString& PathFileName) override;
 
     FAABB GetWorldAABB() const override;
 
-// Animation Section
-public:
-
-
+    /////////////////////////////////////////////////////////////
+    // Animation Section
+    /////////////////////////////////////////////////////////////
     void SetAnimationMode(EAnimationMode InAnimationMode);
 
     /**
@@ -256,5 +262,25 @@ protected:
 private:
     float TestTime = 0;
     bool bIsInitialized = false;
-    FTransform TestBoneBasePose; 
+    FTransform TestBoneBasePose;
+
+
+    /////////////////////////////////////////////////////////////
+    // Physics Section
+    /////////////////////////////////////////////////////////////
+
+public:
+    void InstantiatePhysicsAssetBodies(FPhysScene& PhysScene);
+    void DestroyPhysicsAssetBodies(FPhysScene& PhysScene);
+
+    void SyncBodiesFromAnimation(FPhysScene& PhysScene); // 애님 포즈 → 바디 초기화 (ragdoll 전)
+    void SyncAnimationFromBodies();                      // 래그돌 포즈 → 본 트랜스폼 반영
+
+    int32 GetBoneIndexByName(const FName& BoneName) const;
+
+private:
+    UPhysicsAsset*   PhysicsAsset = nullptr;   // 이 메쉬에 쓸 물리 에셋 (콜라이더/조인트 정의)
+    
+    TArray<FBodyInstance*>       Bodies;       // 각 본(혹은 일부 본)에 대응하는 물리 바디 인스턴스
+    TArray<FConstraintInstance*> Constraints;  // 바디들 사이를 묶는 조인트 인스턴스
 };

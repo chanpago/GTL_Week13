@@ -4,6 +4,7 @@
 #include "Material.h"
 #include "UPrimitiveComponent.generated.h"
 
+struct FBodyInstance;
 // 전방 선언
 struct FSceneCompData;
 
@@ -83,4 +84,6 @@ protected:
 
     UPROPERTY(EditAnywhere, Category="Shape")
     bool bBlockComponent;
+
+    FBodyInstance* BodyInstance;
 };
