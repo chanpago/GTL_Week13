@@ -582,9 +582,8 @@ void SSkeletalMeshViewerWindow::OnRender()
                 ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.35f, 0.45f, 0.60f, 0.7f));
                 ImGui::Separator();
                 ImGui::PopStyleColor();
-                ImGui::Spacing();
 
-                if (ActiveState->SelectedBodySetup)
+                if (ActiveState->SelectedBodySetup) // Body Properties
                 {
                     UBodySetup* Body = ActiveState->SelectedBodySetup;
                     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.90f, 0.40f, 1.0f));
@@ -601,12 +600,19 @@ void SSkeletalMeshViewerWindow::OnRender()
                     ImGui::Separator();
                     ImGui::PopStyleColor();
 
-                    // Basic physics properties
-                    ImGui::Text("Mass: %.3f", Body->Mass);
-                    ImGui::Text("Linear Damping: %.3f", Body->LinearDamping);
-                    ImGui::Text("Angular Damping: %.3f", Body->AngularDamping);
-                    ImGui::Text("Simulate Physics: %s", Body->bSimulatePhysics ? "True" : "False");
-                    ImGui::Text("Enable Gravity: %s", Body->bEnableGravity ? "True" : "False");
+                    // Editable physics properties
+                    ImGui::Text("Physics Properties:");
+                    ImGui::Spacing();
+
+                    //ImGui::PushItemWidth(-1);
+                    ImGui::DragFloat("Mass", &Body->Mass, 0.1f, 0.01f, 10000.0f, "%.3f");
+                    ImGui::DragFloat("Linear Damping", &Body->LinearDamping, 0.001f, 0.0f, 100.0f, "%.3f");
+                    ImGui::DragFloat("Angular Damping", &Body->AngularDamping, 0.001f, 0.0f, 100.0f, "%.3f");
+                    //ImGui::PopItemWidth();
+
+                    ImGui::Spacing();
+                    ImGui::Checkbox("Simulate Physics", &Body->bSimulatePhysics);
+                    ImGui::Checkbox("Enable Gravity", &Body->bEnableGravity);
 
                     ImGui::Spacing();
                     ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.45f, 0.55f, 0.70f, 0.5f));
@@ -621,69 +627,169 @@ void SSkeletalMeshViewerWindow::OnRender()
                     int NumConvex = Body->AggGeom.ConvexElements.Num();
 
                     ImGui::Text("Aggregate Geometry:");
-                    ImGui::Indent(10.0f);
-                    ImGui::Text("Spheres: %d", NumSpheres);
-                    ImGui::Text("Boxes: %d", NumBoxes);
-                    ImGui::Text("Sphyl (capsules): %d", NumSphyls);
-                    ImGui::Text("Convexes: %d", NumConvex);
-                    ImGui::Unindent(10.0f);
-
                     ImGui::Spacing();
 
-                    // 상세 요소 출력 (예: Sphere 목록)
-                    if (NumSpheres > 0)
+                    // Editable Sphere Elements
+                    if (ImGui::CollapsingHeader("Sphere Elements", ImGuiTreeNodeFlags_DefaultOpen))
                     {
-                        ImGui::Text("Sphere Elements:");
                         ImGui::Indent(10.0f);
+                        ImGui::PushID("SphereElements");
+                        
                         for (int si = 0; si < NumSpheres; ++si)
                         {
-                            const auto& S = Body->AggGeom.SphereElements[si];
-                            ImGui::Text("[%d] Center: (%.2f, %.2f, %.2f)  Radius: %.2f", si, S.Center.X, S.Center.Y, S.Center.Z, S.Radius);
+                            FKSphereElem& S = Body->AggGeom.SphereElements[si];
+                            ImGui::PushID(si);
+                            
+                            if (ImGui::TreeNodeEx((void*)(intptr_t)si, ImGuiTreeNodeFlags_DefaultOpen, "Sphere [%d]", si))
+                            {
+                                //ImGui::PushItemWidth(-1);
+                                ImGui::DragFloat3("Center", &S.Center.X, 0.1f, -10000.0f, 10000.0f, "%.2f");
+                                ImGui::DragFloat("Radius", &S.Radius, 0.1f, 0.1f, 10000.0f, "%.2f");
+                                //ImGui::PopItemWidth();
+                                
+                                if (ImGui::Button("Remove Sphere"))
+                                {
+                                    Body->AggGeom.SphereElements.RemoveAt(si);
+                                    ImGui::TreePop();
+                                    ImGui::PopID();
+                                    break;
+                                }
+                                
+                                ImGui::TreePop();
+                            }
+                            ImGui::PopID();
                         }
-                        ImGui::Unindent(10.0f);
-                    }
-
-                    if (NumSphyls > 0)
-                    {
-                        ImGui::Text("Sphyl Elements (Capsules):");
-                        ImGui::Indent(10.0f);
-                        for (int si = 0; si < NumSphyls; ++si)
+                        
+                        if (ImGui::Button("Add Sphere"))
                         {
-                            const auto& S = Body->AggGeom.SphylElements[si];
-                            ImGui::Text("[%d] Center: (%.2f, %.2f, %.2f)  Radius: %.2f  HalfLength: %.2f", si, S.Center.X, S.Center.Y, S.Center.Z, S.Radius, S.HalfLength);
-							ImGui::Text("     Orientation: (%.2f, %.2f, %.2f, %.2f)", S.Rotation.X, S.Rotation.Y, S.Rotation.Z, S.Rotation.W);
-                            FVector RotEuler = S.Rotation.ToEulerZYXDeg();
-							ImGui::Text("     Euler (ZYX): (%.2f°, %.2f°, %.2f°)", RotEuler.Z, RotEuler.Y, RotEuler.X);
+                            FKSphereElem NewSphere;
+                            NewSphere.Center = FVector::Zero();
+                            NewSphere.Radius = 50.0f;
+                            Body->AggGeom.SphereElements.Add(NewSphere);
                         }
+                        
+                        ImGui::PopID(); // Pop "SphereElements"
                         ImGui::Unindent(10.0f);
                     }
 
-                    if (NumBoxes > 0)
+                    // Editable Box Elements
+                    if (ImGui::CollapsingHeader("Box Elements"))
                     {
-                        ImGui::Text("Box Elements:");
                         ImGui::Indent(10.0f);
+                        ImGui::PushID("BoxElements");
+                        
                         for (int bi = 0; bi < NumBoxes; ++bi)
                         {
-                            const auto& B = Body->AggGeom.BoxElements[bi];
-                            ImGui::Text("[%d] Center: (%.2f, %.2f, %.2f)  Extents: (%.2f, %.2f, %.2f)", bi, B.Center.X, B.Center.Y, B.Center.Z, B.Extents.X, B.Extents.Y, B.Extents.Z);
-                            ImGui::Text("     Orientation: (%.2f, %.2f, %.2f, %.2f)", B.Rotation.X, B.Rotation.Y, B.Rotation.Z, B.Rotation.W);
-                            FVector RotEuler = B.Rotation.ToEulerZYXDeg();
-                            ImGui::Text("     Euler (ZYX): (%.2f°, %.2f°, %.2f°)", RotEuler.Z, RotEuler.Y, RotEuler.X);
+                            FKBoxElem& B = Body->AggGeom.BoxElements[bi];
+                            ImGui::PushID(bi);
+                            
+                            if (ImGui::TreeNodeEx((void*)(intptr_t)bi, ImGuiTreeNodeFlags_DefaultOpen, "Box [%d]", bi))
+                            {
+                                //ImGui::PushItemWidth(-1);
+                                ImGui::DragFloat3("Center", &B.Center.X, 0.1f, -10000.0f, 10000.0f, "%.2f");
+                                ImGui::DragFloat3("Extents", &B.Extents.X, 0.1f, 0.1f, 10000.0f, "%.2f");
+                                
+                                // Rotation as Euler angles
+                                FVector EulerDeg = B.Rotation.ToEulerZYXDeg();
+                                if (ImGui::DragFloat3("Rotation", &EulerDeg.X, 0.5f, -180.0f, 180.0f, "%.2f°"))
+                                {
+                                    B.Rotation = FQuat::MakeFromEulerZYX(EulerDeg);
+                                }
+                                //ImGui::PopItemWidth();
+                                
+                                if (ImGui::Button("Remove Box"))
+                                {
+                                    Body->AggGeom.BoxElements.RemoveAt(bi);
+                                    ImGui::TreePop();
+                                    ImGui::PopID();
+                                    break;
+                                }
+                                
+                                ImGui::TreePop();
+                            }
+                            ImGui::PopID();
                         }
+                        
+                        if (ImGui::Button("Add Box"))
+                        {
+                            FKBoxElem NewBox;
+                            NewBox.Center = FVector::Zero();
+                            NewBox.Extents = FVector(50.0f, 50.0f, 50.0f);
+                            NewBox.Rotation = FQuat::Identity();
+                            Body->AggGeom.BoxElements.Add(NewBox);
+                        }
+                        
+                        ImGui::PopID(); // Pop "BoxElements"
                         ImGui::Unindent(10.0f);
                     }
 
+                    // Editable Sphyl (Capsule) Elements
+                    if (ImGui::CollapsingHeader("Sphyl Elements (Capsules)"))
+                    {
+                        ImGui::Indent(10.0f);
+                        ImGui::PushID("SphylElements");
+                        
+                        for (int si = 0; si < NumSphyls; ++si)
+                        {
+                            FKSphylElem& S = Body->AggGeom.SphylElements[si];
+                            ImGui::PushID(si);
+                            
+                            if (ImGui::TreeNodeEx((void*)(intptr_t)si, ImGuiTreeNodeFlags_DefaultOpen, "Capsule [%d]", si))
+                            {
+                                //ImGui::PushItemWidth(-1);
+                                ImGui::DragFloat3("Center", &S.Center.X, 0.1f, -10000.0f, 10000.0f, "%.2f");
+                                ImGui::DragFloat("Radius", &S.Radius, 0.1f, 0.1f, 10000.0f, "%.2f");
+                                ImGui::DragFloat("Half Length", &S.HalfLength, 0.1f, 0.1f, 10000.0f, "%.2f");
+                                
+                                // Rotation as Euler angles
+                                FVector EulerDeg = S.Rotation.ToEulerZYXDeg();
+                                if (ImGui::DragFloat3("Rotation", &EulerDeg.X, 0.5f, -180.0f, 180.0f, "%.2f°"))
+                                {
+                                    S.Rotation = FQuat::MakeFromEulerZYX(EulerDeg);
+                                }
+                                //ImGui::PopItemWidth();
+                                
+                                if (ImGui::Button("Remove Capsule"))
+                                {
+                                    Body->AggGeom.SphylElements.RemoveAt(si);
+                                    ImGui::TreePop();
+                                    ImGui::PopID();
+                                    break;
+                                }
+                                
+                                ImGui::TreePop();
+                            }
+                            ImGui::PopID();
+                        }
+                        
+                        if (ImGui::Button("Add Capsule"))
+                        {
+                            FKSphylElem NewSphyl;
+                            NewSphyl.Center = FVector::Zero();
+                            NewSphyl.Radius = 30.0f;
+                            NewSphyl.HalfLength = 50.0f;
+                            NewSphyl.Rotation = FQuat::Identity();
+                            Body->AggGeom.SphylElements.Add(NewSphyl);
+                        }
+                        
+                        ImGui::PopID(); // Pop "SphylElements"
+                        ImGui::Unindent(10.0f);
+                    }
+
+                    // Convex Elements (read-only for now)
                     if (NumConvex > 0)
                     {
-                        ImGui::Text("Convex Elements: (vertex counts)");
-                        ImGui::Indent(10.0f);
-                        for (int ci = 0; ci < NumConvex; ++ci)
+                        if (ImGui::CollapsingHeader("Convex Elements"))
                         {
-                            const auto& C = Body->AggGeom.ConvexElements[ci];
-                            ImGui::Text("[%d] Vertices: %d", ci, C.Vertices.Num());
-                            // TODO: Vertices 관련 UI?
+                            ImGui::Indent(10.0f);
+                            ImGui::TextDisabled("(Read-only: vertex editing not yet implemented)");
+                            for (int ci = 0; ci < NumConvex; ++ci)
+                            {
+                                const auto& C = Body->AggGeom.ConvexElements[ci];
+                                ImGui::Text("[%d] Vertices: %d", ci, C.Vertices.Num());
+                            }
+                            ImGui::Unindent(10.0f);
                         }
-                        ImGui::Unindent(10.0f);
                     }
                 }
                 else if (ActiveState->SelectedBoneIndex >= 0 && ActiveState->CurrentMesh) // 선택된 본의 트랜스폼 편집 UI
@@ -1448,7 +1554,7 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
                         bool bHover = ImGui::IsMouseHoveringRect(RMin, RMax);
                         bool bPressed = bHover && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
                         bool bDoubleClicked = bHover && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
-                            
+                        
 
                         // Styling
                         ImU32 FillCol = IM_COL32(100, 100, 255, bHover ? 140 : 100);
