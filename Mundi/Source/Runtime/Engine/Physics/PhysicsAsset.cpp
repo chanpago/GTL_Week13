@@ -45,3 +45,138 @@ int32 UPhysicsAsset::FindConstraintIndex(FName BodyA, FName BodyB) const
 	}
 	return INDEX_NONE;
 }
+
+bool UPhysicsAsset::Load(const FString& InFilePath, ID3D11Device* InDevice)
+{
+    JSON Root;
+    if (!FJsonSerializer::LoadJsonFromFile(Root, UTF8ToWide(InFilePath)))
+    {
+        UE_LOG("[UPhysicsAsset] Failed to load file: %s", InFilePath.c_str());
+        return false;
+    }
+
+    Serialize(true, Root);
+    SetFilePath(NormalizePath(InFilePath)); 
+    BuildBodySetupIndexMap();
+
+    UE_LOG("[UPhysicsAsset] Loaded successfully: %s", InFilePath.c_str());
+    return true;
+}
+
+bool UPhysicsAsset::SaveToFile(const FString& FilePath)
+{
+    JSON JsonData = JSON::Make(JSON::Class::Object);
+
+    Serialize(false, JsonData);
+
+    std::ofstream OutFile(FilePath, std::ios::out);
+    if (!OutFile.is_open())
+    {
+        UE_LOG("Failed to open file for writing: %s", FilePath.c_str());
+        return false;
+    }
+
+    OutFile << JsonData.dump(4); // Pretty print
+    OutFile.close();
+
+    UE_LOG("UPhysicsAsset saved to: %s", FilePath.c_str());
+    return true;
+}
+
+void UPhysicsAsset::Serialize(const bool bInIsLoading, JSON& InOutHandle)
+{
+    Super::Serialize(bInIsLoading, InOutHandle);
+
+    if (bInIsLoading)
+    {
+        // =========================================================
+        // [LOAD] 역직렬화
+        // =========================================================
+        if (!InOutHandle.hasKey("Type") || InOutHandle["Type"].ToString() != "PhysicsAsset") { return; }
+
+        // 기존 데이터 초기화 (BodySetups)
+        for (UBodySetup* BodySetup : BodySetups)
+        {
+            if (BodySetup) ObjectFactory::DeleteObject(BodySetup);
+        }
+        BodySetups.Empty();
+
+        // 기본 정보 로드
+        FString NameStr;
+        if (FJsonSerializer::ReadString(InOutHandle, "Name", NameStr))
+        {
+            ObjectName = FName(NameStr);
+        }
+
+        // BodySetups 배열 로드
+        if (InOutHandle.hasKey("BodySetups"))
+        {
+            JSON BodySetupsArray = InOutHandle["BodySetups"];
+            for (int32 i = 0; i < BodySetupsArray.size(); ++i)
+            {
+                JSON BodySetupJson = BodySetupsArray[i];
+
+                // BodySetup 생성
+                UBodySetup* NewBodySetup = Cast<UBodySetup>(NewObject(UBodySetup::StaticClass()));
+                if (NewBodySetup)
+                {
+                    NewBodySetup->Serialize(true, BodySetupJson);
+                    BodySetups.Add(NewBodySetup);
+                }
+            }
+        }
+
+        // Constraints 배열 로드
+        Constraints.Empty();
+        if (InOutHandle.hasKey("Constraints"))
+        {
+            const JSON& ConstraintArray = InOutHandle["Constraints"];
+            for (int32 i = 0; i < ConstraintArray.size(); ++i)
+            {
+                const JSON& Item = ConstraintArray.at(i);
+
+                FPhysicsConstraintSetup Setup{};
+                Setup.Serialize(true, const_cast<JSON&>(Item));
+                Constraints.Add(Setup);
+            }
+        }
+
+        // 런타임 캐시 구축 (Bounds 계산 등)
+        BuildRuntimeCache();
+    }
+    else
+    {
+        // =========================================================
+        // [SAVE] 직렬화
+        // =========================================================
+        InOutHandle["Type"] = "PhysicsAsset";
+        InOutHandle["Name"] = ObjectName.ToString();
+
+        // Physics 배열 저장
+        JSON PhysicsArray = JSON::Make(JSON::Class::Array);
+        for (UBodySetup* BodySetup : BodySetups)
+        {
+            if (!BodySetup) continue;
+
+            JSON BodySetupJson = JSON::Make(JSON::Class::Object);
+            BodySetup->Serialize(false, BodySetupJson);
+
+            PhysicsArray.append(BodySetupJson);
+        }
+        InOutHandle["BodySetups"] = PhysicsArray;
+
+        JSON ConstraintArray = JSON::Make(JSON::Class::Array); 
+        for (FPhysicsConstraintSetup& Setup : Constraints)
+        { 
+            if (!Setup.BodyNameA.IsValid() || !Setup.BodyNameB.IsValid())
+            {
+                continue;
+            }
+
+            JSON ConstraintJson = JSON::Make(JSON::Class::Object);
+            Setup.Serialize(false, ConstraintJson);
+            ConstraintArray.append(ConstraintJson);
+        } 
+        InOutHandle["Constraints"] = ConstraintArray;
+    }
+}

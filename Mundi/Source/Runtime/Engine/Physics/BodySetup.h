@@ -14,6 +14,7 @@ struct FKAggregateGeom
     TArray<FKConvexElem> ConvexElements;
 
     void Clear();
+    void Serialize(const bool bInIsLoading, JSON& InOutHandle);
 };
 
 class UBodySetup : public UBodySetupCore
@@ -37,4 +38,6 @@ public:
     void AddSphere(const FKSphereElem& Elem);
     void AddBox(const FKBoxElem& Elem);
     void AddSphyl(const FKSphylElem& Elem);
+
+    void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 };

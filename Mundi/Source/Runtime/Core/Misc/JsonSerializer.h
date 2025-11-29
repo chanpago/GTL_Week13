@@ -346,6 +346,26 @@ public:
 		return false;
 	}
 
+	static bool ReadTransform(const JSON& InJson, const FString& InKey, FTransform& OutTransform)
+	{
+		if (!InJson.hasKey(InKey)) return false;
+		const JSON& Obj = InJson.at(InKey);
+
+		FVector Translation = FVector::Zero();
+		FVector Scale = FVector::One();
+		FVector4 RotVec = FVector4(0.f, 0.f, 0.f, 1.f);
+
+		FJsonSerializer::ReadVector(Obj, "Translation", Translation);
+		FJsonSerializer::ReadVector4(Obj, "Rotation", RotVec);
+		FJsonSerializer::ReadVector(Obj, "Scale3D", Scale);
+
+		FQuat Rotation(RotVec.X, RotVec.Y, RotVec.Z, RotVec.W);
+		Rotation.Normalize();
+
+		OutTransform = FTransform(Translation, Rotation, Scale);
+		return true;
+	}
+
 	//====================================================================================
 	// Converting To JSON
 	//====================================================================================
@@ -376,6 +396,15 @@ public:
 		JSON ColorArray = JSON::Make(JSON::Class::Array);
 		ColorArray.append(InColor.R, InColor.G, InColor.B, InColor.A);
 		return ColorArray;
+	}
+
+	static JSON TransformToJson(const FTransform& InTransform)
+	{
+		JSON Obj = JSON::Make(JSON::Class::Object);
+		Obj["Translation"] = FJsonSerializer::VectorToJson(InTransform.Translation);
+		Obj["Rotation"] = FJsonSerializer::Vector4ToJson(FVector4(InTransform.Rotation.X, InTransform.Rotation.Y, InTransform.Rotation.Z, InTransform.Rotation.W));
+		Obj["Scale3D"] = FJsonSerializer::VectorToJson(InTransform.Scale3D);
+		return Obj;
 	}
 	
 	//====================================================================================

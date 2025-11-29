@@ -17,6 +17,45 @@ struct FPhysicsConstraintSetup
     float TwistLimitMax;
     float SwingLimitY; // y축 회전
     float SwingLimitZ;
+
+    void Serialize(const bool bInIsLoading, JSON& InOutHandle)
+    {
+        if (bInIsLoading)
+        {
+            FString BodyAName;
+            if (FJsonSerializer::ReadString(InOutHandle, "BodyA", BodyAName))
+            {
+                BodyNameA = FName(BodyAName);
+            }
+            FString BodyBName;
+            if (FJsonSerializer::ReadString(InOutHandle, "BodyB", BodyAName))
+            {
+                BodyNameB = FName(BodyBName);
+            }
+
+            FJsonSerializer::ReadTransform(InOutHandle, "LocalFrameA", LocalFrameA);
+            FJsonSerializer::ReadTransform(InOutHandle, "LocalFrameB", LocalFrameB);
+            FJsonSerializer::ReadFloat(InOutHandle, "TwistMin", TwistLimitMin);
+            FJsonSerializer::ReadFloat(InOutHandle, "TwistMax", TwistLimitMax);
+            FJsonSerializer::ReadFloat(InOutHandle, "SwingY", SwingLimitY);
+            FJsonSerializer::ReadFloat(InOutHandle, "SwingZ", SwingLimitZ);
+        }
+        else
+        {
+            JSON Item = JSON::Make(JSON::Class::Object);
+
+            Item["BodyA"] = BodyNameA.ToString().c_str();
+            Item["BodyB"] = BodyNameB.ToString().c_str();
+            Item["LocalFrameA"] = FJsonSerializer::TransformToJson(LocalFrameA);
+            Item["LocalFrameB"] = FJsonSerializer::TransformToJson(LocalFrameB);
+            Item["TwistMin"] = TwistLimitMin;
+            Item["TwistMax"] = TwistLimitMax;
+            Item["SwingY"] = SwingLimitY;
+            Item["SwingZ"] = SwingLimitZ;
+
+            InOutHandle["Constraints"] = Item;
+        }
+    }
 };
 
 class UBodySetup;
@@ -37,6 +76,9 @@ public:
     // 무조건 Map은 1 대 1 매핑
     TMap<FName, int32> BodySetupIndexMap; // Cache, BodyName -> BodySetups 인덱스
 
+    // ====================================
+    // 헬퍼 함수
+    // ====================================
     void BuildBodySetupIndexMap();
 
     int32 FindBodyIndex(FName BodyName) const; 
@@ -47,11 +89,20 @@ public:
 
     // void CreateBodyInstance(FBodyInstance& OutInstance, FPhysicsScene& PhysicsScnene/*physics의 life cycle을 돌리는 class*/, const FTransform& WorldTransform);
 
+    // ====================================
+    // Asset 직렬화
+    // ====================================
     // UResourceBase Load
     bool Load(const FString& InFilePath, ID3D11Device* InDevice);
 
     // PhysicsAsset을 JSON 형식으로 파일에 저장
     bool SaveToFile(const FString& FilePath);
+
+    void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
+
+    // Runtime에서 같은 자산을  쓸 때, 모두 원본 JSON을 직접 해석하지 않도록 파생 데이터 묶음을 제작해줌
+    // TODO :
+    void BuildRuntimeCache();
 
 private:
     FName Name;

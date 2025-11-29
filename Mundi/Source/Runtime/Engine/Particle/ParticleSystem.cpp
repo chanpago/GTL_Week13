@@ -58,6 +58,8 @@ bool UParticleSystem::Load(const FString& InFilePath, ID3D11Device* InDevice)
     }
 
     Serialize(true, Root);
+    SetFilePath(NormalizePath(InFilePath)); 
+    BuildBodySetupIndexMap();
 
     UE_LOG("[UParticleSystem] Loaded successfully: %s", InFilePath.c_str());
     return true;
