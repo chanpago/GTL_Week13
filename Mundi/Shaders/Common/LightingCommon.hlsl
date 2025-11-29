@@ -550,7 +550,8 @@ float GetCascadedShadowAtt(float3 WorldPos, float3 ViewPos, float3 Normal, float
     }
     else
     {
-        // Cascade 구역 계산
+        // Cascade 구역 계산: ViewPos.z 기준으로 시작 캐스케이드 찾기
+        CurIdx = DirectionalLight.CascadeCount - 1; // 기본값: 마지막 캐스케이드
         for (uint i = 0; i < DirectionalLight.CascadeCount; i++)
         {
             float CurFar = DirectionalLight.CascadedSliceDepth[(i + 1) / 4][(i + 1) % 4];
@@ -561,13 +562,38 @@ float GetCascadedShadowAtt(float3 WorldPos, float3 ViewPos, float3 Normal, float
             }
         }
 
+        // UV 범위 체크 후 유효한 캐스케이드 찾기
+        float3 CurUV = mul(float4(WorldPos, 1), DirectionalLight.Cascades[CurIdx].ShadowViewProjMatrix).xyz;
+
+        // UV 유효 범위 (약간의 마진으로 경계 문제 방지)
+        const float UV_MIN = 0.001f;
+        const float UV_MAX = 0.999f;
+
+        // UV가 범위를 벗어나면 다음 캐스케이드 시도
+        while (CurIdx < DirectionalLight.CascadeCount - 1 &&
+               (CurUV.x < UV_MIN || CurUV.x > UV_MAX || CurUV.y < UV_MIN || CurUV.y > UV_MAX))
+        {
+            CurIdx++;
+            CurUV = mul(float4(WorldPos, 1), DirectionalLight.Cascades[CurIdx].ShadowViewProjMatrix).xyz;
+        }
+
+        // 모든 캐스케이드에서 벗어나면 그림자 없음
+        if (CurUV.x < UV_MIN || CurUV.x > UV_MAX || CurUV.y < UV_MIN || CurUV.y > UV_MAX)
+        {
+            return 1.0f;
+        }
+
         float PrevFar = CurIdx == 0 ? 0 : DirectionalLight.CascadedSliceDepth[CurIdx / 4][CurIdx % 4];
         float ExtensionPrevFar = PrevFar + PrevFar * DirectionalLight.CascadedOverlapValue;
         if (CurIdx > 0 && ViewPos.z < ExtensionPrevFar)
         {
-            // Blending 필요
-            bNeedLerp = true;
-            LerpValue = (ViewPos.z - PrevFar) / (ExtensionPrevFar - PrevFar);
+            // 이전 캐스케이드의 UV도 범위 내인지 확인
+            float3 PrevUV = mul(float4(WorldPos, 1), DirectionalLight.Cascades[CurIdx - 1].ShadowViewProjMatrix).xyz;
+            if (PrevUV.x >= UV_MIN && PrevUV.x <= UV_MAX && PrevUV.y >= UV_MIN && PrevUV.y <= UV_MAX)
+            {
+                bNeedLerp = true;
+                LerpValue = (ViewPos.z - PrevFar) / (ExtensionPrevFar - PrevFar);
+            }
         }
 
         // NdotL은 한 번만 계산
@@ -578,10 +604,8 @@ float GetCascadedShadowAtt(float3 WorldPos, float3 ViewPos, float3 Normal, float
         float CurTotalShadowBias = DirectionalLight.Cascades[CurIdx].ShadowBias + CurSlopeScaledBias;
 
         int SampleCount = ConvertSharpenToSampleCount(DirectionalLight.Cascades[CurIdx].ShadowSharpen);
-        
-        float3 CurUV = mul(float4(WorldPos, 1), DirectionalLight.Cascades[CurIdx].ShadowViewProjMatrix).xyz;
+
         float2 CurAtlasUV = CurUV.xy * DirectionalLight.Cascades[CurIdx].AtlasScaleOffset.xy + DirectionalLight.Cascades[CurIdx].AtlasScaleOffset.zw;
-        // CurTotalShadowBias 사용
         float CurShadowFactor = SampleShadowPCF(CurUV.z - CurTotalShadowBias, CurAtlasUV, SampleCount, FilterRadiusUV, ShadowMap, ShadowSampler);
 
         if (bNeedLerp)
@@ -593,10 +617,9 @@ float GetCascadedShadowAtt(float3 WorldPos, float3 ViewPos, float3 Normal, float
             // PrevIdx에 대한 바이어스 별도 계산
             float PrevSlopeScaledBias = DirectionalLight.Cascades[PrevIdx].ShadowSlopeBias * (1.0f - NdotL);
             float PrevTotalShadowBias = DirectionalLight.Cascades[PrevIdx].ShadowBias + PrevSlopeScaledBias;
-            
+
             int PrevSampleCount = ConvertSharpenToSampleCount(DirectionalLight.Cascades[PrevIdx].ShadowSharpen);
-            
-            // PrevTotalShadowBias 사용
+
             float PrevShadowFactor = SampleShadowPCF(PrevUV.z - PrevTotalShadowBias, PrevAtlasUV, PrevSampleCount, FilterRadiusUV, ShadowMap, ShadowSampler);
             return LerpValue * CurShadowFactor + (1 - LerpValue) * PrevShadowFactor;
         }
