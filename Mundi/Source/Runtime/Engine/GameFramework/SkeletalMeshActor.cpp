@@ -600,7 +600,7 @@ int32 ASkeletalMeshActor::PickBone(const FRay& Ray, float& OutDistance) const
     return ClosestBoneIndex;
 }
 
-void ASkeletalMeshActor::RebuildBodyLines()
+void ASkeletalMeshActor::RebuildBodyLines(bool& bChangedGeomNum, int32 SelectedBodyIndex)
 {
     // Ensure viewer components exist before using them
     EnsureViewerComponents();
@@ -640,15 +640,17 @@ void ASkeletalMeshActor::RebuildBodyLines()
 
     // Initialize cache once per physics asset or rebuild if physics asset changed
     if (!bBodyLinesInitialized || CachedPhysicsAsset != PhysicsAsset || 
-        BodyLinesCache.Num() != PhysicsAsset->BodySetups.Num())
+        BodyLinesCache.Num() != PhysicsAsset->BodySetups.Num() || bChangedGeomNum)
     {
         BodyLineComponent->ClearLines();
         BuildBodyLinesCache();
         bBodyLinesInitialized = true;
         CachedPhysicsAsset = PhysicsAsset;
+        
+        bChangedGeomNum = false;
     }
 
-    // Update transforms only
+	// Update transforms only(body들은 그대로고 트랜스폼만 바뀌는 경우)
     UpdateBodyTransforms();
 }
 
@@ -779,70 +781,96 @@ void ASkeletalMeshActor::BuildBodyLinesCache()
             }
         }
 
-        // Build Capsule (Sphyl) Elements
+        // Build Capsule (Sphyl) Elements - Match UCapsuleComponent::RenderDebugVolume style
         for (const FKSphylElem& Capsule : Body->AggGeom.SphylElements)
         {
             FTransform ShapeLocalTransform(Capsule.Center, Capsule.Rotation, FVector::One());
             FTransform ShapeTransform = BoneLocalTransform.GetWorldTransform(ShapeLocalTransform);
 
-            float LocalRadius = Capsule.Radius * ShapeTransform.Scale3D.GetMaxValue();
-            float LocalHalfLength = Capsule.HalfLength * ShapeTransform.Scale3D.Z;
+            const FVector Scale3D = ShapeTransform.Scale3D;
+            const float AbsScaleX = std::fabs(Scale3D.X);
+            const float AbsScaleY = std::fabs(Scale3D.Y);
+            const float AbsScaleZ = std::fabs(Scale3D.Z);
 
-            FVector UpAxis = ShapeTransform.Rotation.RotateVector(FVector(0, 0, 1));
-            FVector TopCenter = ShapeTransform.Translation + UpAxis * LocalHalfLength;
-            FVector BottomCenter = ShapeTransform.Translation - UpAxis * LocalHalfLength;
+            const float Radius = Capsule.Radius * FMath::Max(AbsScaleX, AbsScaleY);
+            const float HalfHeightAABB = Capsule.HalfLength * AbsScaleZ;
+            const float HalfHeightCylinder = FMath::Max(0.0f, HalfHeightAABB - Radius);
 
-            FVector Right = ShapeTransform.Rotation.RotateVector(FVector(1, 0, 0));
-            FVector Forward = ShapeTransform.Rotation.RotateVector(FVector(0, 1, 0));
+            // No scale in the transform matrix
+            const FMatrix ShapeNoScale = FMatrix::FromTRS(
+                ShapeTransform.Translation,
+                ShapeTransform.Rotation,
+                FVector(1.0f, 1.0f, 1.0f)
+            );
 
-            // 상단 반구
-            for (int i = 0; i < NumSegments; ++i)
+            constexpr int NumOfSphereSlice = 4;
+            constexpr int NumHemisphereSegments = 8;
+
+            // Build top and bottom rings
+            TArray<FVector> TopRingLocal;
+            TArray<FVector> BottomRingLocal;
+            TopRingLocal.Reserve(NumOfSphereSlice);
+            BottomRingLocal.Reserve(NumOfSphereSlice);
+
+            for (int i = 0; i < NumOfSphereSlice; ++i)
             {
-                float angle1 = (float)i / NumSegments * PI;
+                const float a0 = (static_cast<float>(i) / NumOfSphereSlice) * TWO_PI;
+                const float x = Radius * std::sin(a0);
+                const float y = Radius * std::cos(a0);
+                TopRingLocal.Add(FVector(x, y, +HalfHeightCylinder));
+                BottomRingLocal.Add(FVector(x, y, -HalfHeightCylinder));
+            }
 
-                for (int j = 0; j < NumSegments; ++j)
+            // Top and bottom ring lines
+            for (int i = 0; i < NumOfSphereSlice; ++i)
+            {
+                const int j = (i + 1) % NumOfSphereSlice;
+
+                // Top ring
+                FVector p1 = TopRingLocal[i] * ShapeNoScale;
+                FVector p2 = TopRingLocal[j] * ShapeNoScale;
+                BDL.CapsuleLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
+
+                // Bottom ring
+                p1 = BottomRingLocal[i] * ShapeNoScale;
+                p2 = BottomRingLocal[j] * ShapeNoScale;
+                BDL.CapsuleLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
+            }
+
+            // Vertical connecting lines
+            for (int i = 0; i < NumOfSphereSlice; ++i)
+            {
+                FVector p1 = TopRingLocal[i] * ShapeNoScale;
+                FVector p2 = BottomRingLocal[i] * ShapeNoScale;
+                BDL.CapsuleLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
+            }
+
+            // Hemisphere arcs (top and bottom)
+            auto AddHemisphereArcs = [&](float CenterZSign)
+            {
+                const float CenterZ = CenterZSign * HalfHeightCylinder;
+
+                for (int i = 0; i < NumHemisphereSegments; ++i)
                 {
-                    float theta1 = (float)j / NumSegments * 2.0f * PI;
-                    float theta2 = (float)(j + 1) / NumSegments * 2.0f * PI;
+                    const float t0 = (static_cast<float>(i) / NumHemisphereSegments) * PI;
+                    const float t1 = (static_cast<float>(i + 1) / NumHemisphereSegments) * PI;
 
-                    float z1 = LocalRadius * cosf(angle1);
-                    float r1 = LocalRadius * sinf(angle1);
+                    // XZ plane arc
+                    FVector PlaneXZ0(Radius * std::cos(t0), 0.0f, CenterZ + CenterZSign * Radius * std::sin(t0));
+                    FVector PlaneXZ1(Radius * std::cos(t1), 0.0f, CenterZ + CenterZSign * Radius * std::sin(t1));
 
-                    FVector p1 = TopCenter + UpAxis * z1 + (Right * cosf(theta1) + Forward * sinf(theta1)) * r1;
-                    FVector p2 = TopCenter + UpAxis * z1 + (Right * cosf(theta2) + Forward * sinf(theta2)) * r1;
+                    BDL.CapsuleLines.Add(BodyLineComponent->AddLine(PlaneXZ0 * ShapeNoScale, PlaneXZ1 * ShapeNoScale, BodyColor));
 
-                    BDL.CapsuleLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
+                    // YZ plane arc
+                    FVector PlaneYZ0(0.0f, Radius * std::cos(t0), CenterZ + CenterZSign * Radius * std::sin(t0));
+                    FVector PlaneYZ1(0.0f, Radius * std::cos(t1), CenterZ + CenterZSign * Radius * std::sin(t1));
+
+                    BDL.CapsuleLines.Add(BodyLineComponent->AddLine(PlaneYZ0 * ShapeNoScale, PlaneYZ1 * ShapeNoScale, BodyColor));
                 }
-            }
+            };
 
-            // 하단 반구
-            for (int i = 0; i < NumSegments; ++i)
-            {
-                float angle1 = (float)i / NumSegments * PI;
-
-                for (int j = 0; j < NumSegments; ++j)
-                {
-                    float theta1 = (float)j / NumSegments * 2.0f * PI;
-                    float theta2 = (float)(j + 1) / NumSegments * 2.0f * PI;
-
-                    float z1 = -LocalRadius * cosf(angle1);
-                    float r1 = LocalRadius * sinf(angle1);
-
-                    FVector p1 = BottomCenter + UpAxis * z1 + (Right * cosf(theta1) + Forward * sinf(theta1)) * r1;
-                    FVector p2 = BottomCenter + UpAxis * z1 + (Right * cosf(theta2) + Forward * sinf(theta2)) * r1;
-
-                    BDL.CapsuleLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
-                }
-            }
-
-            // 원기둥 부분 (4개의 수직선으로 표현)
-            for (int i = 0; i < 4; ++i)
-            {
-                float angle = (float)i / 4.0f * 2.0f * PI;
-                FVector Offset = (Right * cosf(angle) + Forward * sinf(angle)) * LocalRadius;
-
-                BDL.CapsuleLines.Add(BodyLineComponent->AddLine(TopCenter + Offset, BottomCenter + Offset, BodyColor));
-            }
+            AddHemisphereArcs(+1.0f); // Top hemisphere
+            AddHemisphereArcs(-1.0f); // Bottom hemisphere
         }
 
         // Build Convex Elements (simplified as vertex connections)
@@ -917,11 +945,6 @@ void ASkeletalMeshActor::UpdateBodyTransforms()
         int32 LineIndex = 0;
 
         // Update Sphere Elements
-		const uint32 ProperSphereLineCount = Body->AggGeom.SphereElements.size() * NumSegments * 3;
-        if (ProperSphereLineCount != BDL.SphereLines.Num())
-        {
-            BDL.SphereLines.SetNum(ProperSphereLineCount);
-        }
         for (const FKSphereElem& Sphere : Body->AggGeom.SphereElements)
         {
             FVector LocalCenter = BoneLocalTransform.TransformPosition(Sphere.Center);
@@ -970,11 +993,6 @@ void ASkeletalMeshActor::UpdateBodyTransforms()
         LineIndex = 0;
 
         // Update Box Elements
-		const uint32 ProperBoxLineCount = Body->AggGeom.BoxElements.size() * 12;
-		if (ProperBoxLineCount != BDL.BoxLines.Num())
-		{
-			BDL.BoxLines.SetNum(ProperBoxLineCount);
-		}
         for (const FKBoxElem& Box : Body->AggGeom.BoxElements)
         {
             FVector LocalExtent = Box.Extents;
@@ -1011,73 +1029,108 @@ void ASkeletalMeshActor::UpdateBodyTransforms()
 
         LineIndex = 0;
 
-        // Update Capsule (Sphyl) Elements
+        // Update Capsule (Sphyl) Elements - Match UCapsuleComponent::RenderDebugVolume style
         for (const FKSphylElem& Capsule : Body->AggGeom.SphylElements)
         {
             FTransform ShapeLocalTransform(Capsule.Center, Capsule.Rotation, FVector::One());
             FTransform ShapeTransform = BoneLocalTransform.GetWorldTransform(ShapeLocalTransform);
 
-            float LocalRadius = Capsule.Radius * ShapeTransform.Scale3D.GetMaxValue();
-            float LocalHalfLength = Capsule.HalfLength * ShapeTransform.Scale3D.Z;
+            const FVector Scale3D = ShapeTransform.Scale3D;
+            const float AbsScaleX = std::fabs(Scale3D.X);
+            const float AbsScaleY = std::fabs(Scale3D.Y);
+            const float AbsScaleZ = std::fabs(Scale3D.Z);
 
-            FVector UpAxis = ShapeTransform.Rotation.RotateVector(FVector(0, 0, 1));
-            FVector TopCenter = ShapeTransform.Translation + UpAxis * LocalHalfLength;
-            FVector BottomCenter = ShapeTransform.Translation - UpAxis * LocalHalfLength;
+            const float Radius = Capsule.Radius * FMath::Max(AbsScaleX, AbsScaleY);
+            const float HalfHeightAABB = Capsule.HalfLength * AbsScaleZ;
+            const float HalfHeightCylinder = FMath::Max(0.0f, HalfHeightAABB - Radius);
 
-            FVector Right = ShapeTransform.Rotation.RotateVector(FVector(1, 0, 0));
-            FVector Forward = ShapeTransform.Rotation.RotateVector(FVector(0, 1, 0));
+            // No scale in the transform matrix
+            const FMatrix ShapeNoScale = FMatrix::FromTRS(
+                ShapeTransform.Translation,
+                ShapeTransform.Rotation,
+                FVector(1.0f, 1.0f, 1.0f)
+            );
 
-            // 상단 반구
-            for (int i = 0; i < NumSegments; ++i)
+            constexpr int NumOfSphereSlice = 4;
+            constexpr int NumHemisphereSegments = 8;
+
+            // Build top and bottom rings
+            TArray<FVector> TopRingLocal;
+            TArray<FVector> BottomRingLocal;
+            TopRingLocal.Reserve(NumOfSphereSlice);
+            BottomRingLocal.Reserve(NumOfSphereSlice);
+
+            for (int i = 0; i < NumOfSphereSlice; ++i)
             {
-                float angle1 = (float)i / NumSegments * PI;
-
-                for (int j = 0; j < NumSegments && LineIndex < BDL.CapsuleLines.Num(); ++j, ++LineIndex)
-                {
-                    float theta1 = (float)j / NumSegments * 2.0f * PI;
-                    float theta2 = (float)(j + 1) / NumSegments * 2.0f * PI;
-
-                    float z1 = LocalRadius * cosf(angle1);
-                    float r1 = LocalRadius * sinf(angle1);
-
-                    FVector p1 = TopCenter + UpAxis * z1 + (Right * cosf(theta1) + Forward * sinf(theta1)) * r1;
-                    FVector p2 = TopCenter + UpAxis * z1 + (Right * cosf(theta2) + Forward * sinf(theta2)) * r1;
-
-                    if (BDL.CapsuleLines[LineIndex])
-                        BDL.CapsuleLines[LineIndex]->SetLine(p1, p2);
-                }
+                const float a0 = (static_cast<float>(i) / NumOfSphereSlice) * TWO_PI;
+                const float x = Radius * std::sin(a0);
+                const float y = Radius * std::cos(a0);
+                TopRingLocal.Add(FVector(x, y, +HalfHeightCylinder));
+                BottomRingLocal.Add(FVector(x, y, -HalfHeightCylinder));
             }
 
-            // 하단 반구
-            for (int i = 0; i < NumSegments; ++i)
+            // Top and bottom ring lines
+            for (int i = 0; i < NumOfSphereSlice && LineIndex < BDL.CapsuleLines.Num(); ++i)
             {
-                float angle1 = (float)i / NumSegments * PI;
+                const int j = (i + 1) % NumOfSphereSlice;
 
-                for (int j = 0; j < NumSegments && LineIndex < BDL.CapsuleLines.Num(); ++j, ++LineIndex)
-                {
-                    float theta1 = (float)j / NumSegments * 2.0f * PI;
-                    float theta2 = (float)(j + 1) / NumSegments * 2.0f * PI;
-
-                    float z1 = -LocalRadius * cosf(angle1);
-                    float r1 = LocalRadius * sinf(angle1);
-
-                    FVector p1 = BottomCenter + UpAxis * z1 + (Right * cosf(theta1) + Forward * sinf(theta1)) * r1;
-                    FVector p2 = BottomCenter + UpAxis * z1 + (Right * cosf(theta2) + Forward * sinf(theta2)) * r1;
-
-                    if (BDL.CapsuleLines[LineIndex])
-                        BDL.CapsuleLines[LineIndex]->SetLine(p1, p2);
-                }
-            }
-
-            // 원기둥 부분 (4개의 수직선으로 표현)
-            for (int i = 0; i < 4 && LineIndex < BDL.CapsuleLines.Num(); ++i, ++LineIndex)
-            {
-                float angle = (float)i / 4.0f * 2.0f * PI;
-                FVector Offset = (Right * cosf(angle) + Forward * sinf(angle)) * LocalRadius;
-
+                // Top ring
+                FVector p1 = TopRingLocal[i] * ShapeNoScale;
+                FVector p2 = TopRingLocal[j] * ShapeNoScale;
                 if (BDL.CapsuleLines[LineIndex])
-                    BDL.CapsuleLines[LineIndex]->SetLine(TopCenter + Offset, BottomCenter + Offset);
+                    BDL.CapsuleLines[LineIndex]->SetLine(p1, p2);
+                ++LineIndex;
+
+                // Bottom ring
+                p1 = BottomRingLocal[i] * ShapeNoScale;
+                p2 = BottomRingLocal[j] * ShapeNoScale;
+                if (LineIndex < BDL.CapsuleLines.Num() && BDL.CapsuleLines[LineIndex])
+                    BDL.CapsuleLines[LineIndex]->SetLine(p1, p2);
+                ++LineIndex;
             }
+
+            // Vertical connecting lines
+            for (int i = 0; i < NumOfSphereSlice && LineIndex < BDL.CapsuleLines.Num(); ++i, ++LineIndex)
+            {
+                FVector p1 = TopRingLocal[i] * ShapeNoScale;
+                FVector p2 = BottomRingLocal[i] * ShapeNoScale;
+                if (BDL.CapsuleLines[LineIndex])
+                    BDL.CapsuleLines[LineIndex]->SetLine(p1, p2);
+            }
+
+            // Hemisphere arcs (top and bottom)
+            auto UpdateHemisphereArcs = [&](float CenterZSign)
+            {
+                const float CenterZ = CenterZSign * HalfHeightCylinder;
+
+                for (int i = 0; i < NumHemisphereSegments && LineIndex < BDL.CapsuleLines.Num(); ++i)
+                {
+                    const float t0 = (static_cast<float>(i) / NumHemisphereSegments) * PI;
+                    const float t1 = (static_cast<float>(i + 1) / NumHemisphereSegments) * PI;
+
+                    // XZ plane arc
+                    FVector PlaneXZ0(Radius * std::cos(t0), 0.0f, CenterZ + CenterZSign * Radius * std::sin(t0));
+                    FVector PlaneXZ1(Radius * std::cos(t1), 0.0f, CenterZ + CenterZSign * Radius * std::sin(t1));
+
+                    if (BDL.CapsuleLines[LineIndex])
+                        BDL.CapsuleLines[LineIndex]->SetLine(PlaneXZ0 * ShapeNoScale, PlaneXZ1 * ShapeNoScale);
+                    ++LineIndex;
+
+                    // YZ plane arc
+                    if (LineIndex < BDL.CapsuleLines.Num())
+                    {
+                        FVector PlaneYZ0(0.0f, Radius * std::cos(t0), CenterZ + CenterZSign * Radius * std::sin(t0));
+                        FVector PlaneYZ1(0.0f, Radius * std::cos(t1), CenterZ + CenterZSign * Radius * std::sin(t1));
+
+                        if (BDL.CapsuleLines[LineIndex])
+                            BDL.CapsuleLines[LineIndex]->SetLine(PlaneYZ0 * ShapeNoScale, PlaneYZ1 * ShapeNoScale);
+                        ++LineIndex;
+                    }
+                }
+            };
+
+            UpdateHemisphereArcs(+1.0f); // Top hemisphere
+            UpdateHemisphereArcs(-1.0f); // Bottom hemisphere
         }
 
         LineIndex = 0;

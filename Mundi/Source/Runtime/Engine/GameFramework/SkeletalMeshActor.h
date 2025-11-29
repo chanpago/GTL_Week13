@@ -36,7 +36,7 @@ public:
     void RebuildBoneLines(int32 SelectedBoneIndex);
 
     // Rebuild physics body line overlay from the current physics asset
-    void RebuildBodyLines();
+    void RebuildBodyLines(bool& bChangedGeomNum, int32 SelectedBodyIndex);
 
     // Position the anchor
     void RepositionAnchorToBone(int32 BoneIndex);

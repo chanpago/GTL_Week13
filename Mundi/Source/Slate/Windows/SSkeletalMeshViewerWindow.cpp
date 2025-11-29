@@ -650,6 +650,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                                 if (ImGui::Button("Remove Sphere"))
                                 {
                                     Body->AggGeom.SphereElements.RemoveAt(si);
+                                    ActiveState->bChangedGeomNum = true;
                                     ImGui::TreePop();
                                     ImGui::PopID();
                                     break;
@@ -666,6 +667,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                             NewSphere.Center = FVector::Zero();
                             NewSphere.Radius = 50.0f;
                             Body->AggGeom.SphereElements.Add(NewSphere);
+                            ActiveState->bChangedGeomNum = true;
                         }
                         
                         ImGui::PopID(); // Pop "SphereElements"
@@ -700,6 +702,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                                 if (ImGui::Button("Remove Box"))
                                 {
                                     Body->AggGeom.BoxElements.RemoveAt(bi);
+                                    ActiveState->bChangedGeomNum = true;
                                     ImGui::TreePop();
                                     ImGui::PopID();
                                     break;
@@ -717,6 +720,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                             NewBox.Extents = FVector(50.0f, 50.0f, 50.0f);
                             NewBox.Rotation = FQuat::Identity();
                             Body->AggGeom.BoxElements.Add(NewBox);
+                            ActiveState->bChangedGeomNum = true;
                         }
                         
                         ImGui::PopID(); // Pop "BoxElements"
@@ -752,6 +756,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                                 if (ImGui::Button("Remove Capsule"))
                                 {
                                     Body->AggGeom.SphylElements.RemoveAt(si);
+                                    ActiveState->bChangedGeomNum = true;
                                     ImGui::TreePop();
                                     ImGui::PopID();
                                     break;
@@ -770,6 +775,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                             NewSphyl.HalfLength = 50.0f;
                             NewSphyl.Rotation = FQuat::Identity();
                             Body->AggGeom.SphylElements.Add(NewSphyl);
+                            ActiveState->bChangedGeomNum = true;
                         }
                         
                         ImGui::PopID(); // Pop "SphylElements"
@@ -1190,7 +1196,7 @@ void SSkeletalMeshViewerWindow::OnRenderViewport()
         // Rebuild physics body lines when physics asset changes
         if (ActiveState->PreviewActor && ActiveState->CurrentMesh && ActiveState->CurrentMesh->PhysicsAsset)
         {
-            ActiveState->PreviewActor->RebuildBodyLines();
+            ActiveState->PreviewActor->RebuildBodyLines(ActiveState->bChangedGeomNum, 0);
         }
 
         // 뷰포트 렌더링 (ImGui보다 먼저)
