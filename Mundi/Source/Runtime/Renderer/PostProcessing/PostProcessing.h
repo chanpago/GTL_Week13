@@ -8,6 +8,7 @@ enum class EPostProcessEffectType : uint8
     Bloom,
     Fade,
     Gamma,
+    DepthOfField,
 };
 
 struct FPostProcessPayload

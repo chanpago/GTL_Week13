@@ -115,6 +115,11 @@ enum class RHI_SRV_Index : uint32
 {
 	SceneDepth,  // 장면 깊이
     SceneColorSource,
+	// DOF (Depth of Field)
+	DOFFar,      // Far Field (원경 블러)
+	DOFNear,     // Near Field (근경 블러)
+	DOFTempH,    // Temp Horizontal Blur
+	DOFTempV,    // Temp Vertical Blur
 };
 
 enum class RHI_Sampler_Index : uint32

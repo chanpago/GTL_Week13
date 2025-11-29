@@ -1183,6 +1183,12 @@ void FSceneRenderer::RenderPostProcessingPasses()
 		case EPostProcessEffectType::Gamma:
 			GammaPass.Execute(Modifier, View, RHIDevice);
 			break;
+		case EPostProcessEffectType::DepthOfField:
+			// DOF는 3단계로 실행: Setup → Blur → Recombine
+			DOFSetupPass.Execute(Modifier, View, RHIDevice);
+			DOFBlurPass.Execute(Modifier, View, RHIDevice);
+			DOFRecombinePass.Execute(Modifier, View, RHIDevice);
+			break;
 		}
 	}
 }

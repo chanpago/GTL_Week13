@@ -6,6 +6,9 @@
 #include "PostProcessing/VignettePass.h"
 #include "PostProcessing/HeightFogPass.h"
 #include "PostProcessing/GammaPass.h"
+#include "PostProcessing/DOFSetupPass.h"
+#include "PostProcessing/DOFBlurPass.h"
+#include "PostProcessing/DOFRecombinePass.h"
 
 // 전방 선언 (헤더 파일 의존성 최소화)
 class UWorld;
@@ -153,9 +156,12 @@ private:
 	std::unique_ptr<FTileLightCuller> TileLightCuller;
 
 	// TODO : 자동으로 등록되게 바꾸기!, bloom 빼고 다 stateless해서 걔네는 static(etc..) 등 하이브리도 구조로 바꾸기
-	// PostProcessing 
+	// PostProcessing
 	FHeightFogPass HeightFogPass;
 	FFadeInOutPass FadeInOutPass;
-	FVignettePass VignettePass; 
+	FVignettePass VignettePass;
 	FGammaPass GammaPass;
+	FDOFSetupPass DOFSetupPass;
+	FDOFBlurPass DOFBlurPass;
+	FDOFRecombinePass DOFRecombinePass;
 };
