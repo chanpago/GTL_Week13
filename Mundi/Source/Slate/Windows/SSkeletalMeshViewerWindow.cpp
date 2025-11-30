@@ -870,6 +870,7 @@ void SSkeletalMeshViewerWindow::OnRender()
 
                 //ID3D11ShaderResourceView* SRV = RHIDevice->GetSourceSRV(1);
 				ID3D11ShaderResourceView* SRV = RHIDevice->GetCurrentSourceSRV();
+				//ImGui::Image((void*)SRV, ImVec2(childSize.x, childSize.y), uv0, uv1);
 				ImGui::Image((void*)SRV, ImVec2(childSize.x, childSize.y), uv0, uv1);
             }
             ImGui::EndChild();

@@ -841,10 +841,10 @@ void ASkeletalMeshActor::BuildBodyLinesCache()
         // Build Sphere Elements
         for (const FKSphereElem& Sphere : Body->AggGeom.SphereElements)
         {
-            FVector LocalCenter = Sphere.Center;
-            float LocalRadius = Sphere.Radius;
-            /*FVector LocalCenter = BoneLocalTransform.TransformPosition(Sphere.Center);
-            float LocalRadius = Sphere.Radius * BoneLocalTransform.Scale3D.GetMaxValue();*/
+            /*FVector LocalCenter = Sphere.Center;
+            float LocalRadius = Sphere.Radius*/;
+            FVector LocalCenter = BoneLocalTransform.TransformPosition(Sphere.Center);
+            float LocalRadius = Sphere.Radius * BoneLocalTransform.Scale3D.GetMaxValue();
 
             // Draw 3 orthogonal circles (XY, XZ, YZ planes)
             // XY plane
@@ -1089,11 +1089,11 @@ void ASkeletalMeshActor::UpdateBodyTransforms()
         // Update Sphere Elements
         for (const FKSphereElem& Sphere : Body->AggGeom.SphereElements)
         {
-            /*FVector LocalCenter = BoneLocalTransform.TransformPosition(Sphere.Center);
-            float LocalRadius = Sphere.Radius * BoneLocalTransform.Scale3D.GetMaxValue();*/
+            FVector LocalCenter = BoneLocalTransform.TransformPosition(Sphere.Center);
+            float LocalRadius = Sphere.Radius * BoneLocalTransform.Scale3D.GetMaxValue();
 
-            FVector LocalCenter = Sphere.Center;
-            float LocalRadius = Sphere.Radius;
+            /*FVector LocalCenter = Sphere.Center;
+            float LocalRadius = Sphere.Radius;*/
 
             // XY plane
             for (int i = 0; i < NumSegments && LineIndex < BDL.SphereLines.Num(); ++i, ++LineIndex)
