@@ -176,6 +176,12 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime)
 
     PrevAnimationTime = CurrentAnimationTime; 
 
+    // Sync physics bodies to match animation
+    UWorld* World = GetWorld();
+    if (World && World->GetPhysScene() && PhysicsAsset)
+    {
+        SyncBodiesFromAnimation(*World->GetPhysScene());
+    }
 }
 
 void USkeletalMeshComponent::SetSkeletalMesh(const FString& PathFileName)

@@ -72,13 +72,6 @@ void UPhysicsAsset::CreateGenerateAllBodySetup(EAggCollisionShapeType ShapeType,
         return;
     }
 
-    for (UBodySetup* Body : BodySetups)
-    {
-        if (Body)
-        {
-            ObjectFactory::DeleteObject(Body);
-        }
-    }
     BodySetups.Empty();
     Constraints.Empty();
     CurrentSkeletal = SkeletalComponent;
