@@ -83,7 +83,7 @@ PS_OUTPUT mainPS(PS_INPUT input)
     float accWeight = 0.0;
 
     // Ring 설정
-    const int MAX_RING = 4;  // Ring 0(중심) + Ring 1~4
+    const int MAX_RING = 5;  // Ring 0(중심) + Ring 1~5 = 121 샘플
 
     // Ring 0: 중심 (1 샘플)
     {
@@ -94,7 +94,7 @@ PS_OUTPUT mainPS(PS_INPUT input)
     }
 
     // Ring 1~MAX_RING: 원형 샘플링
-    // 총 샘플 수: 1 + 8 + 16 + 24 + 32 = 81 샘플
+    // 총 샘플 수: 1 + 8 + 16 + 24 + 32 + 40 = 121 샘플
     [unroll]
     for (int ring = 1; ring <= MAX_RING; ring++)
     {
@@ -119,8 +119,9 @@ PS_OUTPUT mainPS(PS_INPUT input)
             // 샘플의 블러 반경이 현재 거리까지 도달하는 정도
             float coverage = saturate((sampleRadiusPx - ringRadius + 1.0) / max(sampleRadiusPx, 0.01));
 
-            // 거리 기반 감쇠 (중심에 가까울수록 강하게)
-            float distanceFalloff = 1.0 - (ringRadius / pixelRadius);
+            // 거리 기반 Gaussian 감쇠 (부드러운 보케)
+            float sigma = pixelRadius * 0.5;
+            float distanceFalloff = exp(-(ringRadius * ringRadius) / (2.0 * sigma * sigma));
 
             // 가중치 = Coverage * 거리감쇠 * CoC
             float weight = coverage * distanceFalloff * sampleCoc;
