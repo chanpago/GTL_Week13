@@ -23,12 +23,33 @@ bool FPhysScene::Initialize()
         return false;
     }
 
-    // 2) Physics
+    // 2) PVD (PhysX Visual Debugger) 연결
+    // PVD 프로그램이 실행 중이면 자동 연결, 없으면 무시
+    Pvd = PxCreatePvd(*Foundation);
+    if (Pvd)
+    {
+        PvdTransport = PxDefaultPvdSocketTransportCreate("127.0.0.1", 5425, 10);
+        if (PvdTransport)
+        {
+            bool bConnected = Pvd->connect(*PvdTransport, PxPvdInstrumentationFlag::eALL);
+            if (bConnected)
+            {
+                UE_LOG("[PhysScene] PVD connected successfully");
+            }
+            else
+            {
+                UE_LOG("[PhysScene] PVD connection failed (PVD application not running?)");
+            }
+        }
+    }
+
+    // 3) Physics
     // PhysX SDK의 메인 엔트리 포인트, 앞으로 우리가 만드는 모든 물리 객체는 Physics를 통해 생성됨.
     // PxTolerancesScale()은 길이/질량/속도 스케일 과 같은 기본값을 넘겨주는 구조체
-    // SceneDesc, joint limit, contact offset 같은 곳에 “이 게임 세계의 단위가 어느 정도냐”를 추정할 때 사용
-    // 한줄요약 : “씬, 머티리얼, 쉐이프 같은 물리 객체를 전부 찍어내는 공장(Factory)”
-    Physics = PxCreatePhysics(PX_PHYSICS_VERSION, *Foundation, PxTolerancesScale());
+    // SceneDesc, joint limit, contact offset 같은 곳에 "이 게임 세계의 단위가 어느 정도냐"를 추정할 때 사용
+    // 한줄요약 : "씬, 머티리얼, 쉐이프 같은 물리 객체를 전부 찍어내는 공장(Factory)"
+    // PVD를 전달하여 디버깅 지원
+    Physics = PxCreatePhysics(PX_PHYSICS_VERSION, *Foundation, PxTolerancesScale(), true, Pvd);
 
     if (!Physics)
     {
@@ -86,6 +107,18 @@ bool FPhysScene::Initialize()
         return false;
     }
 
+    // 7) PVD Scene 클라이언트 설정
+    if (Pvd && Pvd->isConnected())
+    {
+        PxPvdSceneClient* PvdClient = Scene->getScenePvdClient();
+        if (PvdClient)
+        {
+            PvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_CONSTRAINTS, true);
+            PvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_CONTACTS, true);
+            PvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES, true);
+        }
+    }
+
     return true;
     
 }
@@ -118,6 +151,23 @@ void FPhysScene::Shutdown()
     {
         Physics->release();
         Physics = nullptr;
+    }
+
+    // PVD 연결 해제
+    if (Pvd)
+    {
+        if (Pvd->isConnected())
+        {
+            Pvd->disconnect();
+        }
+        Pvd->release();
+        Pvd = nullptr;
+    }
+
+    if (PvdTransport)
+    {
+        PvdTransport->release();
+        PvdTransport = nullptr;
     }
 
     if (Foundation)

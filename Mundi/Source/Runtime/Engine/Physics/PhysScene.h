@@ -46,11 +46,13 @@ private:
     PxDefaultAllocator      Allocator;
     PxDefaultErrorCallback  ErrorCallback;
     PxFoundation*           Foundation      = nullptr;
+    PxPvd*                  Pvd             = nullptr;  // PhysX Visual Debugger
+    PxPvdTransport*         PvdTransport    = nullptr;
     PxPhysics*              Physics         = nullptr;
     PxScene*                Scene           = nullptr;
     PxMaterial*             DefaultMaterial = nullptr;
     PxDefaultCpuDispatcher* Dispatcher      = nullptr;
 
     std::vector<GameObject> Objects; // 간단 테스트용
-    
+
 };
