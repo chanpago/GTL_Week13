@@ -407,6 +407,15 @@ ID3D11ShaderResourceView* D3D11RHI::GetCurrentSourceSRV() const
     return SceneColorSRVs[SourceIndex];
 }
 
+ID3D11ShaderResourceView* D3D11RHI::GetSourceSRV(int32 Index) const
+{
+    if (0 <= Index && Index < NUM_SCENE_BUFFERS)
+    {
+        return SceneColorSRVs[Index];
+    }
+    return nullptr;
+}
+
 ID3D11ShaderResourceView* D3D11RHI::GetSRV(RHI_SRV_Index SRVIndex) const
 {
     ID3D11ShaderResourceView* TempSRV;
@@ -1060,6 +1069,8 @@ void D3D11RHI::OMSetDepthStencilState(EComparisonFunc Func)
         break;
     case EComparisonFunc::LessEqualReadOnly:
         DeviceContext->OMSetDepthStencilState(DepthStencilStateLessEqualReadOnly, 0);
+    case EComparisonFunc::Disable:
+		DeviceContext->OMSetDepthStencilState(DepthStencilStateDisable, 0);
         break;
     }
 }

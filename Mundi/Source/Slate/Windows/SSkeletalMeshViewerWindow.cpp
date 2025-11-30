@@ -26,6 +26,7 @@
 #include "Source/Runtime/Engine/Physics/BodySetup.h"
 #include "Source/Runtime/Engine/Physics/PhysicalMaterial.h"
 #include <cstring>
+#include "RenderManager.h"
 
 namespace
 {
@@ -852,12 +853,35 @@ void SSkeletalMeshViewerWindow::OnRender()
                 {
                     ImGui::GetIO().WantCaptureMouse = false;
                 }
-                
+
                 ImVec2 childPos = ImGui::GetWindowPos();
                 ImVec2 childSize = ImGui::GetWindowSize();
                 ImVec2 rectMin = childPos;
                 ImVec2 rectMax(childPos.x + childSize.x, childPos.y + childSize.y);
                 CenterRect.Left = rectMin.x; CenterRect.Top = rectMin.y; CenterRect.Right = rectMax.x; CenterRect.Bottom = rectMax.y; CenterRect.UpdateMinMax();
+
+                URenderer* CurrentRenderer = URenderManager::GetInstance().GetRenderer();
+                D3D11RHI* RHIDevice = CurrentRenderer->GetRHIDevice();
+
+                uint32 TotalWidth = RHIDevice->GetViewportWidth();
+                uint32 TotalHeight = RHIDevice->GetViewportHeight();
+
+                // UV 좌표를 정확하게 계산: 정확한 본 피킹을 위해 (자식 윈도우의 실제 콘텐츠 영역 사용)
+                ImVec2 contentMin = ImGui::GetWindowContentRegionMin();
+                ImVec2 contentMax = ImGui::GetWindowContentRegionMax();
+
+                // 실제 렌더링 영역의 UV 계산
+                float actualLeft = CenterRect.Left + contentMin.x;
+                float actualTop = CenterRect.Top + contentMin.y;
+
+                ImVec2 uv0(actualLeft / TotalWidth, actualTop / TotalHeight);
+                ImVec2 uv1((actualLeft + (contentMax.x - contentMin.x)) / TotalWidth,
+                    (actualTop + (contentMax.y - contentMin.y)) / TotalHeight);
+
+                ID3D11ShaderResourceView* SRV = RHIDevice->GetCurrentSourceSRV();
+
+                // ImGui::Image 사용 이유: 뷰포트가 Imgui 메뉴를 가려버리는 경우 방지 위함.
+                ImGui::Image((void*)SRV, ImVec2(contentMax.x - contentMin.x, contentMax.y - contentMin.y), uv0, uv1);
             }
             ImGui::EndChild();
 

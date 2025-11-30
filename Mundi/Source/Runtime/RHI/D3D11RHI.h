@@ -175,6 +175,7 @@ public:
 
 	ID3D11ShaderResourceView* GetSRV(RHI_SRV_Index SRVIndex) const;
 	ID3D11ShaderResourceView* GetCurrentSourceSRV() const;
+	ID3D11ShaderResourceView* GetSourceSRV(int32 Index) const;
 
 	ID3D11Texture2D* GetIdBuffer() const { return IdBuffer; }
 	ID3D11Texture2D* GetIdStagingBuffer() const { return IdStagingBuffer; }
