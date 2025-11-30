@@ -6,6 +6,8 @@
 #include "USlateManager.h"
 #include "ThumbnailManager.h"
 #include "Source/Runtime/Engine/Particle/ParticleSystem.h"
+#include "Source/Runtime/AssetManagement/ResourceManager.h"
+#include "Source/Runtime/Engine/Physics/PhysicsAsset.h"
 #include "Source/Runtime/Core/Object/ObjectFactory.h"
 #include <algorithm>
 
@@ -288,6 +290,10 @@ void UContentBrowserWindow::RenderContentGrid()
         {
             CreateNewParticleSystem();
         }
+        if (ImGui::MenuItem("Create Physics Asset"))
+        {
+            CreateNewPhysicsAssetForSkeletalMesh();
+        }
         ImGui::EndPopup();
     }
 
@@ -432,6 +438,19 @@ void UContentBrowserWindow::HandleDoubleClick(FFileEntry& Entry)
             UE_LOG("Failed to load ParticleSystem from: %s", Entry.FileNameUTF8.c_str());
         }
     }
+    else if (ext == ".physics")
+    {
+        UPhysicsAsset* LoadedAsset = UResourceManager::GetInstance().Load<UPhysicsAsset>(pathUTF8);
+        if (LoadedAsset)
+        {
+            USlateManager::GetInstance().OpenSkeletalMeshViewerWithAsset(LoadedAsset, pathUTF8);
+            UE_LOG("Opening SkeletalMeshViewer for physics asset: %s", Entry.FileNameUTF8.c_str());
+        }
+        else
+        {
+            UE_LOG("Failed to load PhysicsAsset from: %s", Entry.FileNameUTF8.c_str());
+        }
+    }
     else
     {
         UE_LOG("Unsupported file type: %s", ext.c_str());
@@ -452,6 +471,7 @@ const char* UContentBrowserWindow::GetIconForFile(const FFileEntry& Entry) const
     else if (ext == ".mat") return "[MAT]";
     else if (ext == ".level" || ext == ".json") return "[DATA]";
     else if (ext == ".particle") return "[PART]";
+    else if (ext == ".physics") return "[PHYS]";
 
     return "[FILE]";
 }
@@ -492,4 +512,27 @@ void UContentBrowserWindow::CreateNewParticleSystem()
     // ParticleViewerWindow를 열고 저장 경로 전달
     FString SavePath = WideToUTF8(ParticlePath.wstring());
     USlateManager::GetInstance().OpenParticleViewerWithSystem(NewSystem, SavePath);
+}
+
+void UContentBrowserWindow::CreateNewPhysicsAssetForSkeletalMesh()
+{
+    // 빈 PhysicsAsset 생성
+    UPhysicsAsset* NewAsset = NewObject<UPhysicsAsset>();
+    NewAsset->ObjectName = FName("NewPhysicsAsset");
+
+    // 저장 경로 생성 (중복 이름 체크)
+    std::filesystem::path PhysicsPath = CurrentPath / "NewPhysicsAsset.physics";
+    int Counter = 1;
+    while (std::filesystem::exists(PhysicsPath))
+    {
+        std::string FileName = "NewPhysicsAsset_" + std::to_string(Counter) + ".physics";
+        PhysicsPath = CurrentPath / FileName;
+        Counter++;
+    }
+
+    // SkeletalMeshViewerWindow를 열고 저장 경로 전달
+    FString SavePath = WideToUTF8(PhysicsPath.wstring());
+    NewAsset->SetFilePath(SavePath);
+    UResourceManager::GetInstance().Add<UPhysicsAsset>(SavePath, NewAsset);
+    USlateManager::GetInstance().OpenSkeletalMeshViewerWithAsset(NewAsset, SavePath);
 }

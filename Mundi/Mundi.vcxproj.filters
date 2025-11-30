@@ -965,7 +965,6 @@
     <ClCompile Include="Generated\UParticleSystemComponent.generated.cpp">
       <Filter>Generated</Filter>
     </ClCompile>
-    <ClCompile Include="PhysXIntegration.cpp" />
     <ClCompile Include="Source\Runtime\Engine\Particle\Modules\ParticleModuleRibbon.cpp">
       <Filter>Source\Runtime\Engine\Physics</Filter>
     </ClCompile>
@@ -993,6 +992,7 @@
     <ClCompile Include="Source\Runtime\Engine\Physics\FKShapeElem.cpp">
       <Filter>Source\Runtime\Engine\Physics</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Runtime\Engine\Physics\PhysScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -2028,7 +2028,6 @@
     <ClInclude Include="Generated\UParticleSystemComponent.generated.h">
       <Filter>Generated</Filter>
     </ClInclude>
-    <ClInclude Include="PhysXIntegration.h" />
     <ClInclude Include="Source\Runtime\Engine\Physics\PhysicsAsset.h">
       <Filter>Source\Runtime\Engine\Physics</Filter>
     </ClInclude>
@@ -2056,6 +2055,8 @@
     <ClInclude Include="Source\Runtime\Engine\Physics\FKShapeElem.h">
       <Filter>Source\Runtime\Engine\Physics</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Runtime\Engine\Physics\PhysicsTypes.h" />
+    <ClInclude Include="Source\Runtime\Engine\Physics\PhysScene.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Tools\CodeGenerator\generate.py">
@@ -2070,6 +2071,7 @@
     <None Include="Tools\CodeGenerator\property_generator.py">
       <Filter>Tools\CodeGenerator</Filter>
     </None>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Shaders">

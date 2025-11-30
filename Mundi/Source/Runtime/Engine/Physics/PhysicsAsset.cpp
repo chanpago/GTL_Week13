@@ -123,7 +123,7 @@ void UPhysicsAsset::Serialize(const bool bInIsLoading, JSON& InOutHandle)
         FString NameStr;
         if (FJsonSerializer::ReadString(InOutHandle, "Name", NameStr))
         {
-            ObjectName = FName(NameStr);
+            Name = FName(NameStr);
         }
 
         // BodySetups 배열 로드
@@ -168,7 +168,7 @@ void UPhysicsAsset::Serialize(const bool bInIsLoading, JSON& InOutHandle)
         // [SAVE] 직렬화
         // =========================================================
         InOutHandle["Type"] = "PhysicsAsset";
-        InOutHandle["Name"] = ObjectName.ToString();
+        InOutHandle["Name"] = Name.ToString();
 
         // Physics 배열 저장
         JSON PhysicsArray = JSON::Make(JSON::Class::Array);

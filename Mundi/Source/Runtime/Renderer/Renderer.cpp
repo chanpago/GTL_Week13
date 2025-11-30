@@ -347,6 +347,7 @@ void URenderer::EndLineBatchAlwaysOnTop(const FMatrix& ModelMatrix)
         RHIDevice->GetDeviceContext()->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
         RHIDevice->GetDeviceContext()->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
         RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+        //RHIDevice->GetDeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         // Disable depth test so lines render on top
         RHIDevice->OMSetDepthStencilState(EComparisonFunc::Disable);

@@ -45,8 +45,8 @@ struct FVisibleRenderProxySet
 	TArray<UTextRenderComponent*> Texts;
 	TArray<UParticleSystemComponent*> Particles;
 
-	// --- Type 2: In-Scene Editor (PP X, Depth-Test O) ---
-	TArray<ULineComponent*> EditorLines;	// 그리드
+	// --- Type 2: In-Scene Editor (PP X, Depth-Test O or X) ---
+	TArray<ULineComponent*> EditorLines;	// 그리드(depth test O), 본 라인(depth test X) 등
 	TArray<UPrimitiveComponent*> EditorPrimitives; // 빛 기즈모, *에디터 아이콘 빌보드*
 
 	// --- Type 3: Overlay (PP X, Depth-Test X) ---

@@ -60,6 +60,7 @@ private:
 
 	// 에셋 생성
 	void CreateNewParticleSystem();
+	void CreateNewPhysicsAssetForSkeletalMesh(); // For static mesh
 
 private:
 	std::filesystem::path RootPath;

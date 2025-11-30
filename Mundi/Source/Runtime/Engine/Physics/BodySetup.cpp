@@ -5,6 +5,20 @@
 IMPLEMENT_CLASS(UBodySetup)
 
 
+UBodySetup::UBodySetup()
+{
+	PhysMaterial = NewObject<UPhysicalMaterial>();
+}
+
+UBodySetup::~UBodySetup()
+{
+	if (PhysMaterial)
+	{
+		ObjectFactory::DeleteObject(PhysMaterial);
+		PhysMaterial = nullptr;
+	}
+}
+
 void UBodySetup::AddSphere(const FKSphereElem& Elem)
 {
     AggGeom.SphereElements.Add(Elem);

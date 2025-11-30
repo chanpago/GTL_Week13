@@ -1,12 +1,12 @@
 ﻿#pragma once
 #include "SWindow.h"
 #include "Source/Runtime/Engine/SkeletalViewer/ViewerState.h"
+class UPhysicsAsset;
 
 class FViewport;
 class FViewportClient;
 class UWorld;
 struct ID3D11Device;
-
 class SSkeletalMeshViewerWindow : public SWindow
 {
 public:
@@ -28,8 +28,10 @@ public:
     FViewport* GetViewport() const { return ActiveState ? ActiveState->Viewport : nullptr; }
     FViewportClient* GetViewportClient() const { return ActiveState ? ActiveState->Client : nullptr; }
 
-    // Load a skeletal mesh into the active tab
+    // Loaders
     void LoadSkeletalMesh(const FString& Path);
+    void LoadPhysicsAsset(UPhysicsAsset* PhysicsAsset);
+    void SetPhysicsAssetSavePath(const FString& SavePath);
 
 private:
     // Tabs
@@ -39,7 +41,9 @@ private:
     // viwer를 닫을 때 자동으로 Notifies 정보 저장
     void SaveAllNotifiesOnClose();
 
+
 private:
+
     // Per-tab state
     ViewerState* ActiveState = nullptr;
     TArray<ViewerState*> Tabs;
@@ -67,6 +71,8 @@ private:
     bool bIsOpen = true;
     bool bSavedOnClose = false;
 
+	std::filesystem::path PhysicsAssetPath;
+
 public:
     bool IsOpen() const { return bIsOpen; }
     void Close() { bIsOpen = false; }
@@ -74,7 +80,9 @@ public:
 
 private:
     void UpdateBoneTransformFromSkeleton(ViewerState* State);
-    
+   
+    bool SavePhysicsAsset(ViewerState* State);
+
     void ApplyBoneTransform(ViewerState* State);
 
     void ExpandToSelectedBone(ViewerState* State, int32 BoneIndex);

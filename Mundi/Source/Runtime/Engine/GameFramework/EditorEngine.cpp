@@ -202,6 +202,7 @@ bool UEditorEngine::Startup(HINSTANCE hInstance)
     UFbxLoader::PreLoad();
     FAudioDevice::Preload();
     RESOURCE.PreloadParticles();
+	RESOURCE.PreloadPhysicsAssets();
     
     // 블루프린트 액션 데이터베이스 초기화
     FBlueprintActionDatabase::GetInstance().Initialize();

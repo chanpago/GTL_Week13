@@ -80,6 +80,8 @@ public:
     // Temp: open/close Skeletal Mesh Viewer (detached window)
     void OpenSkeletalMeshViewer();
     void OpenSkeletalMeshViewerWithFile(const char* FilePath);
+    void OpenSkeletalMeshViewerWithAsset(UPhysicsAsset* PhysicsAsset, const FString& SavePath);
+
     void OpenAnimationGraphEditor(UAnimationGraph* InAnimGraph);
     void CloseSkeletalMeshViewer();
     void CloseAnimationGraphEditor();

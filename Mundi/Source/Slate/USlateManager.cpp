@@ -245,6 +245,30 @@ void USlateManager::OpenSkeletalMeshViewerWithFile(const char* FilePath)
     }
 }
 
+void USlateManager::OpenSkeletalMeshViewerWithAsset(UPhysicsAsset* PhysicsAsset, const FString& SavePath)
+{
+    if (!SkeletalViewerWindow)
+    {
+        SkeletalViewerWindow = new SSkeletalMeshViewerWindow();
+        g_SkeletalViewerWindow = SkeletalViewerWindow;
+
+        const float toolbarHeight = 50.0f;
+        const float availableHeight = Rect.GetHeight() - toolbarHeight;
+        const float w = Rect.GetWidth() * 0.85f;
+        const float h = availableHeight * 0.85f;
+        const float x = Rect.Left + (Rect.GetWidth() - w) * 0.5f;
+        const float y = Rect.Top + toolbarHeight + (availableHeight - h) * 0.5f;
+
+        SkeletalViewerWindow->Initialize(x, y, w, h, World, Device);
+    }
+
+    if (SkeletalViewerWindow)
+    {
+        SkeletalViewerWindow->LoadPhysicsAsset(PhysicsAsset);
+        if (!SavePath.empty()) { SkeletalViewerWindow->SetPhysicsAssetSavePath(SavePath); }
+    }
+}
+
 void USlateManager::OpenAnimationGraphEditor(UAnimationGraph* AnimGraph)
 {
     if (AnimationGraphEditorWindow)

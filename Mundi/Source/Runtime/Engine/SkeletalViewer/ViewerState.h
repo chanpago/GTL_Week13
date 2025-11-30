@@ -69,8 +69,11 @@ public:
 
     // Selected BodySetup (for showing body details / selection)
     UBodySetup* SelectedBodySetup = nullptr;
+	int32 SelectedBodyIndex = -1;
 
     // Rename state for Physics Asset: use boolean (CurrentPhysicsAsset holds the asset being renamed)
     bool bIsRenaming = false;                          // true while inline-rename is active
     char PhysicsAssetNameBuffer[128] = { 0 };          // temporary editable b
+
+	bool bChangedGeomNum = false;
 };

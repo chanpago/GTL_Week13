@@ -1,6 +1,9 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "SkeletalMeshActor.h"
 #include "World.h"
+#include "Source/Runtime/Engine/Physics/PhysicsAsset.h"
+#include "Source/Runtime/Engine/Physics/BodySetup.h"
+#include "Source/Runtime/Engine/Physics/FKShapeElem.h"
 
 ASkeletalMeshActor::ASkeletalMeshActor()
 {
@@ -45,7 +48,7 @@ void ASkeletalMeshActor::SetSkeletalMesh(const FString& PathFileName)
 void ASkeletalMeshActor::EnsureViewerComponents()
 {
     // Only create viewer components if they don't exist and we're in a preview world
-    if (BoneLineComponent && BoneAnchor)
+    if (BoneLineComponent && BoneAnchor && BodyLineComponent)
     {
         return;
     }
@@ -67,6 +70,20 @@ void ASkeletalMeshActor::EnsureViewerComponents()
             BoneLineComponent->SetAlwaysOnTop(true);
             AddOwnedComponent(BoneLineComponent);
             BoneLineComponent->RegisterComponent(World);
+        }
+    }
+
+    // Create body line component for physics body visualization
+    if (!BodyLineComponent)
+    {
+        BodyLineComponent = NewObject<ULineComponent>();
+        if (BodyLineComponent && RootComponent)
+        {
+            BodyLineComponent->ObjectName = "BodyLines";
+            BodyLineComponent->SetupAttachment(RootComponent, EAttachmentRule::KeepRelative);
+            BodyLineComponent->SetAlwaysOnTop(true);
+            AddOwnedComponent(BodyLineComponent);
+            BodyLineComponent->RegisterComponent(World);
         }
     }
 
@@ -200,7 +217,14 @@ void ASkeletalMeshActor::DuplicateSubObjects()
     {
         if (auto* Comp = Cast<ULineComponent>(Component))
         {
-            BoneLineComponent = Comp;
+            if (Comp->ObjectName == FName("BoneLines"))
+            {
+                BoneLineComponent = Comp;
+            }
+            else if (Comp->ObjectName == FName("BodyLines"))
+            {
+                BodyLineComponent = Comp;
+            }
         }
         else if (auto* Comp = Cast<UBoneAnchorComponent>(Component))
         {
@@ -397,6 +421,57 @@ void ASkeletalMeshActor::UpdateBoneSelectionHighlight(int32 SelectedBoneIndex)
     }
 }
 
+void ASkeletalMeshActor::UpdateBodySelectionHighlight(int32 SelectedBodyIndex)
+{
+    if (!SkeletalMeshComponent || !BodyLineComponent)
+    {
+        return;
+    }
+
+    USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
+    if (!SkeletalMesh || !SkeletalMesh->PhysicsAsset)
+    {
+        return;
+    }
+
+    UPhysicsAsset* PhysicsAsset = SkeletalMesh->PhysicsAsset;
+    const int32 BodyCount = PhysicsAsset->BodySetups.Num();
+
+    const FVector4 SelectedColor(1.0f, 0.0f, 0.0f, 1.0f);   // Red for selected body
+    const FVector4 NormalColor(0.2f, 0.5f, 1.0f, 0.7f);     // Blue for normal body
+
+    for (int32 i = 0; i < BodyCount && i < BodyLinesCache.Num(); ++i)
+    {
+        const bool bSelected = (i == SelectedBodyIndex);
+        const FVector4 Color = bSelected ? SelectedColor : NormalColor;
+        FBodyDebugLines& BDL = BodyLinesCache[i];
+
+        // Update sphere line colors
+        for (ULine* L : BDL.SphereLines)
+        {
+            if (L) L->SetColor(Color);
+        }
+
+        // Update box line colors
+        for (ULine* L : BDL.BoxLines)
+        {
+            if (L) L->SetColor(Color);
+        }
+
+        // Update capsule line colors
+        for (ULine* L : BDL.CapsuleLines)
+        {
+            if (L) L->SetColor(Color);
+        }
+
+        // Update convex line colors
+        for (ULine* L : BDL.ConvexLines)
+        {
+            if (L) L->SetColor(Color);
+        }
+    }
+}
+
 void ASkeletalMeshActor::UpdateBoneSubtreeTransforms(int32 BoneIndex)
 {
     if (!SkeletalMeshComponent)
@@ -574,4 +649,578 @@ int32 ASkeletalMeshActor::PickBone(const FRay& Ray, float& OutDistance) const
     }
 
     return ClosestBoneIndex;
+}
+
+void ASkeletalMeshActor::RebuildBodyLines(bool& bChangedGeomNum, int32 SelectedBodyIndex)
+{
+    // Ensure viewer components exist before using them
+    EnsureViewerComponents();
+
+    if (!BodyLineComponent || !SkeletalMeshComponent)
+    {
+        return;
+    }
+
+    USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
+    if (!SkeletalMesh || !SkeletalMesh->PhysicsAsset)
+    {
+        if (bBodyLinesInitialized)
+        {
+            BodyLineComponent->ClearLines();
+            BodyLinesCache.Empty();
+            bBodyLinesInitialized = false;
+            CachedPhysicsAsset = nullptr;
+        }
+        return;
+    }
+
+    const FSkeletalMeshData* Data = SkeletalMesh->GetSkeletalMeshData();
+    if (!Data)
+    {
+        if (bBodyLinesInitialized)
+        {
+            BodyLineComponent->ClearLines();
+            BodyLinesCache.Empty();
+            bBodyLinesInitialized = false;
+            CachedPhysicsAsset = nullptr;
+        }
+        return;
+    }
+
+    UPhysicsAsset* PhysicsAsset = SkeletalMesh->PhysicsAsset;
+
+    // Initialize cache once per physics asset or rebuild if physics asset changed
+    if (!bBodyLinesInitialized || CachedPhysicsAsset != PhysicsAsset || 
+        BodyLinesCache.Num() != PhysicsAsset->BodySetups.Num() || bChangedGeomNum)
+    {
+        BodyLineComponent->ClearLines();
+        BuildBodyLinesCache();
+        bBodyLinesInitialized = true;
+        CachedPhysicsAsset = PhysicsAsset;
+        CachedSelectedBody = -1;
+        
+        bChangedGeomNum = false;
+    }
+
+    // Update selection highlight only when changed
+    if (CachedSelectedBody != SelectedBodyIndex)
+    {
+        UpdateBodySelectionHighlight(SelectedBodyIndex);
+        CachedSelectedBody = SelectedBodyIndex;
+    }
+
+	// Update transforms only(body들은 그대로고 트랜스폼만 바뀌는 경우)
+    UpdateBodyTransforms();
+}
+
+void ASkeletalMeshActor::BuildBodyLinesCache()
+{
+    if (!SkeletalMeshComponent || !BodyLineComponent)
+    {
+        return;
+    }
+
+    USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
+    if (!SkeletalMesh || !SkeletalMesh->PhysicsAsset)
+    {
+        return;
+    }
+
+    const FSkeletalMeshData* Data = SkeletalMesh->GetSkeletalMeshData();
+    if (!Data)
+    {
+        return;
+    }
+
+    UPhysicsAsset* PhysicsAsset = SkeletalMesh->PhysicsAsset;
+    const FSkeleton* Skeleton = &Data->Skeleton;
+
+    // Blue color for physics bodies (semi-transparent)
+    const FVector4 BodyColor(0.2f, 0.5f, 1.0f, 0.7f);
+    constexpr int NumSegments = 16;
+
+    BodyLinesCache.Empty();
+    BodyLinesCache.resize(PhysicsAsset->BodySetups.Num());
+
+    // Build lines for each body setup
+    for (int32 BodyIdx = 0; BodyIdx < PhysicsAsset->BodySetups.Num(); ++BodyIdx)
+    {
+        UBodySetup* Body = PhysicsAsset->BodySetups[BodyIdx];
+        if (!Body)
+            continue;
+
+        FBodyDebugLines& BDL = BodyLinesCache[BodyIdx];
+
+        // Find the bone index for this body
+        int32 BoneIndex = Skeleton->FindBoneIndex(Body->BoneName);
+        if (BoneIndex == INDEX_NONE)
+            continue;
+
+        // Get bone transform in local (actor) space
+        FTransform BoneWorldTransform = SkeletalMeshComponent->GetBoneWorldTransform(BoneIndex);
+        FMatrix WorldInv = GetWorldMatrix().InverseAffine();
+        FMatrix BoneLocalMatrix = BoneWorldTransform.ToMatrix() * WorldInv;
+        FTransform BoneLocalTransform(BoneLocalMatrix);
+
+        // Build Sphere Elements
+        for (const FKSphereElem& Sphere : Body->AggGeom.SphereElements)
+        {
+            FVector LocalCenter = BoneLocalTransform.TransformPosition(Sphere.Center);
+            float LocalRadius = Sphere.Radius * BoneLocalTransform.Scale3D.GetMaxValue();
+
+            // Draw 3 orthogonal circles (XY, XZ, YZ planes)
+            // XY plane
+            for (int i = 0; i < NumSegments; ++i)
+            {
+                float angle1 = (float)i / NumSegments * 2.0f * PI;
+                float angle2 = (float)(i + 1) / NumSegments * 2.0f * PI;
+
+                FVector p1 = LocalCenter + FVector(LocalRadius * cosf(angle1), LocalRadius * sinf(angle1), 0.0f);
+                FVector p2 = LocalCenter + FVector(LocalRadius * cosf(angle2), LocalRadius * sinf(angle2), 0.0f);
+
+                BDL.SphereLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
+            }
+
+            // XZ plane
+            for (int i = 0; i < NumSegments; ++i)
+            {
+                float angle1 = (float)i / NumSegments * 2.0f * PI;
+                float angle2 = (float)(i + 1) / NumSegments * 2.0f * PI;
+
+                FVector p1 = LocalCenter + FVector(LocalRadius * cosf(angle1), 0.0f, LocalRadius * sinf(angle1));
+                FVector p2 = LocalCenter + FVector(LocalRadius * cosf(angle2), 0.0f, LocalRadius * sinf(angle2));
+
+                BDL.SphereLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
+            }
+
+            // YZ plane
+            for (int i = 0; i < NumSegments; ++i)
+            {
+                float angle1 = (float)i / NumSegments * 2.0f * PI;
+                float angle2 = (float)(i + 1) / NumSegments * 2.0f * PI;
+
+                FVector p1 = LocalCenter + FVector(0.0f, LocalRadius * cosf(angle1), LocalRadius * sinf(angle1));
+                FVector p2 = LocalCenter + FVector(0.0f, LocalRadius * cosf(angle2), LocalRadius * sinf(angle2));
+
+                BDL.SphereLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
+            }
+        }
+
+        // Build Box Elements
+        for (const FKBoxElem& Box : Body->AggGeom.BoxElements)
+        {
+            FVector LocalExtent = Box.Extents;
+            FTransform ShapeLocalTransform(Box.Center, Box.Rotation, FVector::One());
+            FTransform ShapeTransform = BoneLocalTransform.GetWorldTransform(ShapeLocalTransform);
+
+            // Box의 8개 꼭지점 (local space)
+            FVector LocalCorners[8] = {
+                {-LocalExtent.X, -LocalExtent.Y, -LocalExtent.Z}, {+LocalExtent.X, -LocalExtent.Y, -LocalExtent.Z},
+                {-LocalExtent.X, +LocalExtent.Y, -LocalExtent.Z}, {+LocalExtent.X, +LocalExtent.Y, -LocalExtent.Z},
+                {-LocalExtent.X, -LocalExtent.Y, +LocalExtent.Z}, {+LocalExtent.X, -LocalExtent.Y, +LocalExtent.Z},
+                {-LocalExtent.X, +LocalExtent.Y, +LocalExtent.Z}, {+LocalExtent.X, +LocalExtent.Y, +LocalExtent.Z},
+            };
+
+            FVector Corners[8];
+            for (int i = 0; i < 8; ++i)
+            {
+                Corners[i] = ShapeTransform.TransformPosition(LocalCorners[i]);
+            }
+
+            // 12개 모서리
+            static const int Edges[12][2] = {
+                {0,1},{1,3},{3,2},{2,0}, // bottom
+                {4,5},{5,7},{7,6},{6,4}, // top
+                {0,4},{1,5},{2,6},{3,7}  // verticals
+            };
+
+            for (int i = 0; i < 12; ++i)
+            {
+                BDL.BoxLines.Add(BodyLineComponent->AddLine(Corners[Edges[i][0]], Corners[Edges[i][1]], BodyColor));
+            }
+        }
+
+        // Build Capsule (Sphyl) Elements - Match UCapsuleComponent::RenderDebugVolume style
+        for (const FKSphylElem& Capsule : Body->AggGeom.SphylElements)
+        {
+            FTransform ShapeLocalTransform(Capsule.Center, Capsule.Rotation, FVector::One());
+            FTransform ShapeTransform = BoneLocalTransform.GetWorldTransform(ShapeLocalTransform);
+
+            const FVector Scale3D = ShapeTransform.Scale3D;
+            const float AbsScaleX = std::fabs(Scale3D.X);
+            const float AbsScaleY = std::fabs(Scale3D.Y);
+            const float AbsScaleZ = std::fabs(Scale3D.Z);
+
+            const float Radius = Capsule.Radius * FMath::Max(AbsScaleX, AbsScaleY);
+            const float HalfHeightAABB = Capsule.HalfLength * AbsScaleZ;
+            const float HalfHeightCylinder = FMath::Max(0.0f, HalfHeightAABB - Radius);
+
+            // No scale in the transform matrix
+            const FMatrix ShapeNoScale = FMatrix::FromTRS(
+                ShapeTransform.Translation,
+                ShapeTransform.Rotation,
+                FVector(1.0f, 1.0f, 1.0f)
+            );
+
+            constexpr int NumOfSphereSlice = 4;
+            constexpr int NumHemisphereSegments = 8;
+
+            // Build top and bottom rings
+            TArray<FVector> TopRingLocal;
+            TArray<FVector> BottomRingLocal;
+            TopRingLocal.Reserve(NumOfSphereSlice);
+            BottomRingLocal.Reserve(NumOfSphereSlice);
+
+            for (int i = 0; i < NumOfSphereSlice; ++i)
+            {
+                const float a0 = (static_cast<float>(i) / NumOfSphereSlice) * TWO_PI;
+                const float x = Radius * std::sin(a0);
+                const float y = Radius * std::cos(a0);
+                TopRingLocal.Add(FVector(x, y, +HalfHeightCylinder));
+                BottomRingLocal.Add(FVector(x, y, -HalfHeightCylinder));
+            }
+
+            // Top and bottom ring lines
+            for (int i = 0; i < NumOfSphereSlice; ++i)
+            {
+                const int j = (i + 1) % NumOfSphereSlice;
+
+                // Top ring
+                FVector p1 = TopRingLocal[i] * ShapeNoScale;
+                FVector p2 = TopRingLocal[j] * ShapeNoScale;
+                BDL.CapsuleLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
+
+                // Bottom ring
+                p1 = BottomRingLocal[i] * ShapeNoScale;
+                p2 = BottomRingLocal[j] * ShapeNoScale;
+                BDL.CapsuleLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
+            }
+
+            // Vertical connecting lines
+            for (int i = 0; i < NumOfSphereSlice; ++i)
+            {
+                FVector p1 = TopRingLocal[i] * ShapeNoScale;
+                FVector p2 = BottomRingLocal[i] * ShapeNoScale;
+                BDL.CapsuleLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
+            }
+
+            // Hemisphere arcs (top and bottom)
+            auto AddHemisphereArcs = [&](float CenterZSign)
+            {
+                const float CenterZ = CenterZSign * HalfHeightCylinder;
+
+                for (int i = 0; i < NumHemisphereSegments; ++i)
+                {
+                    const float t0 = (static_cast<float>(i) / NumHemisphereSegments) * PI;
+                    const float t1 = (static_cast<float>(i + 1) / NumHemisphereSegments) * PI;
+
+                    // XZ plane arc
+                    FVector PlaneXZ0(Radius * std::cos(t0), 0.0f, CenterZ + CenterZSign * Radius * std::sin(t0));
+                    FVector PlaneXZ1(Radius * std::cos(t1), 0.0f, CenterZ + CenterZSign * Radius * std::sin(t1));
+
+                    BDL.CapsuleLines.Add(BodyLineComponent->AddLine(PlaneXZ0 * ShapeNoScale, PlaneXZ1 * ShapeNoScale, BodyColor));
+
+                    // YZ plane arc
+                    FVector PlaneYZ0(0.0f, Radius * std::cos(t0), CenterZ + CenterZSign * Radius * std::sin(t0));
+                    FVector PlaneYZ1(0.0f, Radius * std::cos(t1), CenterZ + CenterZSign * Radius * std::sin(t1));
+
+                    BDL.CapsuleLines.Add(BodyLineComponent->AddLine(PlaneYZ0 * ShapeNoScale, PlaneYZ1 * ShapeNoScale, BodyColor));
+                }
+            };
+
+            AddHemisphereArcs(+1.0f); // Top hemisphere
+            AddHemisphereArcs(-1.0f); // Bottom hemisphere
+        }
+
+        // Build Convex Elements (simplified as vertex connections)
+        for (const FKConvexElem& Convex : Body->AggGeom.ConvexElements)
+        {
+            if (Convex.Vertices.IsEmpty())
+                continue;
+
+            // Simple line strip through all vertices
+            for (int32 i = 0; i < Convex.Vertices.Num() - 1; ++i)
+            {
+                FVector p1 = BoneLocalTransform.TransformPosition(Convex.Vertices[i]);
+                FVector p2 = BoneLocalTransform.TransformPosition(Convex.Vertices[i + 1]);
+                BDL.ConvexLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
+            }
+
+            // Close the loop
+            if (Convex.Vertices.Num() > 2)
+            {
+                FVector p1 = BoneLocalTransform.TransformPosition(Convex.Vertices[Convex.Vertices.Num() - 1]);
+                FVector p2 = BoneLocalTransform.TransformPosition(Convex.Vertices[0]);
+                BDL.ConvexLines.Add(BodyLineComponent->AddLine(p1, p2, BodyColor));
+            }
+        }
+    }
+}
+
+void ASkeletalMeshActor::UpdateBodyTransforms()
+{
+    if (!SkeletalMeshComponent || !BodyLineComponent)
+    {
+        return;
+    }
+
+    USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
+    if (!SkeletalMesh || !SkeletalMesh->PhysicsAsset)
+    {
+        return;
+    }
+
+    const FSkeletalMeshData* Data = SkeletalMesh->GetSkeletalMeshData();
+    if (!Data)
+    {
+        return;
+    }
+
+    UPhysicsAsset* PhysicsAsset = SkeletalMesh->PhysicsAsset;
+    const FSkeleton* Skeleton = &Data->Skeleton;
+
+    constexpr int NumSegments = 16;
+    const FMatrix WorldInv = GetWorldMatrix().InverseAffine();
+
+    // Update each body setup's lines
+    for (int32 BodyIdx = 0; BodyIdx < PhysicsAsset->BodySetups.Num() && BodyIdx < BodyLinesCache.Num(); ++BodyIdx)
+    {
+        UBodySetup* Body = PhysicsAsset->BodySetups[BodyIdx];
+        if (!Body)
+            continue;
+
+        FBodyDebugLines& BDL = BodyLinesCache[BodyIdx];
+
+        // Find the bone index for this body
+        int32 BoneIndex = Skeleton->FindBoneIndex(Body->BoneName);
+        if (BoneIndex == INDEX_NONE)
+            continue;
+
+        // Get bone transform in local (actor) space
+        FTransform BoneWorldTransform = SkeletalMeshComponent->GetBoneWorldTransform(BoneIndex);
+        FMatrix BoneLocalMatrix = BoneWorldTransform.ToMatrix() * WorldInv;
+        FTransform BoneLocalTransform(BoneLocalMatrix);
+
+        int32 LineIndex = 0;
+
+        // Update Sphere Elements
+        for (const FKSphereElem& Sphere : Body->AggGeom.SphereElements)
+        {
+            FVector LocalCenter = BoneLocalTransform.TransformPosition(Sphere.Center);
+            float LocalRadius = Sphere.Radius * BoneLocalTransform.Scale3D.GetMaxValue();
+
+            // XY plane
+            for (int i = 0; i < NumSegments && LineIndex < BDL.SphereLines.Num(); ++i, ++LineIndex)
+            {
+                float angle1 = (float)i / NumSegments * 2.0f * PI;
+                float angle2 = (float)(i + 1) / NumSegments * 2.0f * PI;
+
+                FVector p1 = LocalCenter + FVector(LocalRadius * cosf(angle1), LocalRadius * sinf(angle1), 0.0f);
+                FVector p2 = LocalCenter + FVector(LocalRadius * cosf(angle2), LocalRadius * sinf(angle2), 0.0f);
+
+                if (BDL.SphereLines[LineIndex])
+                    BDL.SphereLines[LineIndex]->SetLine(p1, p2);
+            }
+
+            // XZ plane
+            for (int i = 0; i < NumSegments && LineIndex < BDL.SphereLines.Num(); ++i, ++LineIndex)
+            {
+                float angle1 = (float)i / NumSegments * 2.0f * PI;
+                float angle2 = (float)(i + 1) / NumSegments * 2.0f * PI;
+
+                FVector p1 = LocalCenter + FVector(LocalRadius * cosf(angle1), 0.0f, LocalRadius * sinf(angle1));
+                FVector p2 = LocalCenter + FVector(LocalRadius * cosf(angle2), 0.0f, LocalRadius * sinf(angle2));
+
+                if (BDL.SphereLines[LineIndex])
+                    BDL.SphereLines[LineIndex]->SetLine(p1, p2);
+            }
+
+            // YZ plane
+            for (int i = 0; i < NumSegments && LineIndex < BDL.SphereLines.Num(); ++i, ++LineIndex)
+            {
+                float angle1 = (float)i / NumSegments * 2.0f * PI;
+                float angle2 = (float)(i + 1) / NumSegments * 2.0f * PI;
+
+                FVector p1 = LocalCenter + FVector(0.0f, LocalRadius * cosf(angle1), LocalRadius * sinf(angle1));
+                FVector p2 = LocalCenter + FVector(0.0f, LocalRadius * cosf(angle2), LocalRadius * sinf(angle2));
+
+                if (BDL.SphereLines[LineIndex])
+                    BDL.SphereLines[LineIndex]->SetLine(p1, p2);
+            }
+        }
+
+        LineIndex = 0;
+
+        // Update Box Elements
+        for (const FKBoxElem& Box : Body->AggGeom.BoxElements)
+        {
+            FVector LocalExtent = Box.Extents;
+            FTransform ShapeLocalTransform(Box.Center, Box.Rotation, FVector::One());
+            FTransform ShapeTransform = BoneLocalTransform.GetWorldTransform(ShapeLocalTransform);
+
+            // Box의 8개 꼭지점 (local space)
+            FVector LocalCorners[8] = {
+                {-LocalExtent.X, -LocalExtent.Y, -LocalExtent.Z}, {+LocalExtent.X, -LocalExtent.Y, -LocalExtent.Z},
+                {-LocalExtent.X, +LocalExtent.Y, -LocalExtent.Z}, {+LocalExtent.X, +LocalExtent.Y, -LocalExtent.Z},
+                {-LocalExtent.X, -LocalExtent.Y, +LocalExtent.Z}, {+LocalExtent.X, -LocalExtent.Y, +LocalExtent.Z},
+                {-LocalExtent.X, +LocalExtent.Y, +LocalExtent.Z}, {+LocalExtent.X, +LocalExtent.Y, +LocalExtent.Z},
+            };
+
+            FVector Corners[8];
+            for (int i = 0; i < 8; ++i)
+            {
+                Corners[i] = ShapeTransform.TransformPosition(LocalCorners[i]);
+            }
+
+            // 12개 모서리
+            static const int Edges[12][2] = {
+                {0,1},{1,3},{3,2},{2,0}, // bottom
+                {4,5},{5,7},{7,6},{6,4}, // top
+                {0,4},{1,5},{2,6},{3,7}  // verticals
+            };
+
+            for (int i = 0; i < 12 && LineIndex < BDL.BoxLines.Num(); ++i, ++LineIndex)
+            {
+                if (BDL.BoxLines[LineIndex])
+                    BDL.BoxLines[LineIndex]->SetLine(Corners[Edges[i][0]], Corners[Edges[i][1]]);
+            }
+        }
+
+        LineIndex = 0;
+
+        // Update Capsule (Sphyl) Elements - Match UCapsuleComponent::RenderDebugVolume style
+        for (const FKSphylElem& Capsule : Body->AggGeom.SphylElements)
+        {
+            FTransform ShapeLocalTransform(Capsule.Center, Capsule.Rotation, FVector::One());
+            FTransform ShapeTransform = BoneLocalTransform.GetWorldTransform(ShapeLocalTransform);
+
+            const FVector Scale3D = ShapeTransform.Scale3D;
+            const float AbsScaleX = std::fabs(Scale3D.X);
+            const float AbsScaleY = std::fabs(Scale3D.Y);
+            const float AbsScaleZ = std::fabs(Scale3D.Z);
+
+            const float Radius = Capsule.Radius * FMath::Max(AbsScaleX, AbsScaleY);
+            const float HalfHeightAABB = Capsule.HalfLength * AbsScaleZ;
+            const float HalfHeightCylinder = FMath::Max(0.0f, HalfHeightAABB - Radius);
+
+            // No scale in the transform matrix
+            const FMatrix ShapeNoScale = FMatrix::FromTRS(
+                ShapeTransform.Translation,
+                ShapeTransform.Rotation,
+                FVector(1.0f, 1.0f, 1.0f)
+            );
+
+            constexpr int NumOfSphereSlice = 4;
+            constexpr int NumHemisphereSegments = 8;
+
+            // Build top and bottom rings
+            TArray<FVector> TopRingLocal;
+            TArray<FVector> BottomRingLocal;
+            TopRingLocal.Reserve(NumOfSphereSlice);
+            BottomRingLocal.Reserve(NumOfSphereSlice);
+
+            for (int i = 0; i < NumOfSphereSlice; ++i)
+            {
+                const float a0 = (static_cast<float>(i) / NumOfSphereSlice) * TWO_PI;
+                const float x = Radius * std::sin(a0);
+                const float y = Radius * std::cos(a0);
+                TopRingLocal.Add(FVector(x, y, +HalfHeightCylinder));
+                BottomRingLocal.Add(FVector(x, y, -HalfHeightCylinder));
+            }
+
+            // Top and bottom ring lines
+            for (int i = 0; i < NumOfSphereSlice && LineIndex < BDL.CapsuleLines.Num(); ++i)
+            {
+                const int j = (i + 1) % NumOfSphereSlice;
+
+                // Top ring
+                FVector p1 = TopRingLocal[i] * ShapeNoScale;
+                FVector p2 = TopRingLocal[j] * ShapeNoScale;
+                if (BDL.CapsuleLines[LineIndex])
+                    BDL.CapsuleLines[LineIndex]->SetLine(p1, p2);
+                ++LineIndex;
+
+                // Bottom ring
+                p1 = BottomRingLocal[i] * ShapeNoScale;
+                p2 = BottomRingLocal[j] * ShapeNoScale;
+                if (LineIndex < BDL.CapsuleLines.Num() && BDL.CapsuleLines[LineIndex])
+                    BDL.CapsuleLines[LineIndex]->SetLine(p1, p2);
+                ++LineIndex;
+            }
+
+            // Vertical connecting lines
+            for (int i = 0; i < NumOfSphereSlice && LineIndex < BDL.CapsuleLines.Num(); ++i, ++LineIndex)
+            {
+                FVector p1 = TopRingLocal[i] * ShapeNoScale;
+                FVector p2 = BottomRingLocal[i] * ShapeNoScale;
+                if (BDL.CapsuleLines[LineIndex])
+                    BDL.CapsuleLines[LineIndex]->SetLine(p1, p2);
+            }
+
+            // Hemisphere arcs (top and bottom)
+            auto UpdateHemisphereArcs = [&](float CenterZSign)
+            {
+                const float CenterZ = CenterZSign * HalfHeightCylinder;
+
+                for (int i = 0; i < NumHemisphereSegments && LineIndex < BDL.CapsuleLines.Num(); ++i)
+                {
+                    const float t0 = (static_cast<float>(i) / NumHemisphereSegments) * PI;
+                    const float t1 = (static_cast<float>(i + 1) / NumHemisphereSegments) * PI;
+
+                    // XZ plane arc
+                    FVector PlaneXZ0(Radius * std::cos(t0), 0.0f, CenterZ + CenterZSign * Radius * std::sin(t0));
+                    FVector PlaneXZ1(Radius * std::cos(t1), 0.0f, CenterZ + CenterZSign * Radius * std::sin(t1));
+
+                    if (BDL.CapsuleLines[LineIndex])
+                        BDL.CapsuleLines[LineIndex]->SetLine(PlaneXZ0 * ShapeNoScale, PlaneXZ1 * ShapeNoScale);
+                    ++LineIndex;
+
+                    // YZ plane arc
+                    if (LineIndex < BDL.CapsuleLines.Num())
+                    {
+                        FVector PlaneYZ0(0.0f, Radius * std::cos(t0), CenterZ + CenterZSign * Radius * std::sin(t0));
+                        FVector PlaneYZ1(0.0f, Radius * std::cos(t1), CenterZ + CenterZSign * Radius * std::sin(t1));
+
+                        if (BDL.CapsuleLines[LineIndex])
+                            BDL.CapsuleLines[LineIndex]->SetLine(PlaneYZ0 * ShapeNoScale, PlaneYZ1 * ShapeNoScale);
+                        ++LineIndex;
+                    }
+                }
+            };
+
+            UpdateHemisphereArcs(+1.0f); // Top hemisphere
+            UpdateHemisphereArcs(-1.0f); // Bottom hemisphere
+        }
+
+        LineIndex = 0;
+
+        // Update Convex Elements
+        for (const FKConvexElem& Convex : Body->AggGeom.ConvexElements)
+        {
+            if (Convex.Vertices.IsEmpty())
+                continue;
+
+            // Simple line strip through all vertices
+            for (int32 i = 0; i < Convex.Vertices.Num() - 1 && LineIndex < BDL.ConvexLines.Num(); ++i, ++LineIndex)
+            {
+                FVector p1 = BoneLocalTransform.TransformPosition(Convex.Vertices[i]);
+                FVector p2 = BoneLocalTransform.TransformPosition(Convex.Vertices[i + 1]);
+                
+                if (BDL.ConvexLines[LineIndex])
+                    BDL.ConvexLines[LineIndex]->SetLine(p1, p2);
+            }
+
+            // Close the loop
+            if (Convex.Vertices.Num() > 2 && LineIndex < BDL.ConvexLines.Num())
+            {
+                FVector p1 = BoneLocalTransform.TransformPosition(Convex.Vertices[Convex.Vertices.Num() - 1]);
+                FVector p2 = BoneLocalTransform.TransformPosition(Convex.Vertices[0]);
+                
+                if (BDL.ConvexLines[LineIndex])
+                    BDL.ConvexLines[LineIndex]->SetLine(p1, p2);
+                
+                ++LineIndex;
+            }
+        }
+    }
 }

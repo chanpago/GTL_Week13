@@ -20,9 +20,13 @@
 #include "Source/Runtime/Engine/GameFramework/CameraActor.h"
 #include "Source/Runtime/Engine/Physics/PhysicsAsset.h"
 #include "Source/Runtime/Engine/Physics/BodySetup.h"
+#include "Source/Runtime/Engine/Physics/PhysicalMaterial.h"
+#include <cstring>
 
 SSkeletalMeshViewerWindow::SSkeletalMeshViewerWindow()
 {
+    PhysicsAssetPath = std::filesystem::path(GDataDir) / "PhysicsAsset";
+
     CenterRect = FRect(0, 0, 0, 0);
     
     IconFirstFrame = UResourceManager::GetInstance().Load<UTexture>("Data/Icon/PlayControlsToFront.png");
@@ -468,6 +472,9 @@ void SSkeletalMeshViewerWindow::OnRender()
                                     // When user selects a body, set SelectedBodySetup and also select corresponding bone
                                     ActiveState->SelectedBodySetup = MatchedBody;
 
+                                    ActiveState->SelectedBodyIndex = ActiveState->CurrentPhysicsAsset->FindBodyIndex(FName(Label));
+
+
                                     // When user selects a body, also select the corresponding bone and move gizmo
                                     if (ActiveState->SelectedBoneIndex != Index)
                                     {
@@ -613,7 +620,28 @@ void SSkeletalMeshViewerWindow::OnRender()
                     ImGui::Spacing();
                     ImGui::Checkbox("Simulate Physics", &Body->bSimulatePhysics);
                     ImGui::Checkbox("Enable Gravity", &Body->bEnableGravity);
+                    
+					// ======UPhysicalMaterial editing=======
+                    ImGui::Spacing();
+                    ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.45f, 0.55f, 0.70f, 0.5f));
+                    ImGui::Separator();
+                    ImGui::PopStyleColor();
+                    ImGui::Spacing();
 
+					ImGui::Text("Material Properties:");
+                    UPhysicalMaterial* PhysMat = Body->PhysMaterial;
+                    if (!PhysMat)
+                    {
+                        PhysMat = NewObject<UPhysicalMaterial>();
+                        Body->PhysMaterial = PhysMat;
+                    }
+					ImGui::DragFloat("Static Friction", &PhysMat->StaticFriction, 0.01f, 0.0f, 2.0f, "%.3f");
+					ImGui::DragFloat("Dynamic Friction", &PhysMat->DynamicFriction, 0.01f, 0.0f, 2.0f, "%.3f");
+					ImGui::DragFloat("Restitution", &PhysMat->Restitution, 0.01f, 0.0f, 1.0f, "%.3f");
+					ImGui::DragFloat("Density", &PhysMat->Density, 0.1f, 0.1f, 20.0f, "%.3f");
+
+
+					// =======Aggregate Geometry editing========
                     ImGui::Spacing();
                     ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.45f, 0.55f, 0.70f, 0.5f));
                     ImGui::Separator();
@@ -650,6 +678,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                                 if (ImGui::Button("Remove Sphere"))
                                 {
                                     Body->AggGeom.SphereElements.RemoveAt(si);
+                                    ActiveState->bChangedGeomNum = true;
                                     ImGui::TreePop();
                                     ImGui::PopID();
                                     break;
@@ -666,6 +695,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                             NewSphere.Center = FVector::Zero();
                             NewSphere.Radius = 50.0f;
                             Body->AggGeom.SphereElements.Add(NewSphere);
+                            ActiveState->bChangedGeomNum = true;
                         }
                         
                         ImGui::PopID(); // Pop "SphereElements"
@@ -700,6 +730,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                                 if (ImGui::Button("Remove Box"))
                                 {
                                     Body->AggGeom.BoxElements.RemoveAt(bi);
+                                    ActiveState->bChangedGeomNum = true;
                                     ImGui::TreePop();
                                     ImGui::PopID();
                                     break;
@@ -717,6 +748,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                             NewBox.Extents = FVector(50.0f, 50.0f, 50.0f);
                             NewBox.Rotation = FQuat::Identity();
                             Body->AggGeom.BoxElements.Add(NewBox);
+                            ActiveState->bChangedGeomNum = true;
                         }
                         
                         ImGui::PopID(); // Pop "BoxElements"
@@ -752,6 +784,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                                 if (ImGui::Button("Remove Capsule"))
                                 {
                                     Body->AggGeom.SphylElements.RemoveAt(si);
+                                    ActiveState->bChangedGeomNum = true;
                                     ImGui::TreePop();
                                     ImGui::PopID();
                                     break;
@@ -770,6 +803,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                             NewSphyl.HalfLength = 50.0f;
                             NewSphyl.Rotation = FQuat::Identity();
                             Body->AggGeom.SphylElements.Add(NewSphyl);
+                            ActiveState->bChangedGeomNum = true;
                         }
                         
                         ImGui::PopID(); // Pop "SphylElements"
@@ -1187,9 +1221,80 @@ void SSkeletalMeshViewerWindow::OnRenderViewport()
             ActiveState->bBoneLinesDirty = false;
         }
 
+        // Rebuild physics body lines when physics asset changes
+        if (ActiveState->PreviewActor && ActiveState->CurrentMesh && ActiveState->CurrentMesh->PhysicsAsset)
+        {
+            ActiveState->PreviewActor->RebuildBodyLines(ActiveState->bChangedGeomNum, ActiveState->SelectedBodyIndex);
+        }
+
         // 뷰포트 렌더링 (ImGui보다 먼저)
         ActiveState->Viewport->Render();
     }
+}
+
+void SSkeletalMeshViewerWindow::LoadPhysicsAsset(UPhysicsAsset* PhysicsAsset)
+{
+    if (!ActiveState)
+    {
+        return;
+    }
+
+    ActiveState->CurrentPhysicsAsset = PhysicsAsset;
+
+    if (!PhysicsAsset)
+    {
+        return;
+    }
+
+    PhysicsAsset->BuildRuntimeCache();
+
+    if (ActiveState->CurrentMesh)
+    {
+        ActiveState->CurrentMesh->PhysicsAsset = PhysicsAsset;
+    }
+}
+
+void SSkeletalMeshViewerWindow::SetPhysicsAssetSavePath(const FString& SavePath)
+{
+    if (!ActiveState || !ActiveState->CurrentPhysicsAsset)
+    {
+        return;
+    }
+
+    ActiveState->CurrentPhysicsAsset->SetFilePath(SavePath);
+}
+
+bool SSkeletalMeshViewerWindow::SavePhysicsAsset(ViewerState* State)
+{
+    if (!State || !State->CurrentPhysicsAsset)
+    {
+        return false;
+    }
+
+    FString TargetPath = State->CurrentPhysicsAsset->GetFilePath();
+
+    if (TargetPath.empty())
+    {
+        FWideString Initial = UTF8ToWide(GDataDir) + L"/NewPhysicsAsset.physics";
+        std::filesystem::path Selected = FPlatformProcess::OpenSaveFileDialog(Initial, L"physics", L"Physics Asset (*.physics)");
+        if (Selected.empty())
+        {
+            return false;
+        }
+
+        TargetPath = ResolveAssetRelativePath(WideToUTF8(Selected.wstring()), GDataDir);
+        State->CurrentPhysicsAsset->SetFilePath(TargetPath);
+    }
+
+    if (State->CurrentPhysicsAsset->SaveToFile(TargetPath))
+    {
+        UResourceManager::GetInstance().Add<UPhysicsAsset>(TargetPath, State->CurrentPhysicsAsset);
+        UE_LOG("Physics asset saved: %s", TargetPath.c_str());
+        return true;
+    }
+
+    UE_LOG("Failed to save physics asset: %s", TargetPath.c_str());
+    return false;
 }
 
 void SSkeletalMeshViewerWindow::OpenNewTab(const char* Name)
@@ -1342,7 +1447,7 @@ void SSkeletalMeshViewerWindow::DrawAnimationPanel(ViewerState* State)
         bool bIsTimelineHovered = false;
         float FrameAtMouse = 0.0f;
 
-        // --- 1.2. 헤더 행 (필터 + 눈금자) ---
+        // --- 1.2. 헤더 행 (필터 + 눈금을자) ---
         ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
         
         // 헤더 - 컬럼 0: 필터
@@ -2195,6 +2300,7 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
 
                     // Assign to viewer state
                     State->CurrentPhysicsAsset = NewAsset;
+                    State->CurrentPhysicsAsset->SetFilePath(FString());
 
                     // Optionally attach to the currently loaded skeletal mesh so the preview can use it
                     if (State->CurrentMesh)
@@ -2209,6 +2315,68 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                     UE_LOG("Failed to create new UPhysicsAsset");
                 }
             }
+
+        if (State->CurrentPhysicsAsset)
+        {
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(0.60f, 0.45f, 0.35f, 0.7f));
+            ImGui::Separator();
+            ImGui::PopStyleColor();
+            ImGui::Spacing();
+
+            const FString& SavePath = State->CurrentPhysicsAsset->GetFilePath();
+            ImGui::Text("Active Physics Asset: %s", State->CurrentPhysicsAsset->GetName().ToString().c_str());
+            ImGui::Text("Save Path: %s", SavePath.empty() ? "<None>" : SavePath.c_str());
+
+            //if (ImGui::Button("Browse Save Path"))
+            //{
+            //    FString DefaultPath = SavePath.empty() ? (GDataDir + "/NewPhysicsAsset.physics") : SavePath;
+            //    FWideString Initial = UTF8ToWide(DefaultPath);
+            //    std::filesystem::path Selected = FPlatformProcess::OpenSaveFileDialog(Initial, L"physics", L"Physics Asset (*.physics)");
+            //    if (!Selected.empty())
+            //    {
+            //        FString PathStr = ResolveAssetRelativePath(WideToUTF8(Selected.wstring()), GDataDir);
+            //        State->CurrentPhysicsAsset->SetFilePath(PathStr);
+            //    }
+            //}
+            //ImGui::SameLine();
+            //if (ImGui::Button("Save Physics Asset"))
+            //{
+            //    SavePhysicsAsset(State);
+            //}
+
+            //ImGui::SameLine();
+
+            // Save button: save currently selected PhysicsAsset to file
+            if (ImGui::Button("Save"))
+            {
+                if (State->CurrentPhysicsAsset)
+                {
+                    // Get save path
+                    FWideString WideInitialPath = UTF8ToWide(PhysicsAssetPath.string());
+                    std::filesystem::path WidePath = FPlatformProcess::OpenSaveFileDialog(WideInitialPath, L"phys", L"Physics Asset Files");
+					FString PathStr = ResolveAssetRelativePath(WidePath.string(), PhysicsAssetPath.string());
+
+                    if (!WidePath.empty())
+                    {               
+                        if (State->CurrentPhysicsAsset->SaveToFile(PathStr))
+                        {
+                            State->CurrentPhysicsAsset->SetFilePath(PathStr);
+                            
+                            UE_LOG("PhysicsAsset saved to: %s", PathStr.c_str());
+                        }
+                        else
+                        {
+                            UE_LOG("Failed to save PhysicsAsset to: %s", PathStr.c_str());
+                        }
+                    }
+                }
+                else
+                {
+                    UE_LOG("No PhysicsAsset selected to save");
+                }
+            }
+        }
         }
     }
 }

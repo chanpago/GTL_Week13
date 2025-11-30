@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Actor.h"
 #include "LineComponent.h"
 #include "SkeletalMeshComponent.h"
@@ -25,6 +25,7 @@ public:
     
     // - 본 오버레이(뼈대 선) 시각화를 위한 라인 컴포넌트
     ULineComponent* GetBoneLineComponent() const { return BoneLineComponent; }
+    ULineComponent* GetBodyLineComponent() const { return BodyLineComponent; }
     UBoneAnchorComponent* GetBoneGizmoAnchor() const { return BoneAnchor; }
 
     // Convenience: forward to component
@@ -33,6 +34,9 @@ public:
     // Rebuild bone line overlay from the current skeletal mesh bind pose
     // SelectedBoneIndex: highlight this bone and its parent connection
     void RebuildBoneLines(int32 SelectedBoneIndex);
+
+    // Rebuild physics body line overlay from the current physics asset
+    void RebuildBodyLines(bool& bChangedGeomNum, int32 SelectedBodyIndex);
 
     // Position the anchor
     void RepositionAnchorToBone(int32 BoneIndex);
@@ -52,6 +56,10 @@ protected:
     // 본(부모-자식) 연결을 라인으로 그리기 위한 디버그용 컴포넌트
     // - 액터의 로컬 공간에서 선분을 추가하고, 액터 트랜스폼에 따라 함께 이동/회전/스케일됨
     ULineComponent* BoneLineComponent = nullptr;
+
+    // Physics body 시각화를 위한 라인 컴포넌트
+    ULineComponent* BodyLineComponent = nullptr;
+
     // Anchor component used for gizmo selection/transform at a bone
     UBoneAnchorComponent* BoneAnchor = nullptr;
 
@@ -63,19 +71,36 @@ protected:
         TArray<ULine*> Rings;             // 3 * NumSegments lines per bone (joint spheres)
     };
 
+    // Physics body line cache (avoid ClearLines every frame)
+    struct FBodyDebugLines
+    {
+        TArray<ULine*> SphereLines;       // Lines for sphere collision shapes
+        TArray<ULine*> BoxLines;          // Lines for box collision shapes
+        TArray<ULine*> CapsuleLines;      // Lines for capsule collision shapes
+        TArray<ULine*> ConvexLines;       // Lines for convex collision shapes
+    };
+
     bool bBoneLinesInitialized = false;
     int32 CachedSegments = 4;
     int32 CachedSelected = -1;
     TArray<FBoneDebugLines> BoneLinesCache; // size == BoneCount
     TArray<TArray<int32>> BoneChildren;     // adjacency for subtree updates
 
+    bool bBodyLinesInitialized = false;
+    TArray<FBodyDebugLines> BodyLinesCache; // size == BodySetup count
+    UPhysicsAsset* CachedPhysicsAsset = nullptr;
+    int32 CachedSelectedBody = -1;
+
     float BoneJointRadius = 0.02f;
     float BoneBaseRadius = 0.03f;
 
     void BuildBoneLinesCache();
+    void BuildBodyLinesCache();
     void UpdateBoneSubtreeTransforms(int32 BoneIndex);
     void UpdateBoneSelectionHighlight(int32 SelectedBoneIndex);
+    void UpdateBodySelectionHighlight(int32 SelectedBodyIndex);
+    void UpdateBodyTransforms();
 
-    // Lazily create viewer-only components (BoneLineComponent, BoneAnchor) if in preview world
+    // Lazily create viewer-only components (BoneLineComponent, BodyLineComponent, BoneAnchor) if in preview world
     void EnsureViewerComponents();
 };

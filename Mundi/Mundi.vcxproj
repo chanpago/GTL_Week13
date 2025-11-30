@@ -1175,6 +1175,7 @@
     <ClInclude Include="Generated\UParticleSystemComponent.generated.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="ClassDiagram.cd" />
     <None Include="Tools\CodeGenerator\generate.py" />
     <None Include="Tools\CodeGenerator\lua_generator.py" />
     <None Include="Tools\CodeGenerator\parser.py" />

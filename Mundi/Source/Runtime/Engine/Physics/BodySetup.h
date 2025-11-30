@@ -22,6 +22,9 @@ class UBodySetup : public UBodySetupCore
 {
     DECLARE_CLASS(UBodySetup, UBodySetupCore)
 public:
+    UBodySetup();
+	~UBodySetup() override;
+
     FKAggregateGeom AggGeom;             // 이 Body가 가진 Primitive Collision 모음
 
     float Mass = 10.0f;                

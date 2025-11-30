@@ -7,6 +7,14 @@ public:
     float DynamicFriction;
     float Restitution;
     float Density;
+
+    UPhysicalMaterial()
+        : StaticFriction(0.5f)
+        , DynamicFriction(0.5f)
+        , Restitution(0.5f)
+        , Density(1.0f)
+    {
+	}
     
     void Serialize(const bool bInIsLoading, JSON& InOutHandle)
     {

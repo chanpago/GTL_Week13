@@ -78,6 +78,7 @@ public:
 	UMaterial* GetDefaultMaterial();
 
 	void PreloadParticles();
+	void PreloadPhysicsAssets();
 
 	// --- 디버그 및 기본 메시 생성 ---
 	void CreateDefaultShader();
