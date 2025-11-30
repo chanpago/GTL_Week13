@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "SkeletalMeshActor.h"
 #include "World.h"
 #include "Source/Runtime/Engine/Physics/PhysicsAsset.h"

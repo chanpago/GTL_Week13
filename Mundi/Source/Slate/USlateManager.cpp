@@ -554,6 +554,11 @@ void USlateManager::Render()
         ImGui::PopStyleVar(3);
     }
     
+    if (SkeletalViewerWindow)
+    {
+        SkeletalViewerWindow->OnRenderViewport();
+    }
+
     // Render detached viewer on top
     if (SkeletalViewerWindow)
     {
@@ -573,10 +578,6 @@ void USlateManager::Render()
 
 void USlateManager::RenderAfterUI()
 {
-    if (SkeletalViewerWindow)
-    {
-        SkeletalViewerWindow->OnRenderViewport();
-    }
 
     if (ParticleViewerWindow)
     {
