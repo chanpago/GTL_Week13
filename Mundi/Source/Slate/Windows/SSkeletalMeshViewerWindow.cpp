@@ -1090,7 +1090,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                     }
 
                     // Editable Capsule (Capsule) Elements
-                    if (ImGui::CollapsingHeader("Capsule Elements (Capsules)"))
+                    if (ImGui::CollapsingHeader("Capsule Elements"))
                     {
                         ImGui::Indent(10.0f);
                         ImGui::PushID("CapsuleElements");

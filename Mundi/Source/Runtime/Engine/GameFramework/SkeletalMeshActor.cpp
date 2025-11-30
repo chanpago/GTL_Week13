@@ -917,23 +917,15 @@ void ASkeletalMeshActor::BuildBodyLinesCache()
             }
         }
 
-        // Build Capsule Elements - Match UCapsuleComponent::RenderDebugVolume style
+        // Build Capsule Elements
         for (const FKCapsuleElem& Capsule : Body->AggGeom.CapsuleElements)
         {
             FTransform ShapeLocalTransform(Capsule.Center, Capsule.Rotation, FVector::One());
             FTransform ShapeTransform = BoneLocalTransform.GetWorldTransform(ShapeLocalTransform);
 
-            const FVector Scale3D = ShapeTransform.Scale3D;
-            const float AbsScaleX = std::fabs(Scale3D.X);
-            const float AbsScaleY = std::fabs(Scale3D.Y);
-            const float AbsScaleZ = std::fabs(Scale3D.Z);
-
-            // const float Radius = Capsule.Radius * FMath::Max(AbsScaleX, AbsScaleY);
             const float Radius = Capsule.Radius;
-            const float HalfHeightAABB = Capsule.HalfLength; // *AbsScaleZ;
-            const float HalfHeightCylinder = FMath::Max(0.0f, HalfHeightAABB - Radius);
+            const float HalfHeightCylinder = Capsule.HalfLength;
 
-            // No scale in the transform matrix
             const FMatrix ShapeNoScale = FMatrix::FromTRS(
                 ShapeTransform.Translation,
                 ShapeTransform.Rotation,
@@ -1169,24 +1161,15 @@ void ASkeletalMeshActor::UpdateBodyTransforms()
 
         LineIndex = 0;
 
-        // Update Capsule Elements - Match UCapsuleComponent::RenderDebugVolume style
+        // Update Capsule Elements
         for (const FKCapsuleElem& Capsule : Body->AggGeom.CapsuleElements)
         {
             FTransform ShapeLocalTransform(Capsule.Center, Capsule.Rotation, FVector::One());
             FTransform ShapeTransform = BoneLocalTransform.GetWorldTransform(ShapeLocalTransform);
 
-            const FVector Scale3D = ShapeTransform.Scale3D;
-            const float AbsScaleX = std::fabs(Scale3D.X);
-            const float AbsScaleY = std::fabs(Scale3D.Y);
-            const float AbsScaleZ = std::fabs(Scale3D.Z);
+            const float Radius = Capsule.Radius;
+            const float HalfHeightCylinder = Capsule.HalfLength;
 
-            // const float Radius = Capsule.Radius * FMath::Max(AbsScaleX, AbsScaleY);
-            // const float HalfHeightAABB = Capsule.HalfLength * AbsScaleZ;
-            const float Radius = Capsule.Radius; // *FMath::Max(AbsScaleX, AbsScaleY);
-            const float HalfHeightAABB = Capsule.HalfLength; // *AbsScaleZ;
-            const float HalfHeightCylinder = FMath::Max(0.0f, HalfHeightAABB - Radius);
-
-            // No scale in the transform matrix
             const FMatrix ShapeNoScale = FMatrix::FromTRS(
                 ShapeTransform.Translation,
                 ShapeTransform.Rotation,

@@ -20,6 +20,11 @@ namespace
     }
 }
 
+UPhysicsAsset::~UPhysicsAsset()
+{
+    CurrentSkeletal = nullptr;
+}
+
 void UPhysicsAsset::BuildRuntimeCache()
 {
     // 1) Body 이름 -> 인덱스 맵
@@ -91,6 +96,8 @@ void UPhysicsAsset::CreateGenerateAllBodySetup(EAggCollisionShapeType ShapeType,
     Constraints.Empty();
     CurrentSkeletal = SkeletalComponent;
 
+    CalculateScaledMinColliderLength();
+
     TArray<int32> BoneIndicesToCreate;
     SelectBonesForBodies(Skeleton, BoneIndicesToCreate);
     if (BoneIndicesToCreate.IsEmpty())
@@ -132,8 +139,6 @@ void UPhysicsAsset::CreateGenerateAllBodySetup(EAggCollisionShapeType ShapeType,
     BuildRuntimeCache();
 }
 
-
-
 void UPhysicsAsset::SelectBonesForBodies(const FSkeleton* Skeleton, TArray<int32>& OutBones) const
 {
     OutBones.Empty();
@@ -166,8 +171,6 @@ void UPhysicsAsset::SelectBonesForBodies(const FSkeleton* Skeleton, TArray<int32
     }
 }
 
-
-
 FBonePoints UPhysicsAsset::GetBonePoints(const FSkeleton* Skeleton, int32 BoneIndex) const
 {
     FBonePoints Points{};
@@ -197,8 +200,6 @@ FBonePoints UPhysicsAsset::GetBonePoints(const FSkeleton* Skeleton, int32 BoneIn
     return Points;
 }
 
-
-
 FKSphereElem UPhysicsAsset::FitSphereToBone(const FSkeleton* Skeleton, int32 BoneIndex)
 {
     FBonePoints Point = GetBonePoints(Skeleton, BoneIndex);
@@ -206,16 +207,25 @@ FKSphereElem UPhysicsAsset::FitSphereToBone(const FSkeleton* Skeleton, int32 Bon
     const float BoneLen = BoneDir.Size();
 
     FKSphereElem Elem;
-    FVector WorldCenter = (Point.Start + Point.End) * 0.5f;
-    Elem.Radius = FMath::Max(BoneLen * 0.5f, 0.1f);
 
-    FTransform BoneWorldTransform = CurrentSkeletal->GetBoneWorldTransform(BoneIndex);
-    BoneWorldTransform.Scale3D = FVector(1.f, 1.f, 1.f);
-    Elem.Center = InverseTransformPositionNoScale(BoneWorldTransform, WorldCenter);
+    if (BoneLen < KINDA_SMALL_NUMBER)
+    {
+        Elem.Radius = 0.1f;
+        Elem.Center = FVector::Zero();
+    }
+    else
+    {
+        FVector WorldCenter = (Point.Start + Point.End) * 0.5f;
+        Elem.Radius = BoneLen * 0.5f;
+
+        // 월드 스페이스 Center to Bone의 로컬 스페이스
+        FTransform BoneWorldTransform = CurrentSkeletal->GetBoneWorldTransform(BoneIndex);
+        BoneWorldTransform.Scale3D = FVector(1.f, 1.f, 1.f);
+        Elem.Center = InverseTransformPositionNoScale(BoneWorldTransform, WorldCenter);
+    }
+
     return Elem;
 }
-
-
 
 FKBoxElem UPhysicsAsset::FitBoxToBone(const FSkeleton* Skeleton, int32 BoneIndex)
 {
@@ -223,36 +233,37 @@ FKBoxElem UPhysicsAsset::FitBoxToBone(const FSkeleton* Skeleton, int32 BoneIndex
 
     const FVector BoneDir = (Point.End - Point.Start);
     const float BoneLen = BoneDir.Size();
-    FVector DirNorm = BoneDir;
-    if (DirNorm.SizeSquared() < KINDA_SMALL_NUMBER)
+
+    FKBoxElem Elem;
+
+    if (BoneLen < KINDA_SMALL_NUMBER)
     {
-        DirNorm = FVector(0.0f, 0.0f, 1.0f);
+        Elem.Extents = FVector(0.1f, 0.1f, 0.1f);
+        Elem.Center = FVector::Zero();
+        Elem.Rotation = FQuat::Identity();
     }
     else
     {
-        DirNorm.Normalize();
+        FVector DirNorm = BoneDir.GetSafeNormal();
+        const FVector WorldCenter = (Point.Start + Point.End) * 0.5f;
+
+        const float HalfDepth = BoneLen * 0.5f; // Main axis along bone length
+        const float HalfWidth = BoneLen * 0.15f; // Other axes smaller
+
+        const FVector BoxAxis(0, 0, 1);
+        const FQuat WorldRot = FQuat::FindBetweenNormals(BoxAxis, DirNorm);
+
+        Elem.Extents = FVector(HalfWidth, HalfWidth, HalfDepth);
+
+        FTransform BoneWorldTransform = CurrentSkeletal->GetBoneWorldTransform(BoneIndex);
+        BoneWorldTransform.Scale3D = FVector(1.f, 1.f, 1.f);
+
+        Elem.Center = InverseTransformPositionNoScale(BoneWorldTransform, WorldCenter);
+        Elem.Rotation = InverseTransformRotationNoScale(BoneWorldTransform, WorldRot);
     }
-
-    const FVector WorldCenter = (Point.Start + Point.End) * 0.5f;
-    const float HalfDepth = FMath::Max(BoneLen * 0.5f, 0.1f);
-    const float HalfWidth = FMath::Max(BoneLen * 0.15f, 0.1f);
-
-    const FVector BoxAxis(0, 0, 1);
-    const FQuat WorldRot = FQuat::FindBetweenNormals(BoxAxis, DirNorm);
-
-    FKBoxElem Elem;
-    Elem.Extents = FVector(HalfWidth, HalfWidth, HalfDepth);
-
-    FTransform BoneWorldTransform = CurrentSkeletal->GetBoneWorldTransform(BoneIndex);
-    BoneWorldTransform.Scale3D = FVector(1.f, 1.f, 1.f);
-
-    Elem.Center = InverseTransformPositionNoScale(BoneWorldTransform, WorldCenter);
-    Elem.Rotation = InverseTransformRotationNoScale(BoneWorldTransform, WorldRot);
 
     return Elem;
 }
-
-
 
 FKCapsuleElem UPhysicsAsset::FitCapsuleToBone(const FSkeleton* Skeleton, int32 BoneIndex)
 {
@@ -260,34 +271,34 @@ FKCapsuleElem UPhysicsAsset::FitCapsuleToBone(const FSkeleton* Skeleton, int32 B
 
     const FVector BoneDir = (Point.End - Point.Start);
     const float BoneLen = BoneDir.Size();
-    FVector DirNorm = BoneDir;
-    if (DirNorm.SizeSquared() < KINDA_SMALL_NUMBER)
+    
+    FKCapsuleElem Elem;
+
+    if (BoneLen < KINDA_SMALL_NUMBER)
     {
-        DirNorm = FVector(0.0f, 0.0f, 1.0f);
+        Elem.Radius = 0.1f; 
+        Elem.HalfLength = 0.0f;
+        Elem.Center = FVector::Zero(); 
+        Elem.Rotation = FQuat::Identity();
     }
     else
     {
-        DirNorm.Normalize();
+        Elem.Radius = BoneLen / 4.0f;
+        Elem.HalfLength = BoneLen / 4.0f;
+
+        const FVector DirNorm = BoneDir.GetSafeNormal();
+        
+        const FVector CapsuleAxis(0, 0, 1);
+        const FQuat WorldRot = FQuat::FindBetweenNormals(CapsuleAxis, DirNorm);
+
+        const FVector WorldCenter = (Point.Start + Point.End) * 0.5f;
+
+        FTransform BoneWorldTransform = CurrentSkeletal->GetBoneWorldTransform(BoneIndex);
+        BoneWorldTransform.Scale3D = FVector(1.f, 1.f, 1.f);
+
+        Elem.Center = InverseTransformPositionNoScale(BoneWorldTransform, WorldCenter);
+        Elem.Rotation = InverseTransformRotationNoScale(BoneWorldTransform, WorldRot);
     }
-
-    const FVector WorldCenter = (Point.Start + Point.End) * 0.5f;
-
-    const float Radius = FMath::Max(BoneLen * 0.25f, 0.1f);
-    const float HalfLength = FMath::Max((BoneLen * 0.5f) - Radius, 0.0f);
-
-    const FVector CapsuleAxis(0, 0, 1);
-    const FQuat WorldRot = FQuat::FindBetweenNormals(CapsuleAxis, DirNorm);
-
-    FKCapsuleElem Elem;
-    Elem.Radius = Radius;
-    Elem.HalfLength = HalfLength;
-
-    // 월드 center를 로컬 center로 바꾼다(그래야 추후 Build할 때 World로 이중변환 안 됨)
-    FTransform BoneWorldTransform = CurrentSkeletal->GetBoneWorldTransform(BoneIndex);
-    BoneWorldTransform.Scale3D = FVector(1.f, 1.f, 1.f); 
-
-    Elem.Center = InverseTransformPositionNoScale(BoneWorldTransform, WorldCenter);
-    Elem.Rotation = InverseTransformRotationNoScale(BoneWorldTransform, WorldRot);
 
     return Elem;
 }
@@ -354,6 +365,26 @@ void UPhysicsAsset::GenerateConstraintsFromSkeleton(const FSkeleton* Skeleton, c
 
         Constraints.Add(Setup);
     }
+}
+
+float UPhysicsAsset::GetMeshScale() const
+{
+    if (!CurrentSkeletal)
+    {
+        return 1.0f;
+    }
+
+    // Root bone의 월드 스케일 가져오기
+    const FTransform RootTransform = CurrentSkeletal->GetBoneWorldTransform(0);
+    const FVector Scale = RootTransform.Scale3D;
+
+    return FMath::Max(FMath::Abs(Scale.X), FMath::Abs(Scale.Y), FMath::Abs(Scale.Z));
+}
+
+void UPhysicsAsset::CalculateScaledMinColliderLength()
+{
+    float MeshScale = GetMeshScale();
+    MinColliderLength *= MeshScale;
 }
 
 bool UPhysicsAsset::Load(const FString& InFilePath, ID3D11Device* InDevice)

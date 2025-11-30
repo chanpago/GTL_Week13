@@ -39,7 +39,7 @@ public:
     DECLARE_CLASS(UPhysicsAsset, UResourceBase)
 
     UPhysicsAsset() = default;
-    virtual ~UPhysicsAsset() = default;
+    virtual ~UPhysicsAsset();
 
     void SetName(const FName& NewName) { Name = NewName; }
     FName GetName() const { return Name; }
@@ -58,15 +58,17 @@ public:
     void BuildBodySetupIndexMap();
 
     int32 FindBodyIndex(FName BodyName) const; 
-
     UBodySetup* FindBodySetup(FName BodyName) const;
-
     int32 FindConstraintIndex(FName BodyA, FName BodyB) const;
+
+
 
     // ====================================
     // 뷰어, 자동 PhysicsAsset 관련 함수
     // ====================================
     USkeletalMeshComponent* CurrentSkeletal = nullptr;
+    float MinColliderLength = 0.1f;
+
     void CreateGenerateAllBodySetup(EAggCollisionShapeType ShapeType, FSkeleton* Skeleton, USkeletalMeshComponent* SkeletalComponent = nullptr);
     void SelectBonesForBodies(const FSkeleton* Skeleton, TArray<int32>& OutBones) const;
     FBonePoints GetBonePoints(const FSkeleton* Skeleton, int32 BoneIndex) const;
@@ -75,6 +77,9 @@ public:
     FKCapsuleElem FitCapsuleToBone(const FSkeleton* Skeleton, int32 BoneIndex);
 
     void GenerateConstraintsFromSkeleton(const FSkeleton* Skeleton, const TArray<int32>& BoneIndicesToCreate, USkeletalMeshComponent* SkeletalComponent = nullptr);
+
+    float GetMeshScale() const;
+    void CalculateScaledMinColliderLength();
 
     // ====================================
     // Asset 직렬화
