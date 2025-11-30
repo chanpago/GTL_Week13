@@ -89,19 +89,47 @@ void UDirectionalLightComponent::GetShadowRenderRequests(FSceneView* View, TArra
 	if (bCascaded == false)
 	{
 		TArray<FVector> CameraFrustum = GetFrustumVertices(View->ProjectionMode, View->ViewRect, View->FieldOfView, View->AspectRatio, View->NearClip, View->FarClip, View->ZoomFactor);
-		float Near = View->NearClip;
-		float Far = View->FarClip;
-		float CenterDepth = (Far + Near) / 2;
-		FVector Center = FVector(0, 0, CenterDepth);
-		float MaxDis = FVector::Distance(Center, CameraFrustum[7]) * 2;
-		float WorldSizePerTexel = MaxDis / ShadowResolutionScale;
-		
+
+		// 프러스텀을 월드 -> 라이트 스페이스로 변환
 		CameraFrustum *= ViewInv;
 		CameraFrustum *= ShadowMapView;
+
+		// 라이트 스페이스에서 실제 AABB 계산
 		FAABB CameraFrustumAABB = FAABB(CameraFrustum);
-		CameraFrustumAABB.Min = CameraFrustumAABB.Min.SnapToGrid(FVector(WorldSizePerTexel, WorldSizePerTexel,0), true);
-		CameraFrustumAABB.Max = CameraFrustumAABB.Min + FVector(MaxDis, MaxDis, MaxDis);
+
+		// 라이트 스페이스 XY 평면에서 바운딩 서클 계산 (쉐도우맵 커버리지 기준)
+		FVector LightSpaceCenter = (CameraFrustumAABB.Min + CameraFrustumAABB.Max) * 0.5f;
+		float BoundingCircleRadius = 0.0f;
+		for (int v = 0; v < CameraFrustum.Num(); v++)
+		{
+			// XY 평면에서의 거리만 계산 (Z 제외)
+			float DX = CameraFrustum[v].X - LightSpaceCenter.X;
+			float DY = CameraFrustum[v].Y - LightSpaceCenter.Y;
+			float DistXY = FMath::Sqrt(DX * DX + DY * DY);
+			BoundingCircleRadius = FMath::Max(BoundingCircleRadius, DistXY);
+		}
+		float BoundingCircleDiameter = BoundingCircleRadius * 2.0f;
+
+		// 라이트 스페이스 AABB XY와 바운딩 서클 중 큰 값 사용
+		FVector AABBSize = CameraFrustumAABB.Max - CameraFrustumAABB.Min;
+		float MaxXYLightSpace = FMath::Max(AABBSize.X, AABBSize.Y);
+		float MaxXY = FMath::Max(MaxXYLightSpace, BoundingCircleDiameter);
+
+		float HalfXY = MaxXY * 0.5f;
+		float WorldSizePerTexel = MaxXY / ShadowResolutionScale;
+
+		// AABB 중심을 기준으로 정사각형 확장 (프러스텀 전체 커버 보장)
+		FVector AABBCenter = (CameraFrustumAABB.Min + CameraFrustumAABB.Max) * 0.5f;
+		// 텍셀 안정성을 위해 중심을 스냅
+		AABBCenter = AABBCenter.SnapToGrid(FVector(WorldSizePerTexel, WorldSizePerTexel, 0), true);
+
+		CameraFrustumAABB.Min.X = AABBCenter.X - HalfXY;
+		CameraFrustumAABB.Min.Y = AABBCenter.Y - HalfXY;
+		CameraFrustumAABB.Max.X = AABBCenter.X + HalfXY;
+		CameraFrustumAABB.Max.Y = AABBCenter.Y + HalfXY;
+		// Z는 뒤쪽으로 확장하여 캐스터 포함
 		CameraFrustumAABB.Min.Z -= View->FarClip;
+
 		FMatrix ShadowMapOrtho = FMatrix::OrthoMatrix(CameraFrustumAABB);
 		FShadowRenderRequest ShadowRenderRequest;
 		ShadowRenderRequest.LightOwner = this;
@@ -112,7 +140,7 @@ void UDirectionalLightComponent::GetShadowRenderRequests(FSceneView* View, TArra
 		ShadowRenderRequest.AtlasScaleOffset = 0;
 		OutRequests.Add(ShadowRenderRequest);
 	}
-	else 
+	else
 	{
 		CascadedSliceDepth = GetCascadedSliceDepth(CascadedCount, CascadedLinearBlendingValue, View->NearClip, View->FarClip);
 		for (int i = 0; i < CascadedCount; i++)
@@ -122,17 +150,47 @@ void UDirectionalLightComponent::GetShadowRenderRequests(FSceneView* View, TArra
 			//Near -= Near * CascadedOverlapValue;
 			Far += Far * CascadedOverlapValue;
 			TArray<FVector> CameraFrustum = GetFrustumVertices(View->ProjectionMode, View->ViewRect, View->FieldOfView, View->AspectRatio, Near, Far, View->ZoomFactor);
-			float CenterDepth = (Far + Near) / 2;
-			FVector Center = FVector(0, 0, CenterDepth);
-			float MaxDis = FVector::Distance(Center, CameraFrustum[7]) * 2;
-			float WorldSizePerTexel = MaxDis / ShadowResolutionScale;
 
+			// 프러스텀을 월드 -> 라이트 스페이스로 변환
 			CameraFrustum *= ViewInv;
 			CameraFrustum *= ShadowMapView;
+
+			// 라이트 스페이스에서 실제 AABB 계산
 			FAABB CameraFrustumAABB = FAABB(CameraFrustum);
-			CameraFrustumAABB.Min = CameraFrustumAABB.Min.SnapToGrid(FVector(WorldSizePerTexel, WorldSizePerTexel, 0), true);
-			CameraFrustumAABB.Max = CameraFrustumAABB.Min + FVector(MaxDis, MaxDis, MaxDis);
+
+			// 라이트 스페이스 XY 평면에서 바운딩 서클 계산 (쉐도우맵 커버리지 기준)
+			FVector LightSpaceCenter = (CameraFrustumAABB.Min + CameraFrustumAABB.Max) * 0.5f;
+			float BoundingCircleRadius = 0.0f;
+			for (int v = 0; v < CameraFrustum.Num(); v++)
+			{
+				// XY 평면에서의 거리만 계산 (Z 제외)
+				float DX = CameraFrustum[v].X - LightSpaceCenter.X;
+				float DY = CameraFrustum[v].Y - LightSpaceCenter.Y;
+				float DistXY = FMath::Sqrt(DX * DX + DY * DY);
+				BoundingCircleRadius = FMath::Max(BoundingCircleRadius, DistXY);
+			}
+			float BoundingCircleDiameter = BoundingCircleRadius * 2.0f;
+
+			// 라이트 스페이스 AABB XY와 바운딩 서클 중 큰 값 사용
+			FVector AABBSize = CameraFrustumAABB.Max - CameraFrustumAABB.Min;
+			float MaxXYLightSpace = FMath::Max(AABBSize.X, AABBSize.Y);
+			float MaxXY = FMath::Max(MaxXYLightSpace, BoundingCircleDiameter);
+
+			float HalfXY = MaxXY * 0.5f;
+			float WorldSizePerTexel = MaxXY / ShadowResolutionScale;
+
+			// AABB 중심을 기준으로 정사각형 확장 (프러스텀 전체 커버 보장)
+			FVector AABBCenter = (CameraFrustumAABB.Min + CameraFrustumAABB.Max) * 0.5f;
+			// 텍셀 안정성을 위해 중심을 스냅
+			AABBCenter = AABBCenter.SnapToGrid(FVector(WorldSizePerTexel, WorldSizePerTexel, 0), true);
+
+			CameraFrustumAABB.Min.X = AABBCenter.X - HalfXY;
+			CameraFrustumAABB.Min.Y = AABBCenter.Y - HalfXY;
+			CameraFrustumAABB.Max.X = AABBCenter.X + HalfXY;
+			CameraFrustumAABB.Max.Y = AABBCenter.Y + HalfXY;
+			// Z는 뒤쪽으로 확장하여 캐스터 포함
 			CameraFrustumAABB.Min.Z -= View->FarClip;
+
 			FMatrix ShadowMapOrtho = FMatrix::OrthoMatrix(CameraFrustumAABB);
 			FShadowRenderRequest ShadowRenderRequest;
 			ShadowRenderRequest.LightOwner = this;

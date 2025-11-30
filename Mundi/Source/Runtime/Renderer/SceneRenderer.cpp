@@ -462,13 +462,19 @@ void FSceneRenderer::RenderShadowDepthPass(FShadowRenderRequest& ShadowRequest, 
 	UShader* DepthVS = UResourceManager::GetInstance().Load<UShader>("Shaders/Shadows/DepthOnly_VS.hlsl");
 	if (!DepthVS || !DepthVS->GetVertexShader()) return;
 
-	TArray<FShaderMacro> Macros;
-	if (GWorld->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_GPUSkinning))
+	// 스태틱 메쉬용 (GPU 스키닝 없음)
+	FShaderVariant* ShaderVariantStatic = DepthVS->GetOrCompileShaderVariant({});
+	if (!ShaderVariantStatic) return;
+
+	// 스켈레탈 메쉬용 (GPU 스키닝 있음) - SF_GPUSkinning이 활성화된 경우에만 준비
+	FShaderVariant* ShaderVariantSkinned = nullptr;
+	bool bGPUSkinningEnabled = GWorld->GetRenderSettings().IsShowFlagEnabled(EEngineShowFlags::SF_GPUSkinning);
+	if (bGPUSkinningEnabled)
 	{
-		Macros.Add({"USE_GPU_SKINNING", "1"});
+		TArray<FShaderMacro> SkinningMacros;
+		SkinningMacros.Add({"USE_GPU_SKINNING", "1"});
+		ShaderVariantSkinned = DepthVS->GetOrCompileShaderVariant(SkinningMacros);
 	}
-	FShaderVariant* ShaderVariant = DepthVS->GetOrCompileShaderVariant(Macros);
-	if (!ShaderVariant) return;
 
 	// vsm용 픽셀 셰이더
 	UShader* DepthPs = UResourceManager::GetInstance().Load<UShader>("Shaders/Shadows/DepthOnly_PS.hlsl");
@@ -477,10 +483,7 @@ void FSceneRenderer::RenderShadowDepthPass(FShadowRenderRequest& ShadowRequest, 
 	FShaderVariant* ShaderVarianVSM = DepthPs->GetOrCompileShaderVariant();
 	if (!ShaderVarianVSM) return;
 
-	// 2. 파이프라인 설정
-	RHIDevice->GetDeviceContext()->IASetInputLayout(ShaderVariant->InputLayout);
-	RHIDevice->GetDeviceContext()->VSSetShader(ShaderVariant->VertexShader, nullptr, 0);
-	
+	// 2. 픽셀 셰이더 설정 (배치에 관계없이 동일)
     EShadowAATechnique ShadowAAType = World->GetRenderSettings().GetShadowAATechnique();
 	switch (ShadowAAType)
 	{
@@ -493,7 +496,7 @@ void FSceneRenderer::RenderShadowDepthPass(FShadowRenderRequest& ShadowRequest, 
 	default:
 		RHIDevice->GetDeviceContext()->PSSetShader(nullptr, nullptr, 0);
 		break;
-	}	
+	}
 
 	// 3. 라이트의 View-Projection 행렬을 메인 ViewProj 버퍼에 설정
 	FMatrix WorldLocation = {};
@@ -511,9 +514,25 @@ void FSceneRenderer::RenderShadowDepthPass(FShadowRenderRequest& ShadowRequest, 
 	ID3D11ShaderResourceView* CurrentSkinMatrixSRV = nullptr;
 	ID3D11ShaderResourceView* CurrentSkinNormalMatrixSRV = nullptr;
 
+	// 현재 사용 중인 셰이더 variant 추적
+	FShaderVariant* CurrentShaderVariant = nullptr;
+
 	for (const FMeshBatchElement& Batch : InShadowBatches)
 	{
-		// 셰이더/픽셀 상태 변경 불필요
+		// 배치별로 GPU 스키닝 여부 판단: GPUSkinMatrixSRV가 있으면 스켈레탈 메쉬
+		bool bBatchUsesGPUSkinning = bGPUSkinningEnabled && Batch.GPUSkinMatrixSRV != nullptr;
+		FShaderVariant* RequiredVariant = bBatchUsesGPUSkinning ? ShaderVariantSkinned : ShaderVariantStatic;
+
+		// 셰이더 variant가 변경되면 업데이트
+		if (RequiredVariant != CurrentShaderVariant)
+		{
+			RHIDevice->GetDeviceContext()->IASetInputLayout(RequiredVariant->InputLayout);
+			RHIDevice->GetDeviceContext()->VSSetShader(RequiredVariant->VertexShader, nullptr, 0);
+			CurrentShaderVariant = RequiredVariant;
+
+			// 셰이더가 바뀌면 버퍼도 다시 바인딩해야 할 수 있으므로 캐시 무효화
+			CurrentVertexBuffer = nullptr;
+		}
 
 		// IA 상태 변경
 		if (Batch.VertexBuffer != CurrentVertexBuffer ||

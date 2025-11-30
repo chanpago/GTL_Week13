@@ -212,6 +212,7 @@ void UContentBrowserWindow::RenderFolderTreeNode(const std::filesystem::path& Fo
         }
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+        if (FolderPath == RootPath) flags |= ImGuiTreeNodeFlags_DefaultOpen;
         if (!hasSubFolders) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
         if (FolderPath == CurrentPath) flags |= ImGuiTreeNodeFlags_Selected;
 
