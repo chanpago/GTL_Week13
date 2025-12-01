@@ -256,6 +256,13 @@ void UWorld::Tick(float DeltaSeconds)
         Partition->Update(DeltaSeconds, /*budget*/256);
     }
 
+	// 물리 결과 수확 (PIE에서만) - Actor Tick 전에 수행
+	// 이전 프레임에서 시작한 물리 계산 결과를 가져옴 (1프레임 지연)
+	if (PhysScene && bPie)
+	{
+		PhysScene->WaitForSimulation();
+	}
+
 	if (Level)
 	{
 		// Tick 중에 새로운 actor가 추가될 수도 있어서 복사 후 호출
@@ -286,7 +293,8 @@ void UWorld::Tick(float DeltaSeconds)
 		LuaManager->Tick(GetDeltaTime(EDeltaTime::Game));
 	}
 
-	// 물리 시뮬레이션 (PIE에서만)
+	// 물리 시뮬레이션 시작 (PIE에서만) - non-blocking
+	// 이번 프레임 물리 계산 시작, 결과는 다음 프레임에서 사용
 	if (PhysScene && bPie)
 	{
 		PhysScene->StepSimulation(GetDeltaTime(EDeltaTime::Game));

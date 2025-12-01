@@ -584,6 +584,17 @@ void USkeletalMeshComponent::SyncAnimationFromBodies()
     // 각 BodyInstance에서 월드 트랜스폼을 가져와서
     // 해당 본의 월드 트랜스폼으로 덮어쓴다.
 
+    UWorld* World = GetOwner() ? GetOwner()->GetWorld() : nullptr;
+    if (!World || !World->GetPhysScene())
+        return;
+
+    PxScene* PxScenePtr = World->GetPhysScene()->GetScene();
+    if (!PxScenePtr)
+        return;
+
+    // Thread-Safe: 물리 데이터 읽기 시 Lock 획득
+    SCOPED_PHYSX_READ_LOCK(*PxScenePtr);
+
     for (FBodyInstance* BI : Bodies)
     {
         if (!BI || !BI->BodySetup)

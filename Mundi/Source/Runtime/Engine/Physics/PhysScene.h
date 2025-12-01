@@ -5,6 +5,10 @@
 using namespace physx;
 using namespace DirectX;
 
+// 물리 데이터 접근 시 Thread-Safe Lock 매크로
+#define SCOPED_PHYSX_READ_LOCK(scene) PxSceneReadLock scopedReadLock(scene)
+#define SCOPED_PHYSX_WRITE_LOCK(scene) PxSceneWriteLock scopedWriteLock(scene)
+
 // PhysX Assert를 로그로 출력하는 커스텀 핸들러
 class FPhysXAssertHandler : public PxAssertHandler
 {
@@ -45,7 +49,9 @@ public:
      *          simultate(dt) 호출 -> PhysX(PxScene)가 내부에 등록된
      *          모든 RigidActor/Shape를 가지고  충돌검사
      */
-    void StepSimulation(float dt);                 // 매 프레임 시뮬레이션
+    void StepSimulation(float dt);                 // 매 프레임 시뮬레이션 (non-blocking)
+    bool IsSimulationComplete() const;             // 시뮬레이션 완료 여부 확인
+    void WaitForSimulation();                      // 시뮬레이션 완료 대기
     GameObject& CreateBox(const PxVec3& pos, const PxVec3& halfExtents); // 테스트용 박스 생성
 
     const std::vector<GameObject>& GetObjects() const;
@@ -70,4 +76,5 @@ private:
 
     std::vector<GameObject> Objects; // 간단 테스트용
 
+    bool bSimulating = false;  // 시뮬레이션 진행 중 여부
 };

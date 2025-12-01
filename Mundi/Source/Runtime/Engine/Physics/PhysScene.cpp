@@ -242,14 +242,34 @@ void FPhysScene::StepSimulation(float dt)
     if (!Scene)
         return;
 
-    Scene->simulate(dt);
-    Scene->fetchResults(true);
-
-    // 결과를 GameObject에 반영
-    for (auto& obj : Objects)
+    // 이전 시뮬레이션이 아직 진행 중이면 완료 대기
+    if (bSimulating)
     {
-        //obj.UpdateFromPhysics();
+        WaitForSimulation();
     }
+
+    Scene->simulate(dt);
+    bSimulating = true;
+
+    // Non-blocking: 시뮬레이션 완료를 기다리지 않고 바로 리턴
+    // 물리 데이터 접근 시 SCOPED_PHYSX_READ_LOCK 사용 필요
+}
+
+bool FPhysScene::IsSimulationComplete() const
+{
+    if (!Scene || !bSimulating)
+        return true;
+
+    return Scene->checkResults();
+}
+
+void FPhysScene::WaitForSimulation()
+{
+    if (!Scene || !bSimulating)
+        return;
+
+    Scene->fetchResults(true);  // blocking
+    bSimulating = false;
 }
 
 FPhysScene::GameObject& FPhysScene::CreateBox(const PxVec3& pos, const PxVec3& halfExtents)
