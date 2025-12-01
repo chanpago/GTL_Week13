@@ -28,8 +28,8 @@ public:
     FKAggregateGeom AggGeom;             // 이 Body가 가진 Primitive Collision 모음
 
     float Mass = 10.0f;                
-    float LinearDamping = 0.01f;  // 위치의 시간 당 변화량
-    float AngularDamping = 0.05f; // 회전의 시간 당 변화량
+    float LinearDamping = 1.0f;  // 위치의 시간 당 변화량
+    float AngularDamping = 1.0f; // 회전의 시간 당 변화량
 
     UPhysicalMaterial* PhysMaterial = nullptr;
 

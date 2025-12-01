@@ -3,7 +3,7 @@
 #include "BodySetup.h"
 #include "PhysScene.h"          // FPhysScene 선언
 #include "PhysicsTypes.h"       // ToPx / FromPx (FVector/FTransform <-> Px 타입 변환)
-
+#include "PhysicalMaterial.h"   // UPhysicalMaterial
 
 using namespace physx;
 
@@ -20,11 +20,45 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
 
     PxPhysics*      Physics     = World.GetPhysics();
     PxScene*        Scene       = World.GetScene();
-    PxMaterial*     Material    = World.GetDefaultMaterial();
 
-    if (!Physics || !Scene || !Material)
+    if (!Physics || !Scene)
     {
         return;
+    }
+
+    // BodySetup의 PhysMaterial이 있으면 사용, 없으면 DefaultMaterial 사용
+    PxMaterial* Material = nullptr;
+    if (BodySetup && BodySetup->PhysMaterial)
+    {
+        UPhysicalMaterial* PhysMat = BodySetup->PhysMaterial;
+        Material = Physics->createMaterial(
+            PhysMat->StaticFriction,
+            PhysMat->DynamicFriction,
+            PhysMat->Restitution
+        );
+    }
+    else
+    {
+        Material = World.GetDefaultMaterial();
+    }
+
+    if (!Material)
+    {
+        return;
+    }
+
+    // BodySetup에서 물리 속성 가져오기
+    float ActualMass = Mass;
+    float LinearDamping = 0.01f;
+    float AngularDamping = 0.05f;
+    bool bEnableGravity = true;
+
+    if (BodySetup)
+    {
+        ActualMass = BodySetup->Mass;
+        LinearDamping = BodySetup->LinearDamping;
+        AngularDamping = BodySetup->AngularDamping;
+        bEnableGravity = BodySetup->bEnableGravity;
     }
 
     // 엔진 Transform(FTransform) -> PhysX Transform(PxTransform)
@@ -36,6 +70,13 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
     {
         return;
     }
+
+    // Damping 설정
+    DynamicActor->setLinearDamping(LinearDamping);
+    DynamicActor->setAngularDamping(AngularDamping);
+
+    // 중력 설정
+    DynamicActor->setActorFlag(PxActorFlag::eDISABLE_GRAVITY, !bEnableGravity);
 
      // ★★★★★ 여기부터가 핵심: BodySetup->AggGeom 기반으로 Shape 생성
     if (BodySetup)
@@ -129,7 +170,7 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
     }
 
     // 질량 / 관성 텐서 설정
-    PxRigidBodyExt::updateMassAndInertia(*DynamicActor, Mass);
+    PxRigidBodyExt::updateMassAndInertia(*DynamicActor, ActualMass);
 
     // 씬에 등록
     Scene->addActor(*DynamicActor);
@@ -137,7 +178,12 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
     // FBodyInstance와 연결
     RigidActor           = DynamicActor;
     RigidActor->userData = this; // 나중에 콜백에서 FBodyInstance로 되돌리기 용
-    
+
+    // BodySetup에서 생성한 Material은 release (DefaultMaterial은 PhysScene이 관리)
+    if (BodySetup && BodySetup->PhysMaterial)
+    {
+        Material->release();
+    }
 }
 
 // -------------------------
@@ -153,10 +199,30 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
 
     PxPhysics*   Physics   = World.GetPhysics();
     PxScene*     Scene     = World.GetScene();
-    PxMaterial*  Material  = World.GetDefaultMaterial();
 
-    if (!Physics || !Scene || !Material)
+    if (!Physics || !Scene)
         return;
+
+    // BodySetup의 PhysMaterial이 있으면 사용, 없으면 DefaultMaterial 사용
+    PxMaterial* Material = nullptr;
+    if (BodySetup && BodySetup->PhysMaterial)
+    {
+        UPhysicalMaterial* PhysMat = BodySetup->PhysMaterial;
+        Material = Physics->createMaterial(
+            PhysMat->StaticFriction,
+            PhysMat->DynamicFriction,
+            PhysMat->Restitution
+        );
+    }
+    else
+    {
+        Material = World.GetDefaultMaterial();
+    }
+
+    if (!Material)
+    {
+        return;
+    }
 
     PxTransform Pose = ToPx(WorldTransform);
 
@@ -166,7 +232,7 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
     {
         return;
     }
-    
+
     // BodySetup->AggGeom 기반으로 Shape 생성
     if (BodySetup)
     {
@@ -261,6 +327,12 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
 
     RigidActor           = StaticActor;
     RigidActor->userData = this;
+
+    // BodySetup에서 생성한 Material은 release (DefaultMaterial은 PhysScene이 관리)
+    if (BodySetup && BodySetup->PhysMaterial)
+    {
+        Material->release();
+    }
 }
 
 void FBodyInstance::Terminate(FPhysScene& World)

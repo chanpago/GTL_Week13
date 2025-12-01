@@ -9,9 +9,9 @@ public:
     float Density;
 
     UPhysicalMaterial()
-        : StaticFriction(0.5f)
+        : StaticFriction(1.0f)
         , DynamicFriction(0.5f)
-        , Restitution(0.5f)
+        , Restitution(0.0f)
         , Density(1.0f)
     {
 	}
