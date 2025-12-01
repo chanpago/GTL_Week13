@@ -1533,10 +1533,9 @@ void ASkeletalMeshActor::BuildConstraintLimitLinesCache()
     const FSkeleton* Skeleton = &Data->Skeleton;
 
     // Colors for limit visualization
-    const FVector4 TwistLimitColor(1.0f, 0.5f, 0.0f, 0.8f);  // Orange for twist limits
-    const FVector4 SwingLimitColor(0.0f, 1.0f, 0.5f, 0.6f);  // Cyan for swing limits
-    constexpr int NumSegments = 32;
-    constexpr float LimitRadius = 0.01f;  // Visual radius for limit shapes
+    const FVector4 TwistLimitColor(1.0f, 0.5f, 0.0f, 0.8f);
+    const FVector4 SwingLimitColor(0.0f, 1.0f, 0.5f, 0.6f);
+    constexpr float LimitRadius = 0.1f;
 
     ConstraintLimitLinesCache.Empty();
     ConstraintLimitLinesCache.resize(PhysicsAsset->Constraints.Num());
@@ -1560,13 +1559,10 @@ void ASkeletalMeshActor::BuildConstraintLimitLinesCache()
 
         // Get bone transforms in local (actor) space
         FTransform BoneWorldTransformA = SkeletalMeshComponent->GetBoneWorldTransform(BoneIndexA);
-        FTransform BoneWorldTransformB = SkeletalMeshComponent->GetBoneWorldTransform(BoneIndexB);
-
         FMatrix BoneLocalMatrixA = BoneWorldTransformA.ToMatrix() * WorldInv;
         FTransform BoneLocalTransformA(BoneLocalMatrixA);
 
-        // physicsX에서 body가 속한 공간의 "스케일"은 아마? 무시하기 때문에, 스케일을 1로 고정
-        BoneLocalTransformA.Scale3D = FVector::One(); // Ignore scale for transform updates
+        BoneLocalTransformA.Scale3D = FVector::One();
 
         // Apply LocalFrameA to get constraint frame in parent bone's local space
         FTransform ConstraintFrameA = BoneLocalTransformA.GetWorldTransform(Constraint.LocalFrameA);
@@ -1577,26 +1573,23 @@ void ASkeletalMeshActor::BuildConstraintLimitLinesCache()
         FVector ConstraintAxisY = ConstraintFrameA.Rotation.RotateVector(FVector(0, 1, 0));
         FVector ConstraintAxisZ = ConstraintFrameA.Rotation.RotateVector(FVector(0, 0, 1));
 
-        // === Draw Twist Limits (sector around X axis) ===
-        // TwistLimitMin ~ TwistLimitMax (in radians)
+        // === Draw Twist Limits ===
         const float TwistMin = Constraint.TwistLimitMin;
         const float TwistMax = Constraint.TwistLimitMax;
 
-        // Draw arc from TwistMin to TwistMax in YZ plane around X axis
         const int TwistSegments = 16;
         for (int i = 0; i < TwistSegments; ++i)
         {
             float angle1 = TwistMin + (TwistMax - TwistMin) * (float)i / TwistSegments;
             float angle2 = TwistMin + (TwistMax - TwistMin) * (float)(i + 1) / TwistSegments;
 
-            // Points on circle in YZ plane, rotated by twist angle around X
             FVector p1 = ConstraintOrigin + (ConstraintAxisY * std::cos(angle1) + ConstraintAxisZ * std::sin(angle1)) * LimitRadius;
             FVector p2 = ConstraintOrigin + (ConstraintAxisY * std::cos(angle2) + ConstraintAxisZ * std::sin(angle2)) * LimitRadius;
 
             CLDL.TwistArcLines.Add(ConstraintLimitLineComponent->AddLine(p1, p2, TwistLimitColor));
         }
 
-        // Draw radial lines from center to arc endpoints
+        // Draw radial lines
         {
             FVector pMin = ConstraintOrigin + (ConstraintAxisY * std::cos(TwistMin) + ConstraintAxisZ * std::sin(TwistMin)) * LimitRadius;
             FVector pMax = ConstraintOrigin + (ConstraintAxisY * std::cos(TwistMax) + ConstraintAxisZ * std::sin(TwistMax)) * LimitRadius;
@@ -1605,43 +1598,60 @@ void ASkeletalMeshActor::BuildConstraintLimitLinesCache()
             CLDL.TwistRadialLines.Add(ConstraintLimitLineComponent->AddLine(ConstraintOrigin, pMax, TwistLimitColor));
         }
 
-        // === Draw Swing Limits (cone) ===
-        // SwingLimitY and SwingLimitZ define cone angles around Y and Z axes
-        const float SwingY = Constraint.SwingLimitY;
-        const float SwingZ = Constraint.SwingLimitZ;
+        // === Draw Swing Limits (Elliptical Cone) ===
+		// Y, Z 반대로 적용해야 physicsX의 디버거의 모습과 일치
+        const float SwingY = Constraint.SwingLimitZ;
+        const float SwingZ = Constraint.SwingLimitY;
 
-        // Draw cone base circle and cone surface lines
-        const int ConeSegments = 24;
-        for (int i = 0; i < ConeSegments; ++i)
-        {
-            float angle1 = 2.0f * PI * (float)i / ConeSegments;
-            float angle2 = 2.0f * PI * (float)(i + 1) / ConeSegments;
+        const float sinSwingY = std::sin(SwingY);
+        const float sinSwingZ = std::sin(SwingZ);
+        const float cosSwingY = std::cos(SwingY);
+        const float cosSwingZ = std::cos(SwingZ);
 
-            // Cone opening varies by angle (elliptical cone)
-            float radius1 = LimitRadius * std::sqrt(
-                std::pow(std::cos(angle1) * std::sin(SwingZ), 2.0f) +
-                std::pow(std::sin(angle1) * std::sin(SwingY), 2.0f)
-            );
-            float radius2 = LimitRadius * std::sqrt(
-                std::pow(std::cos(angle2) * std::sin(SwingZ), 2.0f) +
-                std::pow(std::sin(angle2) * std::sin(SwingY), 2.0f)
-            );
-
-            // Cone tip at constraint origin, opening along X axis
-            FVector tipOffset = ConstraintAxisX * LimitRadius;
-            FVector base1 = ConstraintOrigin + tipOffset + 
-                (ConstraintAxisY * std::cos(angle1) + ConstraintAxisZ * std::sin(angle1)) * radius1;
-            FVector base2 = ConstraintOrigin + tipOffset + 
-                (ConstraintAxisY * std::cos(angle2) + ConstraintAxisZ * std::sin(angle2)) * radius2;
-
-            // Cone base circle
-            CLDL.SwingConeLines.Add(ConstraintLimitLineComponent->AddLine(base1, base2, SwingLimitColor));
-
-            // Cone surface lines (every 4th segment to reduce clutter)
-            if (i % 4 == 0)
+        auto GetEllipticalConePoint = [&](float angle) -> FVector
             {
-                CLDL.SwingConeLines.Add(ConstraintLimitLineComponent->AddLine(ConstraintOrigin, base1, SwingLimitColor));
-            }
+                const float cosAngle = std::cos(angle);
+                const float sinAngle = std::sin(angle);
+
+                const float yCoord = sinSwingY * sinAngle;
+                const float zCoord = sinSwingZ * cosAngle;
+
+                const float xCoord = std::sqrt(std::max(0.0f,
+                    cosSwingY * cosSwingY * (sinAngle * sinAngle) +
+                    cosSwingZ * cosSwingZ * (cosAngle * cosAngle)));
+
+                FVector point = ConstraintOrigin +
+                    ConstraintAxisX * (LimitRadius * xCoord) +
+                    ConstraintAxisY * (LimitRadius * yCoord) +
+                    ConstraintAxisZ * (LimitRadius * zCoord);
+
+                return point;
+            };
+
+        // Create continuous ellipse (32 segments for the ellipse perimeter)
+        const int TotalEllipseSegments = 32;
+
+        for (int i = 0; i < TotalEllipseSegments; ++i)
+        {
+            const float t1 = (float)i / TotalEllipseSegments;
+            const float t2 = (float)(i + 1) / TotalEllipseSegments;
+
+            const float angle1 = t1 * TWO_PI;
+            const float angle2 = t2 * TWO_PI;
+
+            FVector p1 = GetEllipticalConePoint(angle1);
+            FVector p2 = GetEllipticalConePoint(angle2);
+
+            CLDL.SwingConeLines.Add(ConstraintLimitLineComponent->AddLine(p1, p2, SwingLimitColor));
+        }
+
+        // Add radial lines from origin to ellipse (8 radial lines evenly distributed)
+        const int NumRadialLines = 8;
+        for (int i = 0; i < NumRadialLines; ++i)
+        {
+            const float angle = (float)i / NumRadialLines * TWO_PI;
+            FVector edgePoint = GetEllipticalConePoint(angle);
+            CLDL.SwingConeLines.Add(ConstraintLimitLineComponent->AddLine(ConstraintOrigin, edgePoint, SwingLimitColor));
         }
     }
 }
@@ -1691,8 +1701,7 @@ void ASkeletalMeshActor::UpdateConstraintLimitTransforms()
         FMatrix BoneLocalMatrixA = BoneWorldTransformA.ToMatrix() * WorldInv;
         FTransform BoneLocalTransformA(BoneLocalMatrixA);
 
-        // physicsX에서 body가 속한 공간의 "스케일"은 아마? 무시하기 때문에, 스케일을 1로 고정
-        BoneLocalTransformA.Scale3D = FVector::One(); // Ignore scale for transform updates
+        BoneLocalTransformA.Scale3D = FVector::One();
 
         // Apply LocalFrameA to get constraint frame in parent bone's local space
         FTransform ConstraintFrameA = BoneLocalTransformA.GetWorldTransform(Constraint.LocalFrameA);
@@ -1741,44 +1750,24 @@ void ASkeletalMeshActor::UpdateConstraintLimitTransforms()
             }
         }
 
-        // === Update Swing Limit Lines (Cone) ===
-        const float SwingY = Constraint.SwingLimitY;
-        const float SwingZ = Constraint.SwingLimitZ;
+        // === Update Swing Limit Lines (Elliptical Cone) ===
+		// Y, Z 반대로 적용해야 physicsX의 디버거의 모습과 일치
+        const float SwingY = Constraint.SwingLimitZ;
+        const float SwingZ = Constraint.SwingLimitY;
 
         const float sinSwingY = std::sin(SwingY);
         const float sinSwingZ = std::sin(SwingZ);
         const float cosSwingY = std::cos(SwingY);
         const float cosSwingZ = std::cos(SwingZ);
 
-        // Lambda to calculate point on elliptical cone surface
         auto GetEllipticalConePoint = [&](float angle) -> FVector
             {
                 const float cosAngle = std::cos(angle);
                 const float sinAngle = std::sin(angle);
 
-                // Calculate the radial distance in the YZ plane based on the angle
-                // Using the ellipse equation: (y/a)² + (z/b)² = 1
-                // where a = sin(SwingY), b = sin(SwingZ)
-                const float yRadius = sinSwingY;
-                const float zRadius = sinSwingZ;
+                const float yCoord = sinSwingY * sinAngle;
+                const float zCoord = sinSwingZ * cosAngle;
 
-                // Parametric form: y = a*sin(θ), z = b*cos(θ)
-                const float yCoord = yRadius * sinAngle;
-                const float zCoord = zRadius * cosAngle;
-
-                // Calculate the radial distance from X axis
-                const float radialDist = std::sqrt(yCoord * yCoord + zCoord * zCoord);
-
-                // Calculate X coordinate based on the swing angle
-                // The cone equation: x² + (y²/sin²(SwingY) + z²/sin²(SwingZ)) * cos²(angle) = 1
-                // Simplified: at the cone surface, x = cos(swing_angle) where swing_angle varies with direction
-
-                // For a point at angle θ in YZ plane, the effective swing angle is:
-                // swing(θ) = atan(radialDist)
-                // But we want the cone to pass through our 4 key vertices
-
-                // Better approach: x coordinate is determined by the constraint that
-                // the point lies on the cone surface at the given swing limits
                 const float xCoord = std::sqrt(std::max(0.0f,
                     cosSwingY * cosSwingY * (sinAngle * sinAngle) +
                     cosSwingZ * cosSwingZ * (cosAngle * cosAngle)));
@@ -1791,7 +1780,7 @@ void ASkeletalMeshActor::UpdateConstraintLimitTransforms()
                 return point;
             };
 
-        // Draw continuous ellipse
+        // Update ellipse perimeter lines (32 segments)
         const int TotalEllipseSegments = 32;
         lineIdx = 0;
 
@@ -1812,30 +1801,17 @@ void ASkeletalMeshActor::UpdateConstraintLimitTransforms()
             }
         }
 
-        // Draw radial lines to 4 key vertices
-        if (lineIdx < CLDL.SwingConeLines.Num() && CLDL.SwingConeLines[lineIdx])
+        // Update radial lines (8 lines from origin to ellipse edge)
+        const int NumRadialLines = 8;
+        for (int i = 0; i < NumRadialLines && lineIdx < CLDL.SwingConeLines.Num(); ++i, ++lineIdx)
         {
-            FVector vertex1 = GetEllipticalConePoint(PI * 0.5f);  // +Y direction
-            CLDL.SwingConeLines[lineIdx]->SetLine(ConstraintOrigin, vertex1);
-            ++lineIdx;
-        }
-        if (lineIdx < CLDL.SwingConeLines.Num() && CLDL.SwingConeLines[lineIdx])
-        {
-            FVector vertex2 = GetEllipticalConePoint(PI * 1.5f);  // -Y direction
-            CLDL.SwingConeLines[lineIdx]->SetLine(ConstraintOrigin, vertex2);
-            ++lineIdx;
-        }
-        if (lineIdx < CLDL.SwingConeLines.Num() && CLDL.SwingConeLines[lineIdx])
-        {
-            FVector vertex3 = GetEllipticalConePoint(0.0f);       // +Z direction
-            CLDL.SwingConeLines[lineIdx]->SetLine(ConstraintOrigin, vertex3);
-            ++lineIdx;
-        }
-        if (lineIdx < CLDL.SwingConeLines.Num() && CLDL.SwingConeLines[lineIdx])
-        {
-            FVector vertex4 = GetEllipticalConePoint(PI);         // -Z direction
-            CLDL.SwingConeLines[lineIdx]->SetLine(ConstraintOrigin, vertex4);
-            ++lineIdx;
+            const float angle = (float)i / NumRadialLines * TWO_PI;
+            FVector edgePoint = GetEllipticalConePoint(angle);
+
+            if (CLDL.SwingConeLines[lineIdx])
+            {
+                CLDL.SwingConeLines[lineIdx]->SetLine(ConstraintOrigin, edgePoint);
+            }
         }
     }
 }
