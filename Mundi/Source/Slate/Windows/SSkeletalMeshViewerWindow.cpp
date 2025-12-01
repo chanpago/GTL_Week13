@@ -2821,7 +2821,7 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                 ImGui::Text("Save Path: %s", SavePath.empty() ? "<None>" : SavePath.c_str());
 
                 // Save button: save currently selected PhysicsAsset to file
-                if (ImGui::Button("Save"))
+                if (ImGui::Button("Save to File"))
                 {
                     if (State->CurrentPhysicsAsset)
                     {
@@ -2850,7 +2850,7 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                     }
                 }
 
-				ImGui::SameLine();
+				ImGui::SameLine(0.0f, 20.0f);
                 if(ImGui::Button("Apply to Current Mesh"))
                 {
                     if (State->CurrentMesh)
