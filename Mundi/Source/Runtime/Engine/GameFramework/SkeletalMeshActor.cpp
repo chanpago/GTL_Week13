@@ -447,12 +447,12 @@ void ASkeletalMeshActor::UpdateBodySelectionHighlight(int32 SelectedBodyIndex)
     }
 
     USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
-    if (!SkeletalMesh || !SkeletalMesh->PhysicsAsset)
+    UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetPhysicsAsset();
+    if (!SkeletalMesh || !PhysicsAsset)
     {
         return;
     }
 
-    UPhysicsAsset* PhysicsAsset = SkeletalMesh->PhysicsAsset;
     const int32 BodyCount = PhysicsAsset->BodySetups.Num();
 
     const FVector4 SelectedColor(1.0f, 0.0f, 0.0f, 1.0f);   // Red for selected body
@@ -680,7 +680,8 @@ void ASkeletalMeshActor::RebuildBodyLines(bool& bChangedGeomNum, int32 SelectedB
     }
 
     USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
-    if (!SkeletalMesh || !SkeletalMesh->PhysicsAsset)
+    UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetPhysicsAsset();
+    if (!SkeletalMesh || !PhysicsAsset)
     {
         if (bBodyLinesInitialized)
         {
@@ -704,8 +705,6 @@ void ASkeletalMeshActor::RebuildBodyLines(bool& bChangedGeomNum, int32 SelectedB
         }
         return;
     }
-
-    UPhysicsAsset* PhysicsAsset = SkeletalMesh->PhysicsAsset;
 
     // Initialize cache once per physics asset or rebuild if physics asset changed
     if (!bBodyLinesInitialized || CachedPhysicsAsset != PhysicsAsset || 
@@ -742,7 +741,8 @@ void ASkeletalMeshActor::RebuildConstraintLines(int32 SelectedConstraintIndex)
     }
 
     USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
-    if (!SkeletalMesh || !SkeletalMesh->PhysicsAsset)
+	UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetPhysicsAsset();
+    if (!SkeletalMesh || !PhysicsAsset)
     {
         if (bConstraintLinesInitialized)
         {
@@ -764,8 +764,6 @@ void ASkeletalMeshActor::RebuildConstraintLines(int32 SelectedConstraintIndex)
         }
         return;
     }
-
-    UPhysicsAsset* PhysicsAsset = SkeletalMesh->PhysicsAsset;
 
     // Initialize cache once per physics asset or rebuild if physics asset changed
     if (!bConstraintLinesInitialized || CachedPhysicsAsset != PhysicsAsset || 
@@ -797,7 +795,8 @@ void ASkeletalMeshActor::BuildBodyLinesCache()
     }
 
     USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
-    if (!SkeletalMesh || !SkeletalMesh->PhysicsAsset)
+    UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetPhysicsAsset();
+    if (!SkeletalMesh || !PhysicsAsset)
     {
         return;
     }
@@ -808,7 +807,6 @@ void ASkeletalMeshActor::BuildBodyLinesCache()
         return;
     }
 
-    UPhysicsAsset* PhysicsAsset = SkeletalMesh->PhysicsAsset;
     const FSkeleton* Skeleton = &Data->Skeleton;
 
     // Blue color for physics bodies (semi-transparent)
@@ -1035,7 +1033,8 @@ void ASkeletalMeshActor::UpdateBodyTransforms()
     }
 
     USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
-    if (!SkeletalMesh || !SkeletalMesh->PhysicsAsset)
+	UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetPhysicsAsset();
+    if (!SkeletalMesh || !PhysicsAsset)
     {
         return;
     }
@@ -1046,7 +1045,6 @@ void ASkeletalMeshActor::UpdateBodyTransforms()
         return;
     }
 
-    UPhysicsAsset* PhysicsAsset = SkeletalMesh->PhysicsAsset;
     const FSkeleton* Skeleton = &Data->Skeleton;
 
     constexpr int NumSegments = 16;
@@ -1299,7 +1297,8 @@ void ASkeletalMeshActor::BuildConstraintLinesCache()
     }
 
     USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
-    if (!SkeletalMesh || !SkeletalMesh->PhysicsAsset)
+    UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetPhysicsAsset();
+    if (!SkeletalMesh || !PhysicsAsset)
     {
         return;
     }
@@ -1310,7 +1309,6 @@ void ASkeletalMeshActor::BuildConstraintLinesCache()
         return;
     }
 
-    UPhysicsAsset* PhysicsAsset = SkeletalMesh->PhysicsAsset;
     const FSkeleton* Skeleton = &Data->Skeleton;
 
     // Yellow color for normal constraints
@@ -1359,12 +1357,12 @@ void ASkeletalMeshActor::UpdateConstraintSelectionHighlight(int32 SelectedConstr
     }
 
     USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
-    if (!SkeletalMesh || !SkeletalMesh->PhysicsAsset)
+    UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetPhysicsAsset();
+    if (!SkeletalMesh || !PhysicsAsset)
     {
         return;
     }
 
-    UPhysicsAsset* PhysicsAsset = SkeletalMesh->PhysicsAsset;
     const int32 ConstraintCount = PhysicsAsset->Constraints.Num();
 
     const FVector4 SelectedColor(1.0f, 0.0f, 0.0f, 1.0f);   // Red for selected constraint
@@ -1391,7 +1389,8 @@ void ASkeletalMeshActor::UpdateConstraintTransforms()
     }
 
     USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
-    if (!SkeletalMesh || !SkeletalMesh->PhysicsAsset)
+    UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetPhysicsAsset();
+    if (!SkeletalMesh || !PhysicsAsset)
     {
         return;
     }
@@ -1402,7 +1401,6 @@ void ASkeletalMeshActor::UpdateConstraintTransforms()
         return;
     }
 
-    UPhysicsAsset* PhysicsAsset = SkeletalMesh->PhysicsAsset;
     const FSkeleton* Skeleton = &Data->Skeleton;
 
     const FMatrix WorldInv = GetWorldMatrix().InverseAffine();

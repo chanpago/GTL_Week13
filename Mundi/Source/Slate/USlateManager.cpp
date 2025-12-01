@@ -554,6 +554,7 @@ void USlateManager::Render()
         ImGui::PopStyleVar(3);
     }
     
+	// 여기서 그려진 뷰포트는 나중에 ImGui::Image로 사용됨
     if (SkeletalViewerWindow)
     {
         SkeletalViewerWindow->OnRenderViewport();

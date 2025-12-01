@@ -1633,7 +1633,7 @@ void SSkeletalMeshViewerWindow::OnRenderViewport()
             }
             
 			// Rebuild physics body lines and constraint lines if needed
-            if (ActiveState->CurrentMesh->PhysicsAsset)
+            if (ActiveState->PreviewActor->GetSkeletalMeshComponent()->GetPhysicsAsset())
             {
                 ActiveState->PreviewActor->RebuildBodyLines(ActiveState->bChangedGeomNum, ActiveState->SelectedBodyIndex);
 
@@ -1685,10 +1685,12 @@ void SSkeletalMeshViewerWindow::LoadPhysicsAsset(UPhysicsAsset* PhysicsAsset)
         }
     }
 
-    if (ActiveState->CurrentMesh)
+	USkeletalMeshComponent* SkeletalComp = ActiveState->PreviewActor->GetSkeletalMeshComponent();
+    assert(SkeletalComp);
+    if(SkeletalComp)
     {
-        ActiveState->CurrentMesh->PhysicsAsset = PhysicsAsset;
-    }
+        SkeletalComp->SetPhysicsAsset(PhysicsAsset);
+	}
 }
 
 void SSkeletalMeshViewerWindow::SetPhysicsAssetSavePath(const FString& SavePath)
@@ -1767,6 +1769,8 @@ void SSkeletalMeshViewerWindow::LoadSkeletalMesh(const FString& Path)
         ActiveState->PreviewActor->SetSkeletalMesh(Path);
         ActiveState->CurrentMesh = Mesh;
         ActiveState->LoadedMeshPath = Path;  // Track for resource unloading
+
+        ActiveState->CurrentPhysicsAsset = ActiveState->PreviewActor->GetSkeletalMeshComponent()->GetPhysicsAsset();
 
         // Update mesh path buffer for display in UI
         strncpy_s(ActiveState->MeshPathBuffer, Path.c_str(), sizeof(ActiveState->MeshPathBuffer) - 1);
@@ -2676,12 +2680,19 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                     }
 
                     bool bIsSelected = (State->CurrentPhysicsAsset == PhysAsset);
+                    bool bIsCurrentMeshPhysicsAsset = (State->CurrentMesh && State->CurrentMesh->PhysicsAsset == PhysAsset);
                     // Rename mode is per-state boolean; check it's active and refers to this asset
                     bool bIsRenamingThis = (State->bIsRenaming && bIsSelected);
 
                     ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.45f, 0.30f, 0.20f, 0.8f));
                     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.55f, 0.40f, 0.30f, 1.0f));
                     ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.40f, 0.25f, 0.15f, 1.0f));
+
+                    // Highlight current mesh's physics asset in blue
+                    if (bIsCurrentMeshPhysicsAsset)
+                    {
+                        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.7f, 1.0f, 1.0f));
+                    }
 
                     ImGui::PushID((void*)PhysAsset);
                     if (bIsRenamingThis)
@@ -2716,11 +2727,11 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                         {
                             State->CurrentPhysicsAsset = PhysAsset;
 
-                            // ensure BodySetupIndexMap is built for quick lookups and apply to preview mesh
-                            if (State->CurrentMesh)
+                            USkeletalMeshComponent* SkeletalComp = ActiveState->PreviewActor->GetSkeletalMeshComponent();
+							assert(SkeletalComp);
+                            if (SkeletalComp)
                             {
-                                PhysAsset->BuildBodySetupIndexMap();
-                                State->CurrentMesh->PhysicsAsset = PhysAsset;
+                                SkeletalComp->SetPhysicsAsset(PhysAsset);
                             }
                         }
 
@@ -2733,6 +2744,13 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                         }
                     }
                     ImGui::PopID();
+
+                    // Pop the blue text color if it was applied
+                    if (bIsCurrentMeshPhysicsAsset)
+                    {
+                        ImGui::PopStyleColor();
+                    }
+
                     ImGui::PopStyleColor(3);
 
                     // Tooltip
@@ -2740,6 +2758,10 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                     {
                         ImGui::BeginTooltip();
                         ImGui::Text("Physics Asset: %s", AssetName.c_str());
+                        if (bIsCurrentMeshPhysicsAsset)
+                        {
+                            ImGui::TextColored(ImVec4(0.4f, 0.7f, 1.0f, 1.0f), "  (Current Mesh's Physics Asset)");
+                        }
                         ImGui::EndTooltip();
                     }
                 }
@@ -2761,10 +2783,11 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                     State->CurrentPhysicsAsset = NewAsset;
                     State->CurrentPhysicsAsset->SetFilePath(FString());
 
-                    // Optionally attach to the currently loaded skeletal mesh so the preview can use it
-                    if (State->CurrentMesh)
+                    USkeletalMeshComponent* SkeletalComp = ActiveState->PreviewActor->GetSkeletalMeshComponent();
+                    assert(SkeletalComp);
+                    if (SkeletalComp)
                     {
-                        State->CurrentMesh->PhysicsAsset = NewAsset;
+                        SkeletalComp->SetPhysicsAsset(NewAsset);
                     }
 
                     UE_LOG("Created new PhysicsAsset: %s", NewAsset->GetName().ToString().c_str());
@@ -2824,6 +2847,20 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                     else
                     {
                         UE_LOG("No PhysicsAsset selected to save");
+                    }
+                }
+
+				ImGui::SameLine();
+                if(ImGui::Button("Apply to Current Mesh"))
+                {
+                    if (State->CurrentMesh)
+                    {
+                        State->CurrentMesh->PhysicsAsset = State->CurrentPhysicsAsset;
+                        UE_LOG("Applied PhysicsAsset to current SkeletalMesh");
+                    }
+                    else
+                    {
+                        UE_LOG("No SkeletalMesh loaded to apply PhysicsAsset to");
                     }
                 }
 

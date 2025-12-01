@@ -153,6 +153,9 @@ public:
     FString GetAnimGraphPath() { return AnimGraphPath; }
     void SetAnimGraphPath(FString InAnimGraphPath) { AnimGraphPath = InAnimGraphPath; }
 
+    UPhysicsAsset* GetPhysicsAsset() const { return PhysicsAsset; }
+	void SetPhysicsAsset(UPhysicsAsset* InPhysicsAsset) { PhysicsAsset = InPhysicsAsset; }
+
 protected:
     /**
      * @brief 애니메이션 업데이트 (TickComponent에서 호출)
