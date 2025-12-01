@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "BodyInstance.h"
 #include "BodySetup.h"
 #include "PhysScene.h"          // FPhysScene 선언
@@ -21,6 +21,36 @@ static PxCombineMode::Enum ToPxCombineMode(ECombineMode Mode)
     case ECombineMode::Multiply: return PxCombineMode::eMULTIPLY;
     case ECombineMode::Max:      return PxCombineMode::eMAX;
     default:                     return PxCombineMode::eMULTIPLY;
+    }
+}
+
+static void SetShapeCollisionFlags(PxShape* Shape, UPrimitiveComponent* OwnerComponent, UBodySetup* BodySetup)
+{
+    if (!Shape || !OwnerComponent || !BodySetup)
+    {
+        return;
+    }
+
+    ECollisionState CollisionStateToUse = BodySetup->CollisionState;
+    if (OwnerComponent->bOverrideCollisionSetting)
+    {
+        CollisionStateToUse = OwnerComponent->CollisionEnabled;
+    }
+
+    switch (CollisionStateToUse)
+    {
+        case ECollisionState::NoCollision:
+            Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
+            Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+            break;
+        case ECollisionState::QueryOnly:
+            Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
+            Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
+            break;
+        case ECollisionState::QueryAndPhysics:
+            Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+            Shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
+            break;
     }
 }
 
@@ -126,7 +156,7 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
             PxShape* Shape = Physics->createShape(Geom, *Material);
             if (Shape)
             {
-                Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+                SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
                 Shape->setLocalPose(LocalPose);
                 Shape->setSimulationFilterData(FilterData);  // Self-Collision 방지
                 DynamicActor->attachShape(*Shape);
@@ -151,7 +181,7 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
             PxShape* Shape = Physics->createShape(Geom, *Material);
             if (Shape)
             {
-                Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+                SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
                 Shape->setLocalPose(LocalPose);
                 Shape->setSimulationFilterData(FilterData);  // Self-Collision 방지
                 DynamicActor->attachShape(*Shape);
@@ -181,7 +211,7 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
             PxShape* Shape = Physics->createShape(Geom, *Material);
             if (Shape)
             {
-                Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+                SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
                 Shape->setLocalPose(LocalPose);
                 Shape->setSimulationFilterData(FilterData);  // Self-Collision 방지
                 DynamicActor->attachShape(*Shape);
@@ -197,7 +227,7 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
         if (Shape)
         {
             Shape->setSimulationFilterData(FilterData);  // Self-Collision 방지
-            Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+            SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
             DynamicActor->attachShape(*Shape);
             Shape->release();
         }
@@ -293,7 +323,7 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
             PxShape* Shape = Physics->createShape(Geom, *Material);
             if (Shape)
             {
-                Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+                SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
                 Shape->setLocalPose(LocalPose);
                 StaticActor->attachShape(*Shape);
                 Shape->release();
@@ -317,7 +347,7 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
             PxShape* Shape = Physics->createShape(Geom, *Material);
             if (Shape)
             {
-                Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+                SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
                 Shape->setLocalPose(LocalPose);
                 StaticActor->attachShape(*Shape);
                 Shape->release();
@@ -345,7 +375,7 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
             PxShape* Shape = Physics->createShape(Geom, *Material);
             if (Shape)
             {
-                Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+                SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
                 Shape->setLocalPose(LocalPose);
                 StaticActor->attachShape(*Shape);
                 Shape->release();
@@ -359,7 +389,7 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
         PxShape* Shape = Physics->createShape(BoxGeom, *Material);
         if (Shape)
         {
-            Shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
+            SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
             StaticActor->attachShape(*Shape);
             Shape->release();
         }
