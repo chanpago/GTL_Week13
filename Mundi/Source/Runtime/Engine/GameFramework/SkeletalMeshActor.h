@@ -27,6 +27,7 @@ public:
     ULineComponent* GetBoneLineComponent() const { return BoneLineComponent; }
     ULineComponent* GetBodyLineComponent() const { return BodyLineComponent; }
 	ULineComponent* GetConstraintLineComponent() const { return ConstraintLineComponent; }
+    ULineComponent* GetConstraintLimitLineComponent() const { return ConstraintLimitLineComponent; }
     UBoneAnchorComponent* GetBoneGizmoAnchor() const { return BoneAnchor; }
 
     // Convenience: forward to component
@@ -40,6 +41,9 @@ public:
     void RebuildBodyLines(bool& bChangedGeomNum, int32 SelectedBodyIndex);
 
 	void RebuildConstraintLines(int32 SelectedConstraintIndex);
+
+    // Rebuild constraint angular limit visualization (twist sector + swing cone)
+    void RebuildConstraintLimitLines(int32 SelectedConstraintIndex);
 
     // Position the anchor
     void RepositionAnchorToBone(int32 BoneIndex);
@@ -65,6 +69,9 @@ protected:
 
 	// Constraint visualization line component
 	ULineComponent* ConstraintLineComponent = nullptr;
+
+    // Constraint angular limit visualization line component (twist sector + swing cone)
+    ULineComponent* ConstraintLimitLineComponent = nullptr;
 
     // Anchor component used for gizmo selection/transform at a bone
     UBoneAnchorComponent* BoneAnchor = nullptr;
@@ -92,6 +99,14 @@ protected:
         ULine* ConnectionLine = nullptr;  // Line connecting two bones
     };
 
+    // Constraint angular limit visualization cache
+    struct FConstraintLimitDebugLines
+    {
+        TArray<ULine*> TwistArcLines;     // Lines for twist limit sector (min~max arc)
+        TArray<ULine*> TwistRadialLines;  // Radial lines from center to twist arc
+        TArray<ULine*> SwingConeLines;    // Lines for swing limit cone (Y and Z)
+    };
+
     bool bBoneLinesInitialized = false;
     int32 CachedSegments = 4;
     int32 CachedSelected = -1;
@@ -107,18 +122,24 @@ protected:
     TArray<FConstraintDebugLines> ConstraintLinesCache; // size == Constraints count
     int32 CachedSelectedConstraint = -1;
 
+    bool bConstraintLimitLinesInitialized = false;
+    TArray<FConstraintLimitDebugLines> ConstraintLimitLinesCache; // size == Constraints count
+
     float BoneJointRadius = 0.02f;
     float BoneBaseRadius = 0.03f;
 
     void BuildBoneLinesCache();
     void BuildBodyLinesCache();
     void BuildConstraintLinesCache();
+    void BuildConstraintLimitLinesCache();
     void UpdateBoneSubtreeTransforms(int32 BoneIndex);
     void UpdateBoneSelectionHighlight(int32 SelectedBoneIndex);
     void UpdateBodySelectionHighlight(int32 SelectedBodyIndex);
     void UpdateConstraintSelectionHighlight(int32 SelectedConstraintIndex);
     void UpdateBodyTransforms();
     void UpdateConstraintTransforms();
+    void UpdateConstraintLimitTransforms();
+    void UpdateConstraintLimitSelectionHighlight(int32 SelectedConstraintIndex);
 
     // Lazily create viewer-only components (BoneLineComponent, BodyLineComponent, BoneAnchor) if in preview world
     void EnsureViewerComponents();

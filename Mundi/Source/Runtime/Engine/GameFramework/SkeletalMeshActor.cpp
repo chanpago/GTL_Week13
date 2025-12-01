@@ -4,6 +4,7 @@
 #include "Source/Runtime/Engine/Physics/PhysicsAsset.h"
 #include "Source/Runtime/Engine/Physics/BodySetup.h"
 #include "Source/Runtime/Engine/Physics/FKShapeElem.h"
+#include <cmath>
 
 ASkeletalMeshActor::ASkeletalMeshActor()
 {
@@ -48,7 +49,7 @@ void ASkeletalMeshActor::SetSkeletalMesh(const FString& PathFileName)
 void ASkeletalMeshActor::EnsureViewerComponents()
 {
     // Only create viewer components if they don't exist and we're in a preview world
-    if (BoneLineComponent && BoneAnchor && BodyLineComponent && ConstraintLineComponent)
+    if (BoneLineComponent && BoneAnchor && BodyLineComponent && ConstraintLineComponent && ConstraintLimitLineComponent)
     {
         return;
     }
@@ -98,6 +99,20 @@ void ASkeletalMeshActor::EnsureViewerComponents()
             ConstraintLineComponent->SetAlwaysOnTop(true);
             AddOwnedComponent(ConstraintLineComponent);
             ConstraintLineComponent->RegisterComponent(World);
+        }
+    }
+
+    // Create constraint limit line component for angular limit visualization
+    if (!ConstraintLimitLineComponent)
+    {
+        ConstraintLimitLineComponent = NewObject<ULineComponent>();
+        if (ConstraintLimitLineComponent && RootComponent)
+        {
+            ConstraintLimitLineComponent->ObjectName = "ConstraintLimitLines";
+            ConstraintLimitLineComponent->SetupAttachment(RootComponent, EAttachmentRule::KeepRelative);
+            ConstraintLimitLineComponent->SetAlwaysOnTop(true);
+            AddOwnedComponent(ConstraintLimitLineComponent);
+            ConstraintLimitLineComponent->RegisterComponent(World);
         }
     }
 
@@ -242,7 +257,11 @@ void ASkeletalMeshActor::DuplicateSubObjects()
             else if (Comp->ObjectName == FName("ConstraintLines"))
             {
                 ConstraintLineComponent = Comp;
-        }
+            }
+            else if (Comp->ObjectName == FName("ConstraintLimitLines"))
+            {
+                ConstraintLimitLineComponent = Comp;
+            }
         }
         else if (auto* Comp = Cast<UBoneAnchorComponent>(Component))
         {
@@ -381,7 +400,7 @@ void ASkeletalMeshActor::BuildBoneLinesCache()
                 FVector4(0.8f,0.8f,0.8f,1.0f)));
         }
     }
-}
+    }
 
 void ASkeletalMeshActor::UpdateBoneSelectionHighlight(int32 SelectedBoneIndex)
 {
@@ -617,31 +636,31 @@ int32 ASkeletalMeshActor::PickBone(const FRay& Ray, float& OutDistance) const
     {
         return -1;
     }
-
+    
     USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
     if (!SkeletalMesh)
     {
         return -1;
     }
-
+    
     const FSkeletalMeshData* Data = SkeletalMesh->GetSkeletalMeshData();
     if (!Data)
     {
         return -1;
     }
-
+    
     const auto& Bones = Data->Skeleton.Bones;
     if (Bones.empty())
     {
         return -1;
-    }
+        }
 
     int32 ClosestBoneIndex = -1;
     float ClosestDistance = FLT_MAX;
 
     // Test each bone with a bounding sphere
     for (int32 i = 0; i < (int32)Bones.size(); ++i)
-    {
+        {
         // Get bone world transform
         FTransform BoneWorldTransform = SkeletalMeshComponent->GetBoneWorldTransform(i);
         FVector BoneWorldPos = BoneWorldTransform.Translation;
@@ -652,22 +671,22 @@ int32 ASkeletalMeshActor::PickBone(const FRay& Ray, float& OutDistance) const
         // Test ray-sphere intersection
         float HitDistance;
         if (IntersectRaySphere(Ray, BoneWorldPos, PickRadius, HitDistance))
-        {
+{
             if (HitDistance < ClosestDistance)
-            {
+    {
                 ClosestDistance = HitDistance;
                 ClosestBoneIndex = i;
-            }
-        }
     }
-
+    }
+    }
+    
     if (ClosestBoneIndex >= 0)
     {
         OutDistance = ClosestDistance;
     }
-
+    
     return ClosestBoneIndex;
-}
+    }
 
 void ASkeletalMeshActor::RebuildBodyLines(bool& bChangedGeomNum, int32 SelectedBodyIndex)
 {
@@ -1369,17 +1388,17 @@ void ASkeletalMeshActor::UpdateConstraintSelectionHighlight(int32 SelectedConstr
     const FVector4 NormalColor(1.0f, 1.0f, 0.0f, 1.0f);     // Yellow for normal constraint
 
     for (int32 i = 0; i < ConstraintCount && i < ConstraintLinesCache.Num(); ++i)
-    {
+{
         const bool bSelected = (i == SelectedConstraintIndex);
         const FVector4 Color = bSelected ? SelectedColor : NormalColor;
         FConstraintDebugLines& CDL = ConstraintLinesCache[i];
 
         if (CDL.ConnectionLine)
-        {
+    {
             CDL.ConnectionLine->SetColor(Color);
-        }
     }
-}
+    }
+        }
 
 void ASkeletalMeshActor::UpdateConstraintTransforms()
 {
@@ -1437,5 +1456,408 @@ void ASkeletalMeshActor::UpdateConstraintTransforms()
 
         // Update the line endpoints
         CDL.ConnectionLine->SetLine(LocalPosA, LocalPosB);
+    }
+}
+
+void ASkeletalMeshActor::RebuildConstraintLimitLines(int32 SelectedConstraintIndex)
+{
+    // Ensure viewer components exist before using them
+    EnsureViewerComponents();
+
+    if (!ConstraintLimitLineComponent || !SkeletalMeshComponent)
+    {
+        return;
+    }
+
+    USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
+    UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetPhysicsAsset();
+    if (!SkeletalMesh || !PhysicsAsset)
+    {
+        if (bConstraintLimitLinesInitialized)
+        {
+            ConstraintLimitLineComponent->ClearLines();
+            ConstraintLimitLinesCache.Empty();
+            bConstraintLimitLinesInitialized = false;
+        }
+        return;
+    }
+
+    const FSkeletalMeshData* Data = SkeletalMesh->GetSkeletalMeshData();
+    if (!Data)
+    {
+        if (bConstraintLimitLinesInitialized)
+        {
+            ConstraintLimitLineComponent->ClearLines();
+            ConstraintLimitLinesCache.Empty();
+            bConstraintLimitLinesInitialized = false;
+        }
+        return;
+    }
+
+    // Initialize cache once per physics asset or rebuild if physics asset changed
+    if (!bConstraintLimitLinesInitialized || CachedPhysicsAsset != PhysicsAsset ||
+        ConstraintLimitLinesCache.Num() != PhysicsAsset->Constraints.Num())
+    {
+        ConstraintLimitLineComponent->ClearLines();
+        BuildConstraintLimitLinesCache();
+        bConstraintLimitLinesInitialized = true;
+    }
+
+    // Update selection highlight
+    UpdateConstraintLimitSelectionHighlight(SelectedConstraintIndex);
+
+    // Update transforms for all constraint limits (they follow bone transforms)
+    UpdateConstraintLimitTransforms();
+}
+
+void ASkeletalMeshActor::BuildConstraintLimitLinesCache()
+{
+    if (!SkeletalMeshComponent || !ConstraintLimitLineComponent)
+    {
+        return;
+    }
+
+    USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
+    UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetPhysicsAsset();
+    if (!SkeletalMesh || !PhysicsAsset)
+    {
+        return;
+    }
+
+    const FSkeletalMeshData* Data = SkeletalMesh->GetSkeletalMeshData();
+    if (!Data)
+    {
+        return;
+    }
+
+    const FSkeleton* Skeleton = &Data->Skeleton;
+
+    // Colors for limit visualization
+    const FVector4 TwistLimitColor(1.0f, 0.5f, 0.0f, 0.8f);
+    const FVector4 SwingLimitColor(0.0f, 1.0f, 0.5f, 0.6f);
+    constexpr float LimitRadius = 0.1f;
+
+    ConstraintLimitLinesCache.Empty();
+    ConstraintLimitLinesCache.resize(PhysicsAsset->Constraints.Num());
+
+    const FMatrix WorldInv = GetWorldMatrix().InverseAffine();
+
+    // Build lines for each constraint's angular limits
+    for (int32 ConstraintIdx = 0; ConstraintIdx < PhysicsAsset->Constraints.Num(); ++ConstraintIdx)
+    {
+        const FPhysicsConstraintSetup& Constraint = PhysicsAsset->Constraints[ConstraintIdx];
+        FConstraintLimitDebugLines& CLDL = ConstraintLimitLinesCache[ConstraintIdx];
+
+        // Find bone indices for both bodies
+        int32 BoneIndexA = Skeleton->FindBoneIndex(Constraint.BodyNameA);
+        int32 BoneIndexB = Skeleton->FindBoneIndex(Constraint.BodyNameB);
+
+        if (BoneIndexA == INDEX_NONE || BoneIndexB == INDEX_NONE)
+        {
+            continue;
+        }
+
+        // Get bone transforms in local (actor) space
+        FTransform BoneWorldTransformA = SkeletalMeshComponent->GetBoneWorldTransform(BoneIndexA);
+        FMatrix BoneLocalMatrixA = BoneWorldTransformA.ToMatrix() * WorldInv;
+        FTransform BoneLocalTransformA(BoneLocalMatrixA);
+
+        BoneLocalTransformA.Scale3D = FVector::One();
+
+        // Apply LocalFrameA to get constraint frame in parent bone's local space
+        FTransform ConstraintFrameA = BoneLocalTransformA.GetWorldTransform(Constraint.LocalFrameA);
+
+        // Constraint frame axes
+        FVector ConstraintOrigin = ConstraintFrameA.Translation;
+        FVector ConstraintAxisX = ConstraintFrameA.Rotation.RotateVector(FVector(1, 0, 0));
+        FVector ConstraintAxisY = ConstraintFrameA.Rotation.RotateVector(FVector(0, 1, 0));
+        FVector ConstraintAxisZ = ConstraintFrameA.Rotation.RotateVector(FVector(0, 0, 1));
+
+        // === Draw Twist Limits ===
+        const float TwistMin = Constraint.TwistLimitMin;
+        const float TwistMax = Constraint.TwistLimitMax;
+
+        const int TwistSegments = 16;
+        for (int i = 0; i < TwistSegments; ++i)
+        {
+            float angle1 = TwistMin + (TwistMax - TwistMin) * (float)i / TwistSegments;
+            float angle2 = TwistMin + (TwistMax - TwistMin) * (float)(i + 1) / TwistSegments;
+
+            FVector p1 = ConstraintOrigin + (ConstraintAxisY * std::cos(angle1) + ConstraintAxisZ * std::sin(angle1)) * LimitRadius;
+            FVector p2 = ConstraintOrigin + (ConstraintAxisY * std::cos(angle2) + ConstraintAxisZ * std::sin(angle2)) * LimitRadius;
+
+            CLDL.TwistArcLines.Add(ConstraintLimitLineComponent->AddLine(p1, p2, TwistLimitColor));
+        }
+
+        // Draw radial lines
+        {
+            FVector pMin = ConstraintOrigin + (ConstraintAxisY * std::cos(TwistMin) + ConstraintAxisZ * std::sin(TwistMin)) * LimitRadius;
+            FVector pMax = ConstraintOrigin + (ConstraintAxisY * std::cos(TwistMax) + ConstraintAxisZ * std::sin(TwistMax)) * LimitRadius;
+
+            CLDL.TwistRadialLines.Add(ConstraintLimitLineComponent->AddLine(ConstraintOrigin, pMin, TwistLimitColor));
+            CLDL.TwistRadialLines.Add(ConstraintLimitLineComponent->AddLine(ConstraintOrigin, pMax, TwistLimitColor));
+        }
+
+        // === Draw Swing Limits (Elliptical Cone) ===
+		// Y, Z 반대로 적용해야 physicsX의 디버거의 모습과 일치
+        const float SwingY = Constraint.SwingLimitZ;
+        const float SwingZ = Constraint.SwingLimitY;
+
+        const float sinSwingY = std::sin(SwingY);
+        const float sinSwingZ = std::sin(SwingZ);
+        const float cosSwingY = std::cos(SwingY);
+        const float cosSwingZ = std::cos(SwingZ);
+
+        auto GetEllipticalConePoint = [&](float angle) -> FVector
+            {
+                const float cosAngle = std::cos(angle);
+                const float sinAngle = std::sin(angle);
+
+                const float yCoord = sinSwingY * sinAngle;
+                const float zCoord = sinSwingZ * cosAngle;
+
+                const float xCoord = std::sqrt(std::max(0.0f,
+                    cosSwingY * cosSwingY * (sinAngle * sinAngle) +
+                    cosSwingZ * cosSwingZ * (cosAngle * cosAngle)));
+
+                FVector point = ConstraintOrigin +
+                    ConstraintAxisX * (LimitRadius * xCoord) +
+                    ConstraintAxisY * (LimitRadius * yCoord) +
+                    ConstraintAxisZ * (LimitRadius * zCoord);
+
+                return point;
+            };
+
+        // Create continuous ellipse (32 segments for the ellipse perimeter)
+        const int TotalEllipseSegments = 32;
+
+        for (int i = 0; i < TotalEllipseSegments; ++i)
+        {
+            const float t1 = (float)i / TotalEllipseSegments;
+            const float t2 = (float)(i + 1) / TotalEllipseSegments;
+
+            const float angle1 = t1 * TWO_PI;
+            const float angle2 = t2 * TWO_PI;
+
+            FVector p1 = GetEllipticalConePoint(angle1);
+            FVector p2 = GetEllipticalConePoint(angle2);
+
+            CLDL.SwingConeLines.Add(ConstraintLimitLineComponent->AddLine(p1, p2, SwingLimitColor));
+        }
+
+        // Add radial lines from origin to ellipse (8 radial lines evenly distributed)
+        const int NumRadialLines = 8;
+        for (int i = 0; i < NumRadialLines; ++i)
+        {
+            const float angle = (float)i / NumRadialLines * TWO_PI;
+            FVector edgePoint = GetEllipticalConePoint(angle);
+            CLDL.SwingConeLines.Add(ConstraintLimitLineComponent->AddLine(ConstraintOrigin, edgePoint, SwingLimitColor));
+        }
+    }
+}
+
+void ASkeletalMeshActor::UpdateConstraintLimitTransforms()
+{
+    if (!SkeletalMeshComponent || !ConstraintLimitLineComponent)
+    {
+        return;
+    }
+
+    USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
+    UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetPhysicsAsset();
+    if (!SkeletalMesh || !PhysicsAsset)
+    {
+        return;
+    }
+
+    const FSkeletalMeshData* Data = SkeletalMesh->GetSkeletalMeshData();
+    if (!Data)
+    {
+        return;
+    }
+
+    const FSkeleton* Skeleton = &Data->Skeleton;
+
+    constexpr float LimitRadius = 0.1f;
+    const FMatrix WorldInv = GetWorldMatrix().InverseAffine();
+
+    // Update each constraint's limit lines
+    for (int32 ConstraintIdx = 0; ConstraintIdx < PhysicsAsset->Constraints.Num() && ConstraintIdx < ConstraintLimitLinesCache.Num(); ++ConstraintIdx)
+    {
+        const FPhysicsConstraintSetup& Constraint = PhysicsAsset->Constraints[ConstraintIdx];
+        FConstraintLimitDebugLines& CLDL = ConstraintLimitLinesCache[ConstraintIdx];
+
+        // Find bone indices for both bodies
+        int32 BoneIndexA = Skeleton->FindBoneIndex(Constraint.BodyNameA);
+        int32 BoneIndexB = Skeleton->FindBoneIndex(Constraint.BodyNameB);
+
+        if (BoneIndexA == INDEX_NONE || BoneIndexB == INDEX_NONE)
+        {
+            continue;
+        }
+
+        // Get bone transforms in local (actor) space
+        FTransform BoneWorldTransformA = SkeletalMeshComponent->GetBoneWorldTransform(BoneIndexA);
+        FMatrix BoneLocalMatrixA = BoneWorldTransformA.ToMatrix() * WorldInv;
+        FTransform BoneLocalTransformA(BoneLocalMatrixA);
+
+        BoneLocalTransformA.Scale3D = FVector::One();
+
+        // Apply LocalFrameA to get constraint frame in parent bone's local space
+        FTransform ConstraintFrameA = BoneLocalTransformA.GetWorldTransform(Constraint.LocalFrameA);
+
+        // Constraint frame axes
+        FVector ConstraintOrigin = ConstraintFrameA.Translation;
+        FVector ConstraintAxisX = ConstraintFrameA.Rotation.RotateVector(FVector(1, 0, 0));
+        FVector ConstraintAxisY = ConstraintFrameA.Rotation.RotateVector(FVector(0, 1, 0));
+        FVector ConstraintAxisZ = ConstraintFrameA.Rotation.RotateVector(FVector(0, 0, 1));
+
+        // === Update Twist Limit Lines ===
+        const float TwistMin = Constraint.TwistLimitMin;
+        const float TwistMax = Constraint.TwistLimitMax;
+
+        const int TwistSegments = 16;
+        int lineIdx = 0;
+
+        // Update arc lines
+        for (int i = 0; i < TwistSegments && lineIdx < CLDL.TwistArcLines.Num(); ++i, ++lineIdx)
+        {
+            float angle1 = TwistMin + (TwistMax - TwistMin) * (float)i / TwistSegments;
+            float angle2 = TwistMin + (TwistMax - TwistMin) * (float)(i + 1) / TwistSegments;
+
+            FVector p1 = ConstraintOrigin + (ConstraintAxisY * std::cos(angle1) + ConstraintAxisZ * std::sin(angle1)) * LimitRadius;
+            FVector p2 = ConstraintOrigin + (ConstraintAxisY * std::cos(angle2) + ConstraintAxisZ * std::sin(angle2)) * LimitRadius;
+
+            if (CLDL.TwistArcLines[lineIdx])
+            {
+                CLDL.TwistArcLines[lineIdx]->SetLine(p1, p2);
+            }
+        }
+
+        // Update radial lines
+        if (CLDL.TwistRadialLines.Num() >= 2)
+        {
+            FVector pMin = ConstraintOrigin + (ConstraintAxisY * std::cos(TwistMin) + ConstraintAxisZ * std::sin(TwistMin)) * LimitRadius;
+            FVector pMax = ConstraintOrigin + (ConstraintAxisY * std::cos(TwistMax) + ConstraintAxisZ * std::sin(TwistMax)) * LimitRadius;
+
+            if (CLDL.TwistRadialLines[0])
+            {
+                CLDL.TwistRadialLines[0]->SetLine(ConstraintOrigin, pMin);
+            }
+            if (CLDL.TwistRadialLines[1])
+            {
+                CLDL.TwistRadialLines[1]->SetLine(ConstraintOrigin, pMax);
+            }
+        }
+
+        // === Update Swing Limit Lines (Elliptical Cone) ===
+		// Y, Z 반대로 적용해야 physicsX의 디버거의 모습과 일치
+        const float SwingY = Constraint.SwingLimitZ;
+        const float SwingZ = Constraint.SwingLimitY;
+
+        const float sinSwingY = std::sin(SwingY);
+        const float sinSwingZ = std::sin(SwingZ);
+        const float cosSwingY = std::cos(SwingY);
+        const float cosSwingZ = std::cos(SwingZ);
+
+        auto GetEllipticalConePoint = [&](float angle) -> FVector
+            {
+                const float cosAngle = std::cos(angle);
+                const float sinAngle = std::sin(angle);
+
+                const float yCoord = sinSwingY * sinAngle;
+                const float zCoord = sinSwingZ * cosAngle;
+
+                const float xCoord = std::sqrt(std::max(0.0f,
+                    cosSwingY * cosSwingY * (sinAngle * sinAngle) +
+                    cosSwingZ * cosSwingZ * (cosAngle * cosAngle)));
+
+                FVector point = ConstraintOrigin +
+                    ConstraintAxisX * (LimitRadius * xCoord) +
+                    ConstraintAxisY * (LimitRadius * yCoord) +
+                    ConstraintAxisZ * (LimitRadius * zCoord);
+
+                return point;
+            };
+
+        // Update ellipse perimeter lines (32 segments)
+        const int TotalEllipseSegments = 32;
+        lineIdx = 0;
+
+        for (int i = 0; i < TotalEllipseSegments && lineIdx < CLDL.SwingConeLines.Num(); ++i, ++lineIdx)
+        {
+            const float t1 = (float)i / TotalEllipseSegments;
+            const float t2 = (float)(i + 1) / TotalEllipseSegments;
+
+            const float angle1 = t1 * TWO_PI;
+            const float angle2 = t2 * TWO_PI;
+
+            FVector p1 = GetEllipticalConePoint(angle1);
+            FVector p2 = GetEllipticalConePoint(angle2);
+
+            if (CLDL.SwingConeLines[lineIdx])
+            {
+                CLDL.SwingConeLines[lineIdx]->SetLine(p1, p2);
+            }
+        }
+
+        // Update radial lines (8 lines from origin to ellipse edge)
+        const int NumRadialLines = 8;
+        for (int i = 0; i < NumRadialLines && lineIdx < CLDL.SwingConeLines.Num(); ++i, ++lineIdx)
+        {
+            const float angle = (float)i / NumRadialLines * TWO_PI;
+            FVector edgePoint = GetEllipticalConePoint(angle);
+
+            if (CLDL.SwingConeLines[lineIdx])
+            {
+                CLDL.SwingConeLines[lineIdx]->SetLine(ConstraintOrigin, edgePoint);
+            }
+        }
+    }
+}
+
+void ASkeletalMeshActor::UpdateConstraintLimitSelectionHighlight(int32 SelectedConstraintIndex)
+{
+    if (!SkeletalMeshComponent)
+    {
+        return;
+    }
+
+    USkeletalMesh* SkeletalMesh = SkeletalMeshComponent->GetSkeletalMesh();
+    UPhysicsAsset* PhysicsAsset = SkeletalMeshComponent->GetPhysicsAsset();
+    if (!SkeletalMesh || !PhysicsAsset)
+    {
+        return;
+    }
+
+    const int32 ConstraintCount = PhysicsAsset->Constraints.Num();
+
+    const FVector4 SelectedTwistColor(1.0f, 0.0f, 0.0f, 1.0f);    // Red for selected twist
+    const FVector4 NormalTwistColor(1.0f, 0.5f, 0.0f, 0.8f);      // Orange for normal twist
+    const FVector4 SelectedSwingColor(0.0f, 1.0f, 1.0f, 1.0f);    // Bright cyan for selected swing
+    const FVector4 NormalSwingColor(0.0f, 1.0f, 0.5f, 0.6f);      // Normal cyan for swing
+
+    for (int32 i = 0; i < ConstraintCount && i < ConstraintLimitLinesCache.Num(); ++i)
+    {
+        const bool bSelected = (i == SelectedConstraintIndex);
+        FConstraintLimitDebugLines& CLDL = ConstraintLimitLinesCache[i];
+
+        // Update twist limit colors
+        const FVector4 TwistColor = bSelected ? SelectedTwistColor : NormalTwistColor;
+        for (ULine* L : CLDL.TwistArcLines)
+        {
+            if (L) L->SetColor(TwistColor);
+        }
+        for (ULine* L : CLDL.TwistRadialLines)
+        {
+            if (L) L->SetColor(TwistColor);
+        }
+
+        // Update swing limit colors
+        const FVector4 SwingColor = bSelected ? SelectedSwingColor : NormalSwingColor;
+        for (ULine* L : CLDL.SwingConeLines)
+        {
+            if (L) L->SetColor(SwingColor);
+        }
     }
 }

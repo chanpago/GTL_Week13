@@ -79,4 +79,8 @@ public:
     char PhysicsAssetNameBuffer[128] = { 0 };          // temporary editable b
 
 	bool bChangedGeomNum = false;
+
+	bool bShowBodies = true;
+	bool bShowConstraintLines = true;
+	bool bShowConstraintLimits = true;
 };
