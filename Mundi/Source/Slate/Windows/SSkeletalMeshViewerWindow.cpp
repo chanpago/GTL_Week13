@@ -686,20 +686,28 @@ void SSkeletalMeshViewerWindow::OnRender()
                                                         FTransform ParentWorldTransform = ActiveState->PreviewActor->GetSkeletalMeshComponent()->GetBoneWorldTransform(ParentBoneIndex);
                                                         FTransform ChildWorldTransform = ActiveState->PreviewActor->GetSkeletalMeshComponent()->GetBoneWorldTransform(ChildBoneIndex);
 
-														// physicX에서는 로컬 좌표계의 scale을 아마? 무시하므로 1,1,1로 설정
-														ParentWorldTransform.Scale3D = FVector(1.0f, 1.0f, 1.0f);
-														ChildWorldTransform.Scale3D = FVector(1.0f, 1.0f, 1.0f);
+                                                        // physicX에서는 로컬 좌표계의 scale을 아마? 무시하므로 1,1,1로 설정
+                                                        ParentWorldTransform.Scale3D = FVector(1.0f, 1.0f, 1.0f);
+                                                        ChildWorldTransform.Scale3D = FVector(1.0f, 1.0f, 1.0f);
 
-                                                        NewConstraint.LocalFrameA = ParentWorldTransform.GetRelativeTransform(ChildWorldTransform);
+                                                        // 조인트 프레임 회전 설정
+                                                        // PxD6Joint 축: X=Twist, Y=Swing1(Twist 0도 기준), Z=Swing2
+                                                        // 목표: 조인트 X축=본 Z축, 조인트 Y축=본 X축 (Twist 0도 기준을 +X로)
+                                                        FQuat ZToX = FQuat::FromAxisAngle(FVector(0, 1, 0), -XM_PIDIV2);
+                                                        FQuat TwistRef = FQuat::FromAxisAngle(FVector(1, 0, 0), -XM_PIDIV2);
+                                                        FQuat JointFrameRotation = ZToX * TwistRef;
+
+                                                        FTransform RelativeTransform = ParentWorldTransform.GetRelativeTransform(ChildWorldTransform);
+                                                        NewConstraint.LocalFrameA = FTransform(RelativeTransform.Translation, RelativeTransform.Rotation * JointFrameRotation, FVector(1, 1, 1));
+                                                        NewConstraint.LocalFrameB = FTransform(FVector::Zero(), JointFrameRotation, FVector(1, 1, 1));
                                                     }
                                                     else
                                                     {
                                                         // Fallback to identity if bones not found
                                                         assert(false && "Bone indices not found for constraint setup");
                                                         NewConstraint.LocalFrameA = FTransform();
+                                                        NewConstraint.LocalFrameB = FTransform();
                                                     }
-
-                                                    NewConstraint.LocalFrameB = FTransform();
 
                                                     NewConstraint.TwistLimitMin = -45.0f;
                                                     NewConstraint.TwistLimitMax = 45.0f;
