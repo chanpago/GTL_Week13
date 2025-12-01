@@ -653,7 +653,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                                 UPhysicsAsset* Phys = ActiveState->CurrentPhysicsAsset;
                                 FName CurrentBodyName = MatchedBody->BoneName;
 								//TArray<const FPhysicsConstraintSetup*> ConnectedConstraints = ActiveState->CurrentPhysicsAsset->GetConstraintsForBody(CurrentBodyName);
-								TArray<int32> ConnectedConstraintIndices = ActiveState->CurrentPhysicsAsset->GetConstraintIndicesForBody(CurrentBodyName);
+								TArray<int32> ConnectedConstraintIndices = Phys->GetConstraintIndicesForBody(CurrentBodyName);
                                 
 
                                 // ===== 바디 UI 우클릭 이벤트 =======
@@ -724,12 +724,40 @@ void SSkeletalMeshViewerWindow::OnRender()
                                         }
                                         ImGui::EndMenu();
                                     }
+                                    if(Phys && ImGui::MenuItem("Delete Body"))
+                                    {
+                                        int32 BodyIndex = Phys->FindBodyIndex(MatchedBody->BoneName);
+                                        if (BodyIndex != INDEX_NONE)
+                                        {
+											// remove connected constraints first
+                                            // Remove from highest index to lowest to avoid shifting issues
+                                            for (int i = ConnectedConstraintIndices.size() - 1; i >= 0; --i)
+                                            {
+                                                Phys->Constraints.RemoveAt(ConnectedConstraintIndices[i]);
+                                            }
+                                            ActiveState->SelectedConstraintIndex = -1;
+
+                                            // Now remove the body
+                                            Phys->BodySetups.RemoveAt(BodyIndex);
+                                            Phys->BuildBodySetupIndexMap();
+
+                                            // Clear selection if this body was selected
+                                            if (ActiveState->SelectedBodySetup == MatchedBody)
+                                            {
+                                                ActiveState->SelectedBodySetup = nullptr;
+                                                ActiveState->SelectedBodyIndex = -1;
+                                            }
+                                            UE_LOG("Deleted UBodySetup for bone %s from PhysicsAsset %s", MatchedBody->BoneName.ToString().c_str(), Phys->GetName().ToString().c_str());
+                                        }
+									}
                                     ImGui::EndPopup();
                                 }
 
 								// =========== Constraint UI ============
                                 ImGui::Indent(14.0f);
                                 
+								// ConnectedConstraintIndices가 현재 프레임 내에서 변경될 수 있으므로(ex: 위에서 delete body 버튼으로 인해 어떤 constraints가 delete 됏을 경우) 재호출해서 다시 할당
+                                ConnectedConstraintIndices = Phys->GetConstraintIndicesForBody(CurrentBodyName);
                                 for (int32 ConstraintIdx : ConnectedConstraintIndices)
                                 {
                                     const FPhysicsConstraintSetup& Constraint = Phys->Constraints[ConstraintIdx];
