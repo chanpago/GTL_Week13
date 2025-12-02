@@ -12,42 +12,6 @@ namespace nv { namespace cloth {
 class FClothSimulationSystem;
 
 /**
- * @brief Cloth 시뮬레이션 파라미터
- */
-struct FClothConfig
-{
-    // 중력
-    FVector Gravity = FVector(0.0f, 0.0f, -980.0f);
-
-    // 댐핑 (0 = 영향 없음, 1 = 속도 제로)
-    FVector Damping = FVector(0.2f, 0.2f, 0.2f);
-
-    // Solver 주파수 (초당 반복 횟수)
-    float SolverFrequency = 120.0f;
-
-    // 바람
-    FVector WindVelocity = FVector(0.0f, 0.0f, 0.0f);
-    float DragCoefficient = 0.5f;
-    float LiftCoefficient = 0.3f;
-
-    // 마찰
-    float Friction = 0.5f;
-
-    // Self Collision
-    float SelfCollisionDistance = 0.0f;
-    float SelfCollisionStiffness = 1.0f;
-
-    // Tether 제약
-    float TetherConstraintScale = 1.0f;
-    float TetherConstraintStiffness = 1.0f;
-
-    // 관성
-    FVector LinearInertia = FVector(1.0f, 1.0f, 1.0f);
-    FVector AngularInertia = FVector(1.0f, 1.0f, 1.0f);
-    FVector CentrifugalInertia = FVector(1.0f, 1.0f, 1.0f);
-};
-
-/**
  * @brief Cloth 시뮬레이션을 위한 컴포넌트
  *
  * NvCloth 라이브러리를 사용하여 옷감 시뮬레이션을 수행합니다.
@@ -109,16 +73,6 @@ public:
     // ──────────────────────────────
 
     /**
-     * @brief Cloth 설정을 적용합니다.
-     */
-    void ApplyClothConfig(const FClothConfig& Config);
-
-    /**
-     * @brief 현재 Cloth 설정을 가져옵니다.
-     */
-    const FClothConfig& GetClothConfig() const { return ClothConfig; }
-
-    /**
      * @brief 중력을 설정합니다.
      */
     void SetGravity(const FVector& InGravity);
@@ -132,6 +86,11 @@ public:
      * @brief 댐핑을 설정합니다.
      */
     void SetDamping(const FVector& InDamping);
+
+    /**
+     * @brief 현재 멤버 변수 설정을 Cloth에 적용합니다.
+     */
+    void ApplyCurrentSettings();
 
     // ──────────────────────────────
     // Runtime State
@@ -197,12 +156,56 @@ protected:
     TArray<FVector> InitialPositions;
     TArray<float> InitialInvMasses;
 
-    // 설정
-    UPROPERTY(EditAnywhere, Category="Cloth")
-    FClothConfig ClothConfig;
-
+    // 시뮬레이션 활성화
     UPROPERTY(EditAnywhere, Category="Cloth")
     bool bSimulationEnabled = true;
+
+    // Physics
+    UPROPERTY(EditAnywhere, Category="Cloth|Physics")
+    FVector Gravity = FVector(0.0f, 0.0f, -980.0f);
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Physics")
+    FVector Damping = FVector(0.2f, 0.2f, 0.2f);
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Physics")
+    float SolverFrequency = 120.0f;
+
+    // Wind
+    UPROPERTY(EditAnywhere, Category="Cloth|Wind")
+    FVector WindVelocity = FVector(0.0f, 0.0f, 0.0f);
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Wind")
+    float DragCoefficient = 0.5f;
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Wind")
+    float LiftCoefficient = 0.3f;
+
+    // Collision
+    UPROPERTY(EditAnywhere, Category="Cloth|Collision")
+    float Friction = 0.5f;
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Collision")
+    float SelfCollisionDistance = 0.0f;
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Collision")
+    float SelfCollisionStiffness = 1.0f;
+
+    // Constraints
+    UPROPERTY(EditAnywhere, Category="Cloth|Constraints")
+    float TetherConstraintScale = 1.0f;
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Constraints")
+    float TetherConstraintStiffness = 1.0f;
+
+    // Inertia
+    UPROPERTY(EditAnywhere, Category="Cloth|Inertia")
+    FVector LinearInertia = FVector(1.0f, 1.0f, 1.0f);
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Inertia")
+    FVector AngularInertia = FVector(1.0f, 1.0f, 1.0f);
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Inertia")
+    FVector CentrifugalInertia = FVector(1.0f, 1.0f, 1.0f);
 
     // 충돌 데이터
     TArray<FVector> CollisionSpheres;

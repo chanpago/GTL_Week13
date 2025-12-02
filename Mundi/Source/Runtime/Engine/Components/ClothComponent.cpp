@@ -192,8 +192,8 @@ bool UClothComponent::CreateClothFromMesh(
         return false;
     }
 
-    // 기본 설정 적용
-    ApplyClothConfig(ClothConfig);
+    // 현재 설정 적용
+    ApplyCurrentSettings();
 
     // ClothSimulationSystem에 등록
     ClothSystem->RegisterCloth(Cloth);
@@ -236,49 +236,47 @@ void UClothComponent::DestroyCloth()
 // Simulation Parameters
 // ──────────────────────────────
 
-void UClothComponent::ApplyClothConfig(const FClothConfig& Config)
+void UClothComponent::ApplyCurrentSettings()
 {
-    ClothConfig = Config;
-
     if (Cloth == nullptr)
     {
         return;
     }
 
     // 중력
-    Cloth->setGravity(physx::PxVec3(Config.Gravity.X, Config.Gravity.Y, Config.Gravity.Z));
+    Cloth->setGravity(physx::PxVec3(Gravity.X, Gravity.Y, Gravity.Z));
 
     // 댐핑
-    Cloth->setDamping(physx::PxVec3(Config.Damping.X, Config.Damping.Y, Config.Damping.Z));
+    Cloth->setDamping(physx::PxVec3(Damping.X, Damping.Y, Damping.Z));
 
     // Solver 주파수
-    Cloth->setSolverFrequency(Config.SolverFrequency);
+    Cloth->setSolverFrequency(SolverFrequency);
 
     // 바람
-    Cloth->setWindVelocity(physx::PxVec3(Config.WindVelocity.X, Config.WindVelocity.Y, Config.WindVelocity.Z));
-    Cloth->setDragCoefficient(Config.DragCoefficient);
-    Cloth->setLiftCoefficient(Config.LiftCoefficient);
+    Cloth->setWindVelocity(physx::PxVec3(WindVelocity.X, WindVelocity.Y, WindVelocity.Z));
+    Cloth->setDragCoefficient(DragCoefficient);
+    Cloth->setLiftCoefficient(LiftCoefficient);
 
     // 마찰
-    Cloth->setFriction(Config.Friction);
+    Cloth->setFriction(Friction);
 
     // Self Collision
-    Cloth->setSelfCollisionDistance(Config.SelfCollisionDistance);
-    Cloth->setSelfCollisionStiffness(Config.SelfCollisionStiffness);
+    Cloth->setSelfCollisionDistance(SelfCollisionDistance);
+    Cloth->setSelfCollisionStiffness(SelfCollisionStiffness);
 
     // Tether
-    Cloth->setTetherConstraintScale(Config.TetherConstraintScale);
-    Cloth->setTetherConstraintStiffness(Config.TetherConstraintStiffness);
+    Cloth->setTetherConstraintScale(TetherConstraintScale);
+    Cloth->setTetherConstraintStiffness(TetherConstraintStiffness);
 
     // 관성
-    Cloth->setLinearInertia(physx::PxVec3(Config.LinearInertia.X, Config.LinearInertia.Y, Config.LinearInertia.Z));
-    Cloth->setAngularInertia(physx::PxVec3(Config.AngularInertia.X, Config.AngularInertia.Y, Config.AngularInertia.Z));
-    Cloth->setCentrifugalInertia(physx::PxVec3(Config.CentrifugalInertia.X, Config.CentrifugalInertia.Y, Config.CentrifugalInertia.Z));
+    Cloth->setLinearInertia(physx::PxVec3(LinearInertia.X, LinearInertia.Y, LinearInertia.Z));
+    Cloth->setAngularInertia(physx::PxVec3(AngularInertia.X, AngularInertia.Y, AngularInertia.Z));
+    Cloth->setCentrifugalInertia(physx::PxVec3(CentrifugalInertia.X, CentrifugalInertia.Y, CentrifugalInertia.Z));
 }
 
 void UClothComponent::SetGravity(const FVector& InGravity)
 {
-    ClothConfig.Gravity = InGravity;
+    Gravity = InGravity;
     if (Cloth != nullptr)
     {
         Cloth->setGravity(physx::PxVec3(InGravity.X, InGravity.Y, InGravity.Z));
@@ -287,9 +285,9 @@ void UClothComponent::SetGravity(const FVector& InGravity)
 
 void UClothComponent::SetWind(const FVector& InWindVelocity, float InDragCoefficient, float InLiftCoefficient)
 {
-    ClothConfig.WindVelocity = InWindVelocity;
-    ClothConfig.DragCoefficient = InDragCoefficient;
-    ClothConfig.LiftCoefficient = InLiftCoefficient;
+    WindVelocity = InWindVelocity;
+    DragCoefficient = InDragCoefficient;
+    LiftCoefficient = InLiftCoefficient;
 
     if (Cloth != nullptr)
     {
@@ -301,7 +299,7 @@ void UClothComponent::SetWind(const FVector& InWindVelocity, float InDragCoeffic
 
 void UClothComponent::SetDamping(const FVector& InDamping)
 {
-    ClothConfig.Damping = InDamping;
+    Damping = InDamping;
     if (Cloth != nullptr)
     {
         Cloth->setDamping(physx::PxVec3(InDamping.X, InDamping.Y, InDamping.Z));
