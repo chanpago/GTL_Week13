@@ -98,26 +98,26 @@ private:
     // Helper to get unique node ID for body
     // Uses SelectedBodyIndex to create unique IDs even when BodyIndex repeats across different selections
     int32 GetBodyNodeID(int32 SelectedBodyIndex, int32 BodyIndex) const {
-        return 1000000 + (SelectedBodyIndex * 10000) + BodyIndex;
+        return 1000000 + (SelectedBodyIndex * 1000) + BodyIndex;
     }
 
     // Helper to get unique pin ID for body connection
     int32 GetBodyPinID(int32 SelectedBodyIndex, int32 BodyIndex) const {
-        return 2000000 + (SelectedBodyIndex * 10000) + BodyIndex;
+        return 2000000 + (SelectedBodyIndex * 1000) + BodyIndex;
     }
 
     // Helper to get unique node ID for constraint
     int32 GetConstraintNodeID(int32 SelectedBodyIndex, int32 ConstraintIndex) const {
-        return 3000000 + (SelectedBodyIndex * 10000) + ConstraintIndex;
+        return 3000000 + (SelectedBodyIndex * 1000) + ConstraintIndex;
     }
 
     // Helper to get unique pin IDs for constraint pins
     int32 GetConstraintInputPinID(int32 SelectedBodyIndex, int32 ConstraintIndex) const {
-        return 4000000 + (SelectedBodyIndex * 10000) + (ConstraintIndex * 2);
+        return 4000000 + (SelectedBodyIndex * 1000) + (ConstraintIndex * 2);
     }
 
     int32 GetConstraintOutputPinID(int32 SelectedBodyIndex, int32 ConstraintIndex) const {
-        return 4000000 + (SelectedBodyIndex * 10000) + (ConstraintIndex * 2) + 1;
+        return 4000000 + (SelectedBodyIndex * 1000) + (ConstraintIndex * 2) + 1;
     }
 
 private:
