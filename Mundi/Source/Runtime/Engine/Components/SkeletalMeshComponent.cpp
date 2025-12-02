@@ -41,11 +41,24 @@ static FBodyInstance* FindBodyInstanceByName(const TArray<FBodyInstance*>& Bodie
     return nullptr;
 }
 
-
-
 USkeletalMeshComponent::USkeletalMeshComponent()
 { 
     SetSkeletalMesh("Data/James/James.fbx");
+}
+
+USkeletalMeshComponent::~USkeletalMeshComponent()
+{
+    if (PhysicsAssetOverride)
+    {
+        ObjectFactory::DeleteObject(PhysicsAssetOverride);
+        PhysicsAssetOverride = nullptr;
+    }
+
+    if (PhysicsAsset)
+    {
+        ObjectFactory::DeleteObject(PhysicsAsset);
+        PhysicsAsset = nullptr;
+    }
 }
 
 void USkeletalMeshComponent::BeginPlay()
@@ -212,6 +225,13 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime)
 void USkeletalMeshComponent::EndPlay()
 {
     OnUnregiDebug();
+    if (UWorld* World = GetWorld())
+    {
+        if (FPhysScene* PhysScene = World->GetPhysScene())
+        {
+            DestroyPhysicsAssetBodies(*PhysScene);
+        }
+    }
 }
 
 void USkeletalMeshComponent::SetSkeletalMesh(const FString& PathFileName)

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "SkinnedMeshComponent.h"
 #include "USkeletalMeshComponent.generated.h"
 // Include for FPendingAnimNotify and FAnimNotifyEvent types
@@ -27,7 +27,7 @@ public:
     GENERATED_REFLECTION_BODY()
     
     USkeletalMeshComponent();
-    ~USkeletalMeshComponent() = default;
+    ~USkeletalMeshComponent();
 
 public:
     void BeginPlay() override;
