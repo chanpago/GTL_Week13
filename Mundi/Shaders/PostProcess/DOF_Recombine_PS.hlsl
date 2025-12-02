@@ -93,8 +93,6 @@ PS_OUTPUT mainPS(PS_INPUT input)
     float4 farBlurred = g_FarBlurredTex.Sample(g_LinearClampSample, input.texCoord);
 
     // 5. 레이어 합성 (Premultiplied Alpha - BlendFactor 제거)
-    // Premultiplied alpha가 이미 블렌딩 처리하므로 별도 마스크 불필요
-
     // [Layer 1] Background (Far Blur)
     float3 farColor = farBlurred.rgb + sceneColor.rgb * (1.0 - farBlurred.a);
 
