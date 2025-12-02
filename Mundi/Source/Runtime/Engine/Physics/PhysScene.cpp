@@ -199,17 +199,28 @@ void FPhysScene::Shutdown()
     // 테스트용 오브젝트 리스트 비우기
     Objects.clear();
 
-    // 생성 역순으로 해제
-    if (SimulationEventCallback)
+    // 시뮬레이션이 진행 중이면 완료 대기 (fetchResults 호출)
+    // Scene->release() 전에 반드시 호출해야 fireQueuedContactCallbacks 크래시 방지
+    if (Scene && bSimulating)
     {
-        delete SimulationEventCallback;
-        SimulationEventCallback = nullptr;
+        Scene->fetchResults(true);
+        bSimulating = false;
     }
 
+    // Scene을 먼저 해제해야 함
+    // Scene->release()가 내부적으로 SimulationEventCallback을 참조하므로
+    // SimulationEventCallback보다 Scene을 먼저 해제해야 함
     if (Scene)
     {
         Scene->release();
         Scene = nullptr;
+    }
+
+    // Scene 해제 후 콜백 삭제
+    if (SimulationEventCallback)
+    {
+        delete SimulationEventCallback;
+        SimulationEventCallback = nullptr;
     }
 
     if (Dispatcher)

@@ -65,7 +65,19 @@ UWorld::~UWorld()
 		{
 			Actor->EndPlay();
 		}
+	}
 
+	// 물리 씬 정리 - Actor 삭제 전에 수행해야 함
+	// fetchResults() 호출 시 콜백에서 Actor/Component를 참조하므로
+	// Actor가 살아있는 상태에서 물리 씬을 먼저 정리해야 dangling pointer 방지
+	if (PhysScene)
+	{
+		PhysScene->Shutdown();
+		PhysScene.reset();
+	}
+
+	if (Level)
+	{
 		TArray<AActor*> TempActors =  Level->GetActors();
 		for (AActor* Actor : TempActors)
 		{
@@ -83,13 +95,6 @@ UWorld::~UWorld()
 
 	GridActor = nullptr;
 	GizmoActor = nullptr;
-
-	// 물리 씬 정리
-	if (PhysScene)
-	{
-		PhysScene->Shutdown();
-		PhysScene.reset();
-	}
 }
 
 void UWorld::Initialize()
