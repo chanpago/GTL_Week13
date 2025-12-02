@@ -328,7 +328,7 @@ void SSkeletalMeshViewerWindow::OnRender()
                 auto widePath = FPlatformProcess::OpenLoadFileDialog(UTF8ToWide(GDataDir), L"fbx", L"FBX Files");
                 if (!widePath.empty())
                 {
-                    std::string s = widePath.string();
+                    FString s = WideToUTF8(widePath.wstring());
                     strncpy_s(ActiveState->MeshPathBuffer, s.c_str(), sizeof(ActiveState->MeshPathBuffer) - 1);
                 }
             }
