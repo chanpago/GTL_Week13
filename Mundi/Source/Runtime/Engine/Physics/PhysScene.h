@@ -2,6 +2,8 @@
 #include <PxPhysicsAPI.h>
 #include "Delegates.h"
 
+struct FHitResult;
+
 using namespace physx;
 using namespace DirectX;
 
@@ -83,6 +85,48 @@ public:
     PxMaterial*             GetDefaultMaterial() const;
     PxDefaultCpuDispatcher* GetDispatcher()      const;
 
+    // ===== Sweep Query =====
+    /**
+     * @brief 캡슐로 Sweep하여 Static 콜라이더와 충돌 검사
+     * @param Start 시작 위치
+     * @param End 끝 위치
+     * @param Radius 캡슐 반지름
+     * @param HalfHeight 캡슐 반높이
+     * @param OutHit 충돌 결과
+     * @param IgnoreActor 무시할 액터 (자기 자신 등)
+     * @return 충돌 여부
+     */
+    bool SweepCapsule(
+        const FVector& Start,
+        const FVector& End,
+        float Radius,
+        float HalfHeight,
+        FHitResult& OutHit,
+        AActor* IgnoreActor = nullptr
+    ) const;
+
+    /**
+     * @brief 박스로 Sweep하여 Static 콜라이더와 충돌 검사
+     */
+    bool SweepBox(
+        const FVector& Start,
+        const FVector& End,
+        const FVector& HalfExtents,
+        const FQuat& Rotation,
+        FHitResult& OutHit,
+        AActor* IgnoreActor = nullptr
+    ) const;
+
+    /**
+     * @brief 스피어로 Sweep하여 Static 콜라이더와 충돌 검사
+     */
+    bool SweepSphere(
+        const FVector& Start,
+        const FVector& End,
+        float Radius,
+        FHitResult& OutHit,
+        AActor* IgnoreActor = nullptr
+    ) const;
 
 private:
     PxDefaultAllocator      Allocator;

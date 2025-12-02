@@ -1,6 +1,10 @@
 ﻿#include "pch.h"
 #include "PhysScene.h"
 #include "SimulationEventCallback.h"
+#include "Source/Runtime/Engine/Collision/Collision.h"
+#include "Source/Runtime/Engine/Physics/BodyInstance.h"
+#include "Source/Runtime/Engine/Components/PrimitiveComponent.h"
+#include "Actor.h"
 #include <Windows.h>
 
 /**
@@ -363,4 +367,269 @@ PxMaterial* FPhysScene::GetDefaultMaterial() const
 PxDefaultCpuDispatcher* FPhysScene::GetDispatcher() const
 {
     return Dispatcher;
+}
+
+// ===== Sweep Query Helper =====
+namespace
+{
+    // PhysX PxSweepHit을 FHitResult로 변환
+    void ConvertPxSweepHitToHitResult(
+        const PxSweepHit& PxHit,
+        const FVector& Start,
+        const FVector& End,
+        const FVector& Direction,
+        float TotalDistance,
+        FHitResult& OutHit)
+    {
+        OutHit.bHit = true;
+        OutHit.bBlockingHit = true;
+        OutHit.Time = PxHit.distance / TotalDistance;
+        OutHit.Distance = PxHit.distance;
+        OutHit.Location = Start + Direction * PxHit.distance;
+        OutHit.ImpactPoint = FVector(PxHit.position.x, PxHit.position.y, PxHit.position.z);
+        OutHit.ImpactNormal = FVector(PxHit.normal.x, PxHit.normal.y, PxHit.normal.z);
+        OutHit.TraceStart = Start;
+        OutHit.TraceEnd = End;
+
+        // Actor/Component 정보 추출
+        if (PxHit.actor)
+        {
+            void* UserData = PxHit.actor->userData;
+            if (UserData)
+            {
+                // BodyInstance에서 Owner 추출
+                FBodyInstance* BodyInst = static_cast<FBodyInstance*>(UserData);
+                if (BodyInst && BodyInst->OwnerComponent)
+                {
+                    OutHit.HitComponent = Cast<UPrimitiveComponent>(BodyInst->OwnerComponent);
+                    if (OutHit.HitComponent)
+                    {
+                        OutHit.HitActor = OutHit.HitComponent->GetOwner();
+                    }
+                }
+            }
+        }
+    }
+
+    // Static 콜라이더만 대상으로 하는 필터 콜백
+    class FSweepQueryFilterCallback : public PxQueryFilterCallback
+    {
+    public:
+        AActor* IgnoreActor = nullptr;
+
+        FSweepQueryFilterCallback(AActor* InIgnoreActor)
+            : IgnoreActor(InIgnoreActor)
+        {
+        }
+
+        virtual PxQueryHitType::Enum preFilter(
+            const PxFilterData& filterData,
+            const PxShape* shape,
+            const PxRigidActor* actor,
+            PxHitFlags& queryFlags) override
+        {
+            // Static 액터만 대상으로 함
+            if (actor->getType() != PxActorType::eRIGID_STATIC)
+            {
+                return PxQueryHitType::eNONE;
+            }
+
+            // IgnoreActor 처리
+            if (IgnoreActor && actor->userData)
+            {
+                FBodyInstance* BodyInst = static_cast<FBodyInstance*>(actor->userData);
+                if (BodyInst && BodyInst->OwnerComponent)
+                {
+                    AActor* HitActor = BodyInst->OwnerComponent->GetOwner();
+                    if (HitActor == IgnoreActor)
+                    {
+                        return PxQueryHitType::eNONE;
+                    }
+                }
+            }
+
+            return PxQueryHitType::eBLOCK;
+        }
+
+        virtual PxQueryHitType::Enum postFilter(
+            const PxFilterData& filterData,
+            const PxQueryHit& hit) override
+        {
+            return PxQueryHitType::eBLOCK;
+        }
+    };
+}
+
+bool FPhysScene::SweepCapsule(
+    const FVector& Start,
+    const FVector& End,
+    float Radius,
+    float HalfHeight,
+    FHitResult& OutHit,
+    AActor* IgnoreActor) const
+{
+    OutHit.Reset();
+
+    if (!Scene)
+        return false;
+
+    FVector Direction = End - Start;
+    float TotalDistance = Direction.Size();
+
+    if (TotalDistance < KINDA_SMALL_NUMBER)
+        return false;
+
+    Direction = Direction / TotalDistance; // Normalize
+
+    // PhysX Capsule Geometry (PhysX 캡슐은 X축 방향이 기본)
+    // 우리 캡슐은 Z축 방향이므로 회전 필요
+    // PhysX의 halfHeight는 원통 부분만의 반높이 (반구 제외)
+    // 전체 캡슐 높이 = 2 * (cylinderHalfHeight + radius)
+    float CylinderHalfHeight = FMath::Max(0.0f, HalfHeight - Radius);
+    PxCapsuleGeometry CapsuleGeom(Radius, CylinderHalfHeight);
+
+    // 캡슐 방향 설정 (Z-up으로 회전)
+    PxQuat CapsuleRotation(PxHalfPi, PxVec3(0, 1, 0)); // Y축 기준 90도 회전
+    PxTransform StartPose(PxVec3(Start.X, Start.Y, Start.Z), CapsuleRotation);
+
+    PxVec3 PxDirection(Direction.X, Direction.Y, Direction.Z);
+
+    // Sweep 쿼리 설정
+    PxSweepBuffer HitBuffer;
+    PxHitFlags HitFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eDEFAULT;
+
+    // Static만 대상으로 하는 필터
+    FSweepQueryFilterCallback FilterCallback(IgnoreActor);
+    PxQueryFilterData FilterData;
+    FilterData.flags = PxQueryFlag::eSTATIC | PxQueryFlag::ePREFILTER;
+
+    // Read Lock 필요 (시뮬레이션과 동시 접근 방지)
+    SCOPED_PHYSX_READ_LOCK(*Scene);
+
+    bool bHit = Scene->sweep(
+        CapsuleGeom,
+        StartPose,
+        PxDirection,
+        TotalDistance,
+        HitBuffer,
+        HitFlags,
+        FilterData,
+        &FilterCallback
+    );
+
+    if (bHit && HitBuffer.hasBlock)
+    {
+        ConvertPxSweepHitToHitResult(HitBuffer.block, Start, End, Direction, TotalDistance, OutHit);
+        return true;
+    }
+
+    return false;
+}
+
+bool FPhysScene::SweepBox(
+    const FVector& Start,
+    const FVector& End,
+    const FVector& HalfExtents,
+    const FQuat& Rotation,
+    FHitResult& OutHit,
+    AActor* IgnoreActor) const
+{
+    OutHit.Reset();
+
+    if (!Scene)
+        return false;
+
+    FVector Direction = End - Start;
+    float TotalDistance = Direction.Size();
+
+    if (TotalDistance < KINDA_SMALL_NUMBER)
+        return false;
+
+    Direction = Direction / TotalDistance;
+
+    PxBoxGeometry BoxGeom(HalfExtents.X, HalfExtents.Y, HalfExtents.Z);
+    PxQuat PxRot(Rotation.X, Rotation.Y, Rotation.Z, Rotation.W);
+    PxTransform StartPose(PxVec3(Start.X, Start.Y, Start.Z), PxRot);
+    PxVec3 PxDirection(Direction.X, Direction.Y, Direction.Z);
+
+    PxSweepBuffer HitBuffer;
+    PxHitFlags HitFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eDEFAULT;
+
+    FSweepQueryFilterCallback FilterCallback(IgnoreActor);
+    PxQueryFilterData FilterData;
+    FilterData.flags = PxQueryFlag::eSTATIC | PxQueryFlag::ePREFILTER;
+
+    SCOPED_PHYSX_READ_LOCK(*Scene);
+
+    bool bHit = Scene->sweep(
+        BoxGeom,
+        StartPose,
+        PxDirection,
+        TotalDistance,
+        HitBuffer,
+        HitFlags,
+        FilterData,
+        &FilterCallback
+    );
+
+    if (bHit && HitBuffer.hasBlock)
+    {
+        ConvertPxSweepHitToHitResult(HitBuffer.block, Start, End, Direction, TotalDistance, OutHit);
+        return true;
+    }
+
+    return false;
+}
+
+bool FPhysScene::SweepSphere(
+    const FVector& Start,
+    const FVector& End,
+    float Radius,
+    FHitResult& OutHit,
+    AActor* IgnoreActor) const
+{
+    OutHit.Reset();
+
+    if (!Scene)
+        return false;
+
+    FVector Direction = End - Start;
+    float TotalDistance = Direction.Size();
+
+    if (TotalDistance < KINDA_SMALL_NUMBER)
+        return false;
+
+    Direction = Direction / TotalDistance;
+
+    PxSphereGeometry SphereGeom(Radius);
+    PxTransform StartPose(PxVec3(Start.X, Start.Y, Start.Z));
+    PxVec3 PxDirection(Direction.X, Direction.Y, Direction.Z);
+
+    PxSweepBuffer HitBuffer;
+    PxHitFlags HitFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eDEFAULT;
+
+    FSweepQueryFilterCallback FilterCallback(IgnoreActor);
+    PxQueryFilterData FilterData;
+    FilterData.flags = PxQueryFlag::eSTATIC | PxQueryFlag::ePREFILTER;
+
+    SCOPED_PHYSX_READ_LOCK(*Scene);
+
+    bool bHit = Scene->sweep(
+        SphereGeom,
+        StartPose,
+        PxDirection,
+        TotalDistance,
+        HitBuffer,
+        HitFlags,
+        FilterData,
+        &FilterCallback
+    );
+
+    if (bHit && HitBuffer.hasBlock)
+    {
+        ConvertPxSweepHitToHitResult(HitBuffer.block, Start, End, Direction, TotalDistance, OutHit);
+        return true;
+    }
+
+    return false;
 }

@@ -11,20 +11,10 @@ UCapsuleComponent::UCapsuleComponent()
 {
     CapsuleHalfHeight = 0.5f;
     CapsuleRadius = 0.5f;
-
-	//CapsuleHalfHeight = WorldAABB.GetHalfExtent().Z;
-	//CapsuleRadius = FMath::Max(WorldAABB.GetHalfExtent().X, WorldAABB.GetHalfExtent().Y);
 }
 
 void UCapsuleComponent::OnRegister(UWorld* World)
 {
-	//Super::OnRegister(World);
-    //
-	//CapsuleHalfHeight = WorldAABB.GetHalfExtent().Z ;
-	//CapsuleRadius = WorldAABB.GetHalfExtent().X < WorldAABB.GetHalfExtent().Y ? WorldAABB.GetHalfExtent().Y : WorldAABB.GetHalfExtent().X;
-    //CapsuleRadius *= 2;
-
-
     Super::OnRegister(World);
 
     if (AActor* Owner = GetOwner())
@@ -32,25 +22,29 @@ void UCapsuleComponent::OnRegister(UWorld* World)
         FAABB ActorBounds = Owner->GetBounds();
         FVector WorldHalfExtent = ActorBounds.GetHalfExtent();
 
-        // World scale로 나눠서 local 값 계산
-        const FTransform WorldTransform = GetWorldTransform();
-        const FVector S = FVector(
-            std::fabs(WorldTransform.Scale3D.X),
-            std::fabs(WorldTransform.Scale3D.Y),
-            std::fabs(WorldTransform.Scale3D.Z)
-        );
+        // Owner의 bounds가 유효한 경우에만 캡슐 크기를 재계산
+        // Character 같은 경우 GetBounds()가 빈 AABB를 반환하므로 기존 값 유지
+        if (!WorldHalfExtent.IsZero())
+        {
+            // World scale로 나눠서 local 값 계산
+            const FTransform WorldTransform = GetWorldTransform();
+            const FVector S = FVector(
+                std::fabs(WorldTransform.Scale3D.X),
+                std::fabs(WorldTransform.Scale3D.Y),
+                std::fabs(WorldTransform.Scale3D.Z)
+            );
 
-        constexpr float Eps = 1e-6f;
+            constexpr float Eps = 1e-6f;
 
-        // Z축 = 높이, XY축 = 반지름
-        float LocalHalfHeight = S.Z > Eps ? WorldHalfExtent.Z / S.Z : WorldHalfExtent.Z;
-        float LocalRadiusX = S.X > Eps ? WorldHalfExtent.X / S.X : WorldHalfExtent.X;
-        float LocalRadiusY = S.Y > Eps ? WorldHalfExtent.Y / S.Y : WorldHalfExtent.Y;
+            // Z축 = 높이, XY축 = 반지름
+            float LocalHalfHeight = S.Z > Eps ? WorldHalfExtent.Z / S.Z : WorldHalfExtent.Z;
+            float LocalRadiusX = S.X > Eps ? WorldHalfExtent.X / S.X : WorldHalfExtent.X;
+            float LocalRadiusY = S.Y > Eps ? WorldHalfExtent.Y / S.Y : WorldHalfExtent.Y;
 
-        CapsuleHalfHeight = LocalHalfHeight;
-        CapsuleRadius = FMath::Max(LocalRadiusX, LocalRadiusY); 
+            CapsuleHalfHeight = LocalHalfHeight;
+            CapsuleRadius = FMath::Max(LocalRadiusX, LocalRadiusY);
+        }
     }
-
 }
 
 void UCapsuleComponent::DuplicateSubObjects()
