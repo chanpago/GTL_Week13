@@ -1,10 +1,10 @@
 #include "DOF_Common.hlsli"
 
 // Input Textures
-Texture2D    g_SceneColorTex : register(t0);  // Full Res
-Texture2D    g_SceneDepthTex : register(t1);  // Full Res
-Texture2D    g_FarFieldTex   : register(t2);  // 1/4 Res (Blurred)
-Texture2D    g_NearFieldTex  : register(t3);  // 1/4 Res (Blurred)
+Texture2D    g_SceneColorTex : register(t0);   // Full Res
+Texture2D    g_SceneDepthTex : register(t1);   // Full Res
+Texture2D    g_NearBlurredTex: register(t2);   // 1/2 Res (Near Blur)
+Texture2D    g_FarBlurredTex : register(t3);   // 1/2 Res (Far Blur)
 
 SamplerState g_LinearClampSample : register(s0);
 SamplerState g_PointClampSample  : register(s1);
@@ -64,34 +64,6 @@ struct PS_OUTPUT
     float4 Color : SV_Target0;
 };
 
-// Bilateral Upsampling: 깊이 기반 가중치로 엣지 보존 업샘플링
-float4 BilateralUpsample(Texture2D blurTex, float2 uv, float centerDepth, float2 lowResTexelSize)
-{
-    float4 blur = 0;
-    float totalWeight = 0;
-
-    [unroll]
-    for (int y = -1; y <= 1; y++)
-    {
-        [unroll]
-        for (int x = -1; x <= 1; x++)
-        {
-            float2 sampleUV = uv + float2(x, y) * lowResTexelSize;
-            float4 s = blurTex.Sample(g_LinearClampSample, sampleUV);
-
-            float sampleDepth = g_SceneDepthTex.Sample(g_PointClampSample, sampleUV).r;
-            sampleDepth = LinearizeDepth(sampleDepth, NearClip, FarClip, IsOrthographic2);
-
-            float depthDiff = abs(sampleDepth - centerDepth) / max(centerDepth, 0.1);
-            float w = exp(-depthDiff * 2.0);
-            blur += s * w;
-            totalWeight += w;
-        }
-    }
-
-    return blur / max(totalWeight, 0.001);
-}
-
 PS_OUTPUT mainPS(PS_INPUT input)
 {
     PS_OUTPUT output;
@@ -107,44 +79,29 @@ PS_OUTPUT mainPS(PS_INPUT input)
         return output;
     }
 
-    // 3. Depth 샘플링 및 CoC 계산
+    // 3. 현재 픽셀의 CoC 계산 (Far Blur 오클루전용)
     float rawDepth = g_SceneDepthTex.Sample(g_PointClampSample, input.texCoord).r;
     float viewDepth = LinearizeDepth(rawDepth, NearClip, FarClip, IsOrthographic2);
-
-    float CoC = CalculateCoC(
-        viewDepth,
-        FocalDistance,
-        FocalRegion,
-        NearTransitionRegion,
-        FarTransitionRegion,
-        MaxNearBlurSize,
-        MaxFarBlurSize
+    float CoC = CalculateCoCWithSkyCheck(
+        viewDepth, FocalDistance, FocalRegion,
+        NearTransitionRegion, FarTransitionRegion,
+        MaxNearBlurSize, MaxFarBlurSize, FarClip
     );
 
-    // 4. 블러 텍스처 샘플링 (Bilateral, 부드러운 깊이 가중치)
-    // Near Field는 항상 샘플링 (Bleeding을 위해 초점 영역도 Near 확인 필요)
-    float2 lowResTexelSize = ScreenSize.zw * 1.f;
-    float4 farField = BilateralUpsample(g_FarFieldTex, input.texCoord, viewDepth, lowResTexelSize);
-    float4 nearField = BilateralUpsample(g_NearFieldTex, input.texCoord, viewDepth, lowResTexelSize);
+    // 4. 블러 텍스처 샘플링 (Premultiplied Alpha)
+    float4 nearBlurred = g_NearBlurredTex.Sample(g_LinearClampSample, input.texCoord);
+    float4 farBlurred = g_FarBlurredTex.Sample(g_LinearClampSample, input.texCoord);
 
-    // 5. UE 스타일 레이어 합성 (Far → Sharp → Near)
-    float4 finalColor = sceneColor;
+    // 5. 레이어 합성 (Premultiplied Alpha - BlendFactor 제거)
+    // Premultiplied alpha가 이미 블렌딩 처리하므로 별도 마스크 불필요
 
-    // Layer 1: Far Blur (배경) - CoC > 0 일때만
-    if (CoC > 0.001)
-    {
-        float farMask = saturate(CoC);
-        farMask = farMask * farMask * (3.0 - 2.0 * farMask);  // Smoothstep
-        finalColor = lerp(finalColor, float4(farField.rgb, 1.0), farMask);
-    }
+    // [Layer 1] Background (Far Blur)
+    float3 farColor = farBlurred.rgb + sceneColor.rgb * (1.0 - farBlurred.a);
 
-    // Layer 2: Near Blur (전경) - nearField.a (블러된 CoC)로 Sharp 위에 덮기
-    // 초점 영역(CoC=0)이라도 주변 Near가 번지면 적용해야 함 (Bleeding)
-    float nearMask = nearField.a;  // 텍스처에서 온 CoC (블러되어 번짐)
-    nearMask = nearMask * nearMask * (3.0 - 2.0 * nearMask);  // Smoothstep
-    finalColor = lerp(finalColor, float4(nearField.rgb, 1.0), nearMask);
+    // [Layer 2] Foreground (Near Blur)
+    float3 finalColor = nearBlurred.rgb + farColor * (1.0 - nearBlurred.a);
 
-    output.Color = finalColor;
+    output.Color = float4(finalColor, 1.0);
 
     return output;
 }

@@ -64,6 +64,36 @@ float CalculateCoC(
     return coc;
 }
 
+// Circle of Confusion (CoC) 계산 - Far Clip 체크 포함
+// farClip 근처 깊이는 하늘/무한대로 간주하고 CoC = 0 반환
+float CalculateCoCWithSkyCheck(
+    float viewDepth,
+    float focalDistance,
+    float focalRegion,
+    float nearTransition,
+    float farTransition,
+    float maxNearBlurSize,
+    float maxFarBlurSize,
+    float farClip
+)
+{
+    // 하늘/배경 체크: Far Clip의 95% 이상이면 무한대로 간주 → 블러 안함
+    if (viewDepth > farClip * 0.99)
+    {
+        return 0.0;
+    }
+
+    return CalculateCoC(
+        viewDepth,
+        focalDistance,
+        focalRegion,
+        nearTransition,
+        farTransition,
+        maxNearBlurSize,
+        maxFarBlurSize
+    );
+}
+
 // 간단한 CoC 계산 (물리 기반 생략, 성능 우선)
 float CalculateCoCSimple(
     float viewDepthCm,
@@ -245,6 +275,40 @@ BilateralDownsampleResult BilateralDownsampleWithCoC(
 
     return result;
 }
+
+// ==========================================
+// Scatter 대상 선별 (Setup과 Scatter에서 공유)
+// ==========================================
+
+// Luminance 계산
+float Luminance(float3 color)
+{
+    return dot(color, float3(0.2126, 0.7152, 0.0722));
+}
+
+// Scatter 조건 상수
+static const float SCATTER_LUMA_THRESHOLD = 0.4;   // 밝기 임계값
+static const float SCATTER_FACTOR_THRESHOLD = 0.5; // scatterFactor 임계값
+static const float SCATTER_COC_THRESHOLD = 0.1;    // CoC 임계값
+
+// Scatter 대상 여부 판단
+// 반환: true = Scatter로 처리, false = Gather로 처리
+bool ShouldScatter(float3 color, float coc)
+{
+    float luma = Luminance(color);
+    float scatterFactor = saturate(luma / SCATTER_LUMA_THRESHOLD - 1.0);
+    return (scatterFactor > SCATTER_FACTOR_THRESHOLD) && (abs(coc) > SCATTER_COC_THRESHOLD);
+}
+
+// Gather용 가중치 계산 (Scatter 대상이 아닌 경우)
+float CalculateGatherWeight(float3 color, float coc)
+{
+    float luma = Luminance(color);
+    float distinction = abs(coc) * luma;
+    return smoothstep(100.0, -100.0, distinction);
+}
+
+// ==========================================
 
 // Gaussian 가중치 (9-tap)
 static const float GAUSSIAN_WEIGHTS_9[5] =

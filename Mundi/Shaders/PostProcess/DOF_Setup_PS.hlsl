@@ -52,78 +52,36 @@ cbuffer ViewportConstants : register(b10)
     float4 ScreenSize;
 }
 
-// MRT 출력 (Far Field, Near Field)
+// 단일 출력 (Near/Far 혼합, CoC 부호로 구분)
 struct PS_OUTPUT
 {
-    float4 FarField  : SV_Target0;
-    float4 NearField : SV_Target1;
+    float4 Color : SV_Target0;  // RGB + CoC (Near: 음수, Far: 양수, Focus: 0)
 };
 
 PS_OUTPUT mainPS(PS_INPUT input)
 {
     PS_OUTPUT output;
 
-    // 1. Bilateral 다운샘플 (깊이 기반 가중치로 엣지 보존)
-    float2 fullResTexelSize = ScreenSize.zw;  // 1.0 / ScreenSize
+    // 1. Bilinear 다운샘플
+    float4 sceneColor = g_SceneColorTex.Sample(g_LinearClampSample, input.texCoord);
 
-    // depthSigma: 깊이 감도 (m 단위, 작을수록 엣지 보존 강함)
-    // 일반적으로 0.5~2.0m 정도가 적절
-    float depthSigma = 1.0;
+    // 2. 중심 깊이에서 CoC 계산
+    float rawDepth = g_SceneDepthTex.Sample(g_PointClampSample, input.texCoord).r;
+    float linearDepth = LinearizeDepth(rawDepth, NearClip, FarClip, IsOrthographic2);
 
-    BilateralDownsampleResult dsResult = BilateralDownsampleWithCoC(
-        g_SceneColorTex,
-        g_SceneDepthTex,
-        g_LinearClampSample,
-        g_PointClampSample,
-        input.texCoord,
-        fullResTexelSize,
-        NearClip,
-        FarClip,
-        IsOrthographic2,
-        depthSigma,
+    float CoC = CalculateCoCWithSkyCheck(
+        linearDepth,
         FocalDistance,
         FocalRegion,
         NearTransitionRegion,
         FarTransitionRegion,
         MaxNearBlurSize,
-        MaxFarBlurSize
+        MaxFarBlurSize,
+        FarClip
     );
 
-    float4 sceneColor = dsResult.color;
-    float CoC = dsResult.coc;
-    float linearDepth = dsResult.linearDepth;
-
-    // 헤일로 방지: Sky Focus Distance (부드러운 전환)
-    // 매우 먼 거리(하늘/빈 공간)는 블러 점진적 감소
-    const float skyFocusStart = FarClip * 0.5;   // 전환 시작 (50%)
-    const float skyFocusEnd = FarClip * 0.9;     // 전환 끝 (90%)
-
-    if (linearDepth > skyFocusStart && CoC > 0.0)
-    {
-        // smoothstep으로 부드럽게 CoC 감소
-        float skyFalloff = 1.0 - smoothstep(skyFocusStart, skyFocusEnd, linearDepth);
-        CoC *= skyFalloff;
-    }
-
-    // 2. Near/Far 분리 (CoC 기준으로 한쪽에만 출력 - 색 섞임 방지)
-    if (CoC > 0.0)
-    {
-        // 원경: Far에만
-        output.FarField = float4(sceneColor.rgb, CoC);
-        output.NearField = float4(0, 0, 0, 0);
-    }
-    else if (CoC < 0.0)
-    {
-        // 근경: Near에만
-        output.FarField = float4(0, 0, 0, 0);
-        output.NearField = float4(sceneColor.rgb, -CoC);
-    }
-    else
-    {
-        // 초점: 둘 다 X
-        output.FarField = float4(0, 0, 0, 0);
-        output.NearField = float4(0, 0, 0, 0);
-    }
+    // 3. 원본 색상 + CoC 출력
+    output.Color = float4(sceneColor.rgb, CoC);
 
     return output;
 }

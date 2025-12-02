@@ -35,6 +35,8 @@
 #include "SkeletalMeshComponent.h"
 #include "Source/Editor/BlueprintGraph/AnimationGraph.h"
 #include "Source/Runtime/Core/Misc/PathUtils.h"
+#include "PlayerCameraManager.h"
+#include "Camera/CamMod_DOF.h"
 
 using namespace std;
 
@@ -540,6 +542,130 @@ void UTargetActorTransformWidget::RenderSelectedActorDetails(AActor* SelectedAct
 
 	ImGui::Spacing();
 	ImGui::Separator();
+
+	// PlayerCameraManager인 경우 DOF 설정 UI 표시
+	if (APlayerCameraManager* CamMgr = Cast<APlayerCameraManager>(SelectedActor))
+	{
+		RenderDOFSettings(CamMgr);
+	}
+}
+
+void UTargetActorTransformWidget::RenderDOFSettings(APlayerCameraManager* CamMgr)
+{
+	if (!CamMgr)
+	{
+		return;
+	}
+
+	// 기존 DOF Modifier 찾기
+	UCamMod_DOF* DOF = nullptr;
+	for (UCameraModifierBase* Mod : CamMgr->ActiveModifiers)
+	{
+		if (UCamMod_DOF* Found = Cast<UCamMod_DOF>(Mod))
+		{
+			DOF = Found;
+			break;
+		}
+	}
+
+	bool bDOFEnabled = (DOF != nullptr && DOF->bEnabled);
+
+	if (ImGui::CollapsingHeader("Depth of Field", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::Indent(10.0f);
+
+		// DOF Enable 체크박스
+		bool bPrevEnabled = bDOFEnabled;
+		if (ImGui::Checkbox("Enable DOF", &bDOFEnabled))
+		{
+			if (bDOFEnabled && !bPrevEnabled)
+			{
+				// DOF 활성화 - Modifier 생성
+				if (!DOF)
+				{
+					DOF = new UCamMod_DOF();
+					CamMgr->ActiveModifiers.Add(DOF);
+				}
+				DOF->bEnabled = true;
+			}
+			else if (!bDOFEnabled && bPrevEnabled)
+			{
+				// DOF 비활성화
+				if (DOF)
+				{
+					DOF->bEnabled = false;
+				}
+			}
+		}
+
+		if (bDOFEnabled && DOF)
+		{
+			ImGui::Spacing();
+			ImGui::Text("Focus Settings");
+
+			// Focal Distance
+			ImGui::Text("Focal Distance (m)");
+			ImGui::SetNextItemWidth(-1);
+			ImGui::DragFloat("##FocalDistance", &DOF->FocalDistance, 0.1f, 0.1f, 1000.0f, "%.1f");
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("The distance to the focal plane in meters");
+			}
+
+			// Focal Region
+			ImGui::Text("Focal Region (m)");
+			ImGui::SetNextItemWidth(-1);
+			ImGui::DragFloat("##FocalRegion", &DOF->FocalRegion, 0.1f, 0.0f, 100.0f, "%.1f");
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("The size of the perfectly sharp region around the focal plane");
+			}
+
+			ImGui::Spacing();
+			ImGui::Text("Transition Regions");
+
+			// Near Transition
+			ImGui::Text("Near Transition (m)");
+			ImGui::SetNextItemWidth(-1);
+			ImGui::DragFloat("##NearTransition", &DOF->NearTransitionRegion, 0.1f, 0.1f, 100.0f, "%.1f");
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Distance over which blur transitions from sharp to max near blur");
+			}
+
+			// Far Transition
+			ImGui::Text("Far Transition (m)");
+			ImGui::SetNextItemWidth(-1);
+			ImGui::DragFloat("##FarTransition", &DOF->FarTransitionRegion, 0.1f, 0.1f, 500.0f, "%.1f");
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Distance over which blur transitions from sharp to max far blur");
+			}
+
+			ImGui::Spacing();
+			ImGui::Text("Blur Size (pixels)");
+
+			// Max Near Blur
+			ImGui::Text("Max Near Blur");
+			ImGui::SetNextItemWidth(-1);
+			ImGui::DragFloat("##MaxNearBlur", &DOF->MaxNearBlurSize, 0.5f, 0.0f, 128.0f, "%.1f");
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Maximum blur radius for near (foreground) objects in pixels");
+			}
+
+			// Max Far Blur
+			ImGui::Text("Max Far Blur");
+			ImGui::SetNextItemWidth(-1);
+			ImGui::DragFloat("##MaxFarBlur", &DOF->MaxFarBlurSize, 0.5f, 0.0f, 128.0f, "%.1f");
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Maximum blur radius for far (background) objects in pixels");
+			}
+		}
+
+		ImGui::Unindent(10.0f);
+	}
 }
 
 // 컴포넌트의 프로퍼티 출력

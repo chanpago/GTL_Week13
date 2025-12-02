@@ -121,11 +121,10 @@ void FDOFTilePass::Execute(D3D11RHI* RHIDevice)
         return;
     }
 
-    // Far/Near Field SRV 가져오기
-    ID3D11ShaderResourceView* FarFieldSRV = RHIDevice->GetDOFSRV(0);
-    ID3D11ShaderResourceView* NearFieldSRV = RHIDevice->GetDOFSRV(1);
+    // 혼합 텍스처 SRV 가져오기 (Near/Far 통합)
+    ID3D11ShaderResourceView* InputSRV = RHIDevice->GetDOFSRV(0);
 
-    if (!FarFieldSRV)
+    if (!InputSRV)
     {
         return;
     }
@@ -154,7 +153,7 @@ void FDOFTilePass::Execute(D3D11RHI* RHIDevice)
         cb->InputSizeY = InputHeight;
         cb->TileCountX = TileCountX;
         cb->TileCountY = TileCountY;
-        cb->CocRadiusToTileScale = 16.0f;  // CoC(0~1) * 16 = Half Res 픽셀 (최대 블러 32px 기준)
+        cb->CocRadiusToTileScale = 32.0f;  // CoC(0~1) * 32 = Half Res 픽셀 (최대 블러 64px Full Res 기준)
 
         DeviceContext->Unmap(TileConstantBuffer, 0);
     }
@@ -163,9 +162,8 @@ void FDOFTilePass::Execute(D3D11RHI* RHIDevice)
     RHIDevice->CSSetShader(FlattenCS->GetComputeShader());
     RHIDevice->CSSetConstantBuffers(0, 1, &TileConstantBuffer);
 
-    // 입력: Far + Near Field CoC 텍스처
-    ID3D11ShaderResourceView* FieldSRVs[2] = { FarFieldSRV, NearFieldSRV };
-    RHIDevice->CSSetShaderResources(0, 2, FieldSRVs);
+    // 입력: 혼합 텍스처 (Near/Far 통합, CoC 부호 있음)
+    RHIDevice->CSSetShaderResources(0, 1, &InputSRV);
 
     // 출력: Flattened Tile 텍스처
     RHIDevice->CSSetUnorderedAccessViews(0, 1, &FlattenedTileUAV, nullptr);
@@ -176,8 +174,8 @@ void FDOFTilePass::Execute(D3D11RHI* RHIDevice)
     // 리소스 언바인드
     ID3D11UnorderedAccessView* nullUAV = nullptr;
     RHIDevice->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
-    ID3D11ShaderResourceView* nullSRVs[2] = { nullptr, nullptr };
-    RHIDevice->CSSetShaderResources(0, 2, nullSRVs);
+    ID3D11ShaderResourceView* nullSRV = nullptr;
+    RHIDevice->CSSetShaderResources(0, 1, &nullSRV);
 
     // =====================================================
     // Pass 2: Tile Dilate
