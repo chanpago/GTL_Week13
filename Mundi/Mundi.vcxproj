@@ -106,7 +106,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);ThirdParty\Lua\lib\$(Configuration)\;ThirdParty\DirectXTex\lib\$(Configuration)\;ThirdParty\FBXSDK\lib\$(Configuration)\;ThirdParty\DirectXTK\lib\$(Configuration)\;ThirdParty\physx\lib\$(Configuration)\</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);ThirdParty\Lua\lib\$(Configuration)\;ThirdParty\DirectXTex\lib\$(Configuration)\;ThirdParty\FBXSDK\lib\$(Configuration)\;ThirdParty\DirectXTK\lib\$(Configuration)\;ThirdParty\physx\lib\$(Configuration)\;ThirdParty\NvClothes\lib\$(Configuration)\</AdditionalLibraryDirectories>
       <AdditionalDependencies>DirectXTK.lib;DirectXTex.lib;%(AdditionalDependencies);Lua.lib;libfbxsdk-md.lib;alembic-md.lib;libxml2-md.lib;zlib-md.lib</AdditionalDependencies>
       <AdditionalOptions>/IGNORE:4099 /SOURCELINK:"$(IntDir)sourcelink.json" %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -165,7 +165,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>PX_PHYSX_STATIC_LIB;NDEBUG;_CONSOLE;_EDITOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PX_PHYSX_STATIC_LIB;NV_CLOTH_IMPORT=;NDEBUG;_CONSOLE;_EDITOR;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -178,7 +178,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);ThirdParty\Lua\lib\$(Configuration)\;ThirdParty\DirectXTex\lib\$(Configuration)\;ThirdParty\FBXSDK\lib\$(Configuration)\;ThirdParty\DirectXTK\lib\$(Configuration)\;ThirdParty\physx\lib\$(Configuration)\</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);ThirdParty\Lua\lib\$(Configuration)\;ThirdParty\DirectXTex\lib\$(Configuration)\;ThirdParty\FBXSDK\lib\$(Configuration)\;ThirdParty\DirectXTK\lib\$(Configuration)\;ThirdParty\physx\lib\$(Configuration)\;ThirdParty\NvClothes\lib\$(Configuration)\</AdditionalLibraryDirectories>
       <AdditionalDependencies>DirectXTK.lib;DirectXTex.lib;%(AdditionalDependencies);Lua.lib;libfbxsdk-md.lib;alembic-md.lib;libxml2-md.lib;zlib-md.lib</AdditionalDependencies>
       <AdditionalOptions>/IGNORE:4099 /SOURCELINK:"$(IntDir)sourcelink.json" %(AdditionalOptions)</AdditionalOptions>
     </Link>

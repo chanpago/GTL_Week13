@@ -993,6 +993,12 @@
       <Filter>Source\Runtime\Engine\Physics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Runtime\Engine\Physics\PhysScene.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_Gamma.cpp" />
+    <ClCompile Include="Source\Runtime\Engine\Physics\SimulationEventCallback.cpp" />
+    <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFBlurPass.cpp" />
+    <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFRecombinePass.cpp" />
+    <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFSetupPass.cpp" />
+    <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFTilePass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -2057,6 +2063,13 @@
     </ClInclude>
     <ClInclude Include="Source\Runtime\Engine\Physics\PhysicsTypes.h" />
     <ClInclude Include="Source\Runtime\Engine\Physics\PhysScene.h" />
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_DOF.h" />
+    <ClInclude Include="Source\Runtime\Engine\GameFramework\Camera\CamMod_Gamma.h" />
+    <ClInclude Include="Source\Runtime\Engine\Physics\SimulationEventCallback.h" />
+    <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFBlurPass.h" />
+    <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFRecombinePass.h" />
+    <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFSetupPass.h" />
+    <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFTilePass.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Tools\CodeGenerator\generate.py">
