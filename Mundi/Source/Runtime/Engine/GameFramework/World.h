@@ -6,6 +6,7 @@
 #include "Gizmo/GizmoActor.h"
 #include "LightManager.h"
 #include "Source/Runtime/Engine/Physics/PhysScene.h"
+#include "Source/Runtime/Engine/Physics/ClothSimulationSystem.h"
 
 // Forward Declarations
 class UResourceManager;
@@ -99,6 +100,7 @@ public:
     FLightManager* GetLightManager() const { return LightManager.get(); }
     FLuaManager* GetLuaManager() const { return LuaManager.get(); }
     FPhysScene* GetPhysScene() { return PhysScene.get(); }
+    FClothSimulationSystem* GetClothSimulationSystem() { return ClothSimSystem.get(); }
 
     /** 뷰어 등 별도의 물리 시뮬레이션이 필요한 월드에서 호출 */
     void InitializePhysScene();
@@ -170,6 +172,9 @@ private:
 
     /** === 물리 씬 ===*/
     std::unique_ptr<FPhysScene> PhysScene;
+
+    /** === Cloth 시뮬레이션 ===*/
+    std::unique_ptr<FClothSimulationSystem> ClothSimSystem;
     
     /** === GameMode === */
     AGameModeBase* GameMode = nullptr;

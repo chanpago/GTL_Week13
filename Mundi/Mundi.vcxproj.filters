@@ -999,7 +999,9 @@
     <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFRecombinePass.cpp" />
     <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFSetupPass.cpp" />
     <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFTilePass.cpp" />
-  <ClCompile Include="Generated\USpringArmComponent.generated.cpp"><Filter>Generated</Filter></ClCompile></ItemGroup>
+    <ClCompile Include="Generated\UClothComponent.generated.cpp"><Filter>Generated</Filter></ClCompile>
+    <ClCompile Include="Generated\USpringArmComponent.generated.cpp"><Filter>Generated</Filter></ClCompile>
+  </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="Source\Editor\BlueprintGraph\AnimationGraph.h">
@@ -2070,7 +2072,9 @@
     <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFRecombinePass.h" />
     <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFSetupPass.h" />
     <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFTilePass.h" />
-  <ClInclude Include="Generated\USpringArmComponent.generated.h"><Filter>Generated</Filter></ClInclude></ItemGroup>
+     <ClInclude Include="Generated\UClothComponent.generated.h"><Filter>Generated</Filter></ClInclude>
+     <ClInclude Include="Generated\USpringArmComponent.generated.h"><Filter>Generated</Filter></ClInclude>
+  </ItemGroup>
   <ItemGroup>
     <None Include="Tools\CodeGenerator\generate.py">
       <Filter>Tools\CodeGenerator</Filter>

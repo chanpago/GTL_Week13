@@ -322,6 +322,12 @@ void UWorld::Tick(float DeltaSeconds)
 		PhysScene->StepSimulation(GetDeltaTime(EDeltaTime::Game));
 	}
 
+	// Cloth 시뮬레이션 (PIE에서만)
+	if (ClothSimSystem && bPie)
+	{
+		ClothSimSystem->Simulate(GetDeltaTime(EDeltaTime::Game));
+	}
+
 	// 지연 삭제 처리
 	ProcessPendingKillActors();
 }
@@ -341,6 +347,10 @@ UWorld* UWorld::DuplicateWorldForPIE(UWorld* InEditorWorld)
 	// 물리 씬 초기화
 	PIEWorld->PhysScene = std::make_unique<FPhysScene>();
 	PIEWorld->PhysScene->Initialize();
+
+	// Cloth 시뮬레이션 초기화
+	PIEWorld->ClothSimSystem = std::make_unique<FClothSimulationSystem>();
+	PIEWorld->ClothSimSystem->Initialize();
 
 	PIEWorld->bPie = true;
 	
