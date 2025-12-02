@@ -11,13 +11,19 @@ inline FVector PxToFVector(const PxVec3& V)
 }
 
 FSimulationEventCallback::FSimulationEventCallback(FPhysScene* owner)
-	: OwnerScene(owner)
+	: OwnerScene(owner), bIsShuttingDown(false)
 {
 }
 
+void FSimulationEventCallback::OnPreShutdown()
+{
+	bIsShuttingDown.store(true);
+}
+
+
 void FSimulationEventCallback::onContact(const PxContactPairHeader& PairHeader, const PxContactPair* Pairs, PxU32 NumPairs)
 {
-	if (!OwnerScene)
+	if (bIsShuttingDown.load() || !OwnerScene)
 	{
 		return;
 	}
@@ -88,7 +94,7 @@ void FSimulationEventCallback::onContact(const PxContactPairHeader& PairHeader, 
 
 void FSimulationEventCallback::onTrigger(physx::PxTriggerPair* pairs, physx::PxU32 count)
 {
-	if (!OwnerScene)
+	if (bIsShuttingDown.load() || !OwnerScene)
 	{
 		return;
 	}

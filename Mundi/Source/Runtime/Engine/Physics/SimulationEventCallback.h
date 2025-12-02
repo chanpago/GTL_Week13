@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include <PxPhysicsAPI.h>
 
+#include <atomic>
+
 namespace physx
 {
     class PxSimulationEventCallback;
@@ -18,6 +20,9 @@ class FSimulationEventCallback : public PxSimulationEventCallback
 {
 public:
 	FSimulationEventCallback(FPhysScene* owner);
+    virtual ~FSimulationEventCallback() = default;
+
+    void OnPreShutdown();
 
     virtual void onContact(const physx::PxContactPairHeader& pairHeader, const physx::PxContactPair* pairs, physx::PxU32 nbPairs) override;
     virtual void onTrigger(physx::PxTriggerPair* pairs, physx::PxU32 count) override;
@@ -28,5 +33,6 @@ public:
     virtual void onAdvance(const physx::PxRigidBody* const*, const physx::PxTransform*, const physx::PxU32) override {};
 
 private:
-	FPhysScene* OwnerScene = nullptr;
+	FPhysScene* OwnerScene;
+    std::atomic<bool> bIsShuttingDown;
 };

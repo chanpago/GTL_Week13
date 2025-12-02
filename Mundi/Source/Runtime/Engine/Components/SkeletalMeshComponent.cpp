@@ -41,11 +41,24 @@ static FBodyInstance* FindBodyInstanceByName(const TArray<FBodyInstance*>& Bodie
     return nullptr;
 }
 
-
-
 USkeletalMeshComponent::USkeletalMeshComponent()
 { 
     SetSkeletalMesh("Data/James/James.fbx");
+}
+
+USkeletalMeshComponent::~USkeletalMeshComponent()
+{
+    if (PhysicsAssetOverride)
+    {
+        ObjectFactory::DeleteObject(PhysicsAssetOverride);
+        PhysicsAssetOverride = nullptr;
+    }
+
+    if (PhysicsAsset)
+    {
+        ObjectFactory::DeleteObject(PhysicsAsset);
+        PhysicsAsset = nullptr;
+    }
 }
 
 void USkeletalMeshComponent::BeginPlay()
@@ -212,6 +225,13 @@ void USkeletalMeshComponent::TickComponent(float DeltaTime)
 void USkeletalMeshComponent::EndPlay()
 {
     OnUnregiDebug();
+    if (UWorld* World = GetWorld())
+    {
+        if (FPhysScene* PhysScene = World->GetPhysScene())
+        {
+            DestroyPhysicsAssetBodies(*PhysScene);
+        }
+    }
 }
 
 void USkeletalMeshComponent::SetSkeletalMesh(const FString& PathFileName)
@@ -313,6 +333,13 @@ void USkeletalMeshComponent::ApplyPhysicsAsset(UPhysicsAsset* InPhysicsAsset)
 
     UWorld* World = GetWorld();
     FPhysScene* PhysScene = World ? World->GetPhysScene() : nullptr;
+
+    // Thread 충돌 방지, Main Thread애서 physx 비동기 Thread 기다림
+    // - PA의 물리 시뮬레이션이 완료될 때까지 기다린 다음, BodyInstance를 삭제시킨다. 
+	if (PhysScene)
+	{
+		PhysScene->WaitForSimulation();
+	}
 
     if (PhysScene && (Bodies.Num() > 0 || Constraints.Num() > 0))
     {
