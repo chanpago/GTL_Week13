@@ -46,6 +46,14 @@ class Property:
         """타입에 맞는 ADD_PROPERTY 매크로 결정 (동적 감지)"""
         type_lower = self.type.lower()
 
+        # ECombineMode 타입 체크 (물리 재질 결합 모드)
+        if 'ecombinemode' in type_lower:
+            return 'ADD_PROPERTY_COMBINE_MODE'
+
+        # PhysMaterialPreset 체크 (변수명 기반)
+        if 'physmaterialpreset' in self.name.lower():
+            return 'ADD_PROPERTY_PHYS_MATERIAL_PRESET'
+
         # TArray 타입 체크 (포인터 체크보다 먼저)
         if 'tarray' in type_lower:
             # TArray<UMaterialInterface*> 같은 형태에서 내부 타입 추출

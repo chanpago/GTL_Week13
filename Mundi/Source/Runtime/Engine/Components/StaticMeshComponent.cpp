@@ -267,6 +267,21 @@ void UStaticMeshComponent::InitPhysics(FPhysScene& PhysScene)
 	BodyInstance->OwnerComponent = this;
 	BodyInstance->BodySetup = GetBodySetup(); // StaticMesh에서 가져오기
 
+	// Override 값 설정
+	BodyInstance->bUseOverrideValues = true;
+	BodyInstance->MassOverride = MassOverride;
+	BodyInstance->LinearDampingOverride = LinearDampingOverride;
+	BodyInstance->AngularDampingOverride = AngularDampingOverride;
+
+	// PhysMaterialPreset에서 물리 재질 값 가져오기
+	GetPhysMaterialValues(
+		BodyInstance->StaticFrictionOverride,
+		BodyInstance->DynamicFrictionOverride,
+		BodyInstance->RestitutionOverride
+	);
+	BodyInstance->FrictionCombineModeOverride = FrictionCombineModeOverride;
+	BodyInstance->RestitutionCombineModeOverride = RestitutionCombineModeOverride;
+
 	FTransform WorldTM = GetWorldTransform();
 	FVector Scale3D = WorldTM.Scale3D;  // 월드 스케일 추출
 
@@ -276,13 +291,8 @@ void UStaticMeshComponent::InitPhysics(FPhysScene& PhysScene)
 	}
 	else
 	{
-		// Dynamic의 경우 BodySetup에서 Mass를 가져오거나 기본값 사용
-		float Mass = 10.0f;
-		if (BodyInstance->BodySetup)
-		{
-			Mass = BodyInstance->BodySetup->Mass;
-		}
-		BodyInstance->InitDynamic(PhysScene, WorldTM, Mass, Scale3D);
+		// Dynamic의 경우 Override된 Mass 사용
+		BodyInstance->InitDynamic(PhysScene, WorldTM, MassOverride, Scale3D);
 	}
 }
 
@@ -304,11 +314,77 @@ void UStaticMeshComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 		// 역직렬화 (로드)
 		FJsonSerializer::ReadBool(InOutHandle, "bSimulatePhysics", bSimulatePhysics, false, false);
 		FJsonSerializer::ReadBool(InOutHandle, "bIsStaticPhysics", bIsStaticPhysics, true, false);
+
+		// Physics 속성 역직렬화
+		FJsonSerializer::ReadFloat(InOutHandle, "MassOverride", MassOverride, 10.0f, false);
+		FJsonSerializer::ReadFloat(InOutHandle, "LinearDampingOverride", LinearDampingOverride, 0.01f, false);
+		FJsonSerializer::ReadFloat(InOutHandle, "AngularDampingOverride", AngularDampingOverride, 0.05f, false);
+		FJsonSerializer::ReadInt32(InOutHandle, "PhysMaterialPreset", PhysMaterialPreset, 0, false);
+
+		int32 FrictionMode = static_cast<int32>(FrictionCombineModeOverride);
+		int32 RestitutionMode = static_cast<int32>(RestitutionCombineModeOverride);
+		FJsonSerializer::ReadInt32(InOutHandle, "FrictionCombineModeOverride", FrictionMode, 2, false);
+		FJsonSerializer::ReadInt32(InOutHandle, "RestitutionCombineModeOverride", RestitutionMode, 2, false);
+		FrictionCombineModeOverride = static_cast<ECombineMode>(FrictionMode);
+		RestitutionCombineModeOverride = static_cast<ECombineMode>(RestitutionMode);
 	}
 	else
 	{
 		// 직렬화 (저장)
 		InOutHandle["bSimulatePhysics"] = bSimulatePhysics;
 		InOutHandle["bIsStaticPhysics"] = bIsStaticPhysics;
+
+		// Physics 속성 직렬화
+		InOutHandle["MassOverride"] = MassOverride;
+		InOutHandle["LinearDampingOverride"] = LinearDampingOverride;
+		InOutHandle["AngularDampingOverride"] = AngularDampingOverride;
+		InOutHandle["PhysMaterialPreset"] = PhysMaterialPreset;
+		InOutHandle["FrictionCombineModeOverride"] = static_cast<int32>(FrictionCombineModeOverride);
+		InOutHandle["RestitutionCombineModeOverride"] = static_cast<int32>(RestitutionCombineModeOverride);
+	}
+}
+
+void UStaticMeshComponent::GetPhysMaterialValues(float& OutStaticFriction, float& OutDynamicFriction, float& OutRestitution) const
+{
+	// PhysMaterialPreset에 따른 물리 재질 값 반환
+	// 0: Default, 1: Mud(진흙), 2: Wood(나무), 3: Rubber(고무), 4: Billiard(당구공), 5: Ice(얼음), 6: Metal(금속)
+	switch (PhysMaterialPreset)
+	{
+	case 1: // Mud (진흙) - 높은 마찰, 탄성 없음
+		OutStaticFriction = 1.5f;
+		OutDynamicFriction = 1.2f;
+		OutRestitution = 0.0f;
+		break;
+	case 2: // Wood (나무) - 중간 마찰, 약간의 탄성
+		OutStaticFriction = 0.4f;
+		OutDynamicFriction = 0.3f;
+		OutRestitution = 0.4f;
+		break;
+	case 3: // Rubber (고무공) - 높은 마찰, 높은 탄성
+		OutStaticFriction = 1.0f;
+		OutDynamicFriction = 0.8f;
+		OutRestitution = 0.8f;
+		break;
+	case 4: // Billiard (당구공) - 낮은 마찰, 매우 높은 탄성
+		OutStaticFriction = 0.2f;
+		OutDynamicFriction = 0.15f;
+		OutRestitution = 0.95f;
+		break;
+	case 5: // Ice (얼음) - 매우 낮은 마찰, 약간의 탄성
+		OutStaticFriction = 0.05f;
+		OutDynamicFriction = 0.03f;
+		OutRestitution = 0.1f;
+		break;
+	case 6: // Metal (금속) - 중간 마찰, 중간 탄성
+		OutStaticFriction = 0.6f;
+		OutDynamicFriction = 0.4f;
+		OutRestitution = 0.3f;
+		break;
+	case 0: // Default
+	default:
+		OutStaticFriction = 0.5f;
+		OutDynamicFriction = 0.4f;
+		OutRestitution = 0.0f;
+		break;
 	}
 }

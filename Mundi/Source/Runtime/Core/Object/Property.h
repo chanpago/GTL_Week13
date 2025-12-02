@@ -23,6 +23,8 @@ enum class EPropertyType : uint8
 	ScriptFile,
 	Sound,
 	Curve,
+	PhysMaterialPreset,  // Physics Material 프리셋 선택 (콤보박스)
+	CombineMode,         // ECombineMode 열거형 선택 (콤보박스)
 	// 추후 추가될 프로퍼티들은 직접 해줘야함.
 	Count			// 요소 개수, 항상 마지막!
 };

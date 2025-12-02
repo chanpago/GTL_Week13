@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Source/Runtime/Engine/Physics/PhysicalMaterial.h"
 
 class UPrimitiveComponent;
 class UBodySetup;
@@ -32,4 +33,17 @@ public:
     UPrimitiveComponent*        OwnerComponent = nullptr;
     UBodySetup*                 BodySetup      = nullptr;
     physx::PxRigidActor*        RigidActor     = nullptr;
+
+    // Override 값들 (컴포넌트에서 설정)
+    bool bUseOverrideValues = false;
+    float MassOverride = 10.0f;
+    float LinearDampingOverride = 0.01f;
+    float AngularDampingOverride = 0.05f;
+
+    // Physics Material Override
+    float StaticFrictionOverride = 0.5f;
+    float DynamicFrictionOverride = 0.4f;
+    float RestitutionOverride = 0.0f;
+    ECombineMode FrictionCombineModeOverride = ECombineMode::Multiply;
+    ECombineMode RestitutionCombineModeOverride = ECombineMode::Multiply;
 };

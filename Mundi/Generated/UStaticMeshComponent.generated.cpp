@@ -38,6 +38,12 @@ BEGIN_PROPERTIES(UStaticMeshComponent)
     ADD_PROPERTY_STATICMESH(UStaticMesh*, StaticMesh, "Static Mesh", true, "Static mesh asset to render")
     ADD_PROPERTY(bool, bSimulatePhysics, "Physics", true, "Enable physics simulation for this mesh")
     ADD_PROPERTY(bool, bIsStaticPhysics, "Physics", true, "If true, this is a static collider (immovable). If false, it's dynamic (affected by gravity/forces)")
+    ADD_PROPERTY(float, MassOverride, "Physics", true, "Mass in kg")
+    ADD_PROPERTY(float, LinearDampingOverride, "Physics", true, "Linear damping coefficient")
+    ADD_PROPERTY(float, AngularDampingOverride, "Physics", true, "Angular damping coefficient")
+    ADD_PROPERTY_PHYS_MATERIAL_PRESET(int32, PhysMaterialPreset, "Physics", true, "Physical material preset index (0=Default, 1=Mud, 2=Wood, 3=Rubber, 4=Billiard)")
+    ADD_PROPERTY_COMBINE_MODE(ECombineMode, FrictionCombineModeOverride, "Physics", true, "Friction combine mode")
+    ADD_PROPERTY_COMBINE_MODE(ECombineMode, RestitutionCombineModeOverride, "Physics", true, "Restitution combine mode")
 END_PROPERTIES()
 
 // ===== Lua Binding =====

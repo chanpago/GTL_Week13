@@ -168,6 +168,15 @@ bool UPropertyRenderer::RenderProperty(const FProperty& Property, void* ObjectIn
 	case EPropertyType::Sound:
 		bChanged = RenderSoundProperty(Property, ObjectInstance);
 		break;
+
+	case EPropertyType::PhysMaterialPreset:
+		bChanged = RenderPhysMaterialPresetProperty(Property, ObjectInstance);
+		break;
+
+	case EPropertyType::CombineMode:
+		bChanged = RenderCombineModeProperty(Property, ObjectInstance);
+		break;
+
 	default:
 		ImGui::Text("%s: [Unknown Type]", Property.Name);
 		break;
@@ -2004,4 +2013,131 @@ bool UPropertyRenderer::RenderParticleSystemProperty(const FProperty& Prop, void
 	}
 
     return bValueChanged;
+}
+
+// ===== Physics Material Preset 선택 콤보박스 =====
+bool UPropertyRenderer::RenderPhysMaterialPresetProperty(const FProperty& Prop, void* Instance)
+{
+	int32* Value = Prop.GetValuePtr<int32>(Instance);
+	if (!Value)
+		return false;
+
+	bool bChanged = false;
+
+	// 프리셋 이름 목록
+	static const char* PresetNames[] = {
+		"Default",      // 0
+		"Mud",          // 1 - 진흙
+		"Wood",         // 2 - 나무
+		"Rubber",       // 3 - 고무공
+		"Billiard",     // 4 - 당구공
+		"Ice",          // 5 - 얼음
+		"Metal"         // 6 - 금속
+	};
+	static const int NumPresets = sizeof(PresetNames) / sizeof(PresetNames[0]);
+
+	// 현재 선택된 프리셋이 범위 내인지 확인
+	int CurrentIndex = *Value;
+	if (CurrentIndex < 0 || CurrentIndex >= NumPresets)
+		CurrentIndex = 0;
+
+	const char* PreviewText = PresetNames[CurrentIndex];
+
+	FString Label = FString(Prop.Name) + "##PhysMaterialPreset";
+	ImGui::SetNextItemWidth(150.0f);
+	if (ImGui::BeginCombo(Label.c_str(), PreviewText))
+	{
+		for (int i = 0; i < NumPresets; ++i)
+		{
+			bool bIsSelected = (CurrentIndex == i);
+			if (ImGui::Selectable(PresetNames[i], bIsSelected))
+			{
+				*Value = i;
+				bChanged = true;
+			}
+			if (bIsSelected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+
+	// 툴팁으로 선택된 프리셋의 물리 속성 표시
+	if (ImGui::IsItemHovered())
+	{
+		float StaticFriction = 0.5f, DynamicFriction = 0.4f, Restitution = 0.0f;
+		switch (CurrentIndex)
+		{
+		case 1: StaticFriction = 1.5f; DynamicFriction = 1.2f; Restitution = 0.0f; break;  // Mud
+		case 2: StaticFriction = 0.4f; DynamicFriction = 0.3f; Restitution = 0.4f; break;  // Wood
+		case 3: StaticFriction = 1.0f; DynamicFriction = 0.8f; Restitution = 0.8f; break;  // Rubber
+		case 4: StaticFriction = 0.2f; DynamicFriction = 0.15f; Restitution = 0.95f; break; // Billiard
+		case 5: StaticFriction = 0.05f; DynamicFriction = 0.03f; Restitution = 0.1f; break; // Ice
+		case 6: StaticFriction = 0.6f; DynamicFriction = 0.4f; Restitution = 0.3f; break;  // Metal
+		default: break;
+		}
+		ImGui::SetTooltip("Static Friction: %.2f\nDynamic Friction: %.2f\nRestitution: %.2f",
+			StaticFriction, DynamicFriction, Restitution);
+	}
+
+	return bChanged;
+}
+
+// ===== Combine Mode 선택 콤보박스 =====
+bool UPropertyRenderer::RenderCombineModeProperty(const FProperty& Prop, void* Instance)
+{
+	// ECombineMode는 uint8 기반이므로 직접 캐스팅
+	uint8* ValuePtr = Prop.GetValuePtr<uint8>(Instance);
+	if (!ValuePtr)
+		return false;
+
+	bool bChanged = false;
+
+	// 합성 모드 이름 목록
+	static const char* ModeNames[] = {
+		"Average",   // 0
+		"Min",       // 1
+		"Multiply",  // 2
+		"Max"        // 3
+	};
+	static const int NumModes = sizeof(ModeNames) / sizeof(ModeNames[0]);
+
+	int CurrentIndex = static_cast<int>(*ValuePtr);
+	if (CurrentIndex < 0 || CurrentIndex >= NumModes)
+		CurrentIndex = 2; // Default to Multiply
+
+	const char* PreviewText = ModeNames[CurrentIndex];
+
+	FString Label = FString(Prop.Name) + "##CombineMode";
+	ImGui::SetNextItemWidth(150.0f);
+	if (ImGui::BeginCombo(Label.c_str(), PreviewText))
+	{
+		for (int i = 0; i < NumModes; ++i)
+		{
+			bool bIsSelected = (CurrentIndex == i);
+			if (ImGui::Selectable(ModeNames[i], bIsSelected))
+			{
+				*ValuePtr = static_cast<uint8>(i);
+				bChanged = true;
+			}
+			if (bIsSelected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+
+	// 툴팁으로 합성 모드 설명
+	if (ImGui::IsItemHovered())
+	{
+		const char* Description = "";
+		switch (CurrentIndex)
+		{
+		case 0: Description = "Average: (A + B) / 2"; break;
+		case 1: Description = "Min: min(A, B)"; break;
+		case 2: Description = "Multiply: A * B (Default)"; break;
+		case 3: Description = "Max: max(A, B)"; break;
+		}
+		ImGui::SetTooltip("%s", Description);
+	}
+
+	return bChanged;
 }

@@ -70,10 +70,25 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
         return;
     }
 
-    // BodySetup의 PhysMaterial이 있으면 사용, 없으면 DefaultMaterial 사용
+    // Material 생성: Override 값 사용 여부에 따라 결정
     PxMaterial* Material = nullptr;
-    if (BodySetup && BodySetup->PhysMaterial)
+    bool bCreatedMaterial = false;
+
+    if (bUseOverrideValues)
     {
+        // Override 값을 사용하여 Material 생성
+        Material = Physics->createMaterial(
+            StaticFrictionOverride,
+            DynamicFrictionOverride,
+            RestitutionOverride
+        );
+        Material->setFrictionCombineMode(ToPxCombineMode(FrictionCombineModeOverride));
+        Material->setRestitutionCombineMode(ToPxCombineMode(RestitutionCombineModeOverride));
+        bCreatedMaterial = true;
+    }
+    else if (BodySetup && BodySetup->PhysMaterial)
+    {
+        // BodySetup의 PhysMaterial 사용
         UPhysicalMaterial* PhysMat = BodySetup->PhysMaterial;
         Material = Physics->createMaterial(
             PhysMat->StaticFriction,
@@ -84,6 +99,7 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
         // Combine Mode 설정 (언리얼 스타일 우선순위 기반, 기본값 Multiply)
         Material->setFrictionCombineMode(ToPxCombineMode(PhysMat->FrictionCombineMode));
         Material->setRestitutionCombineMode(ToPxCombineMode(PhysMat->RestitutionCombineMode));
+        bCreatedMaterial = true;
     }
     else
     {
@@ -95,13 +111,25 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
         return;
     }
 
-    // BodySetup에서 물리 속성 가져오기
+    // 물리 속성 결정: Override 값 사용 여부에 따라 결정
     float ActualMass = Mass;
     float LinearDamping = 0.01f;
     float AngularDamping = 0.05f;
     bool bEnableGravity = true;
 
-    if (BodySetup)
+    if (bUseOverrideValues)
+    {
+        // Override 값 사용
+        ActualMass = MassOverride;
+        LinearDamping = LinearDampingOverride;
+        AngularDamping = AngularDampingOverride;
+        // bEnableGravity는 BodySetup에서 가져옴 (Override 없음)
+        if (BodySetup)
+        {
+            bEnableGravity = BodySetup->bEnableGravity;
+        }
+    }
+    else if (BodySetup)
     {
         ActualMass = BodySetup->Mass;
         LinearDamping = BodySetup->LinearDamping;
@@ -243,8 +271,8 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
     RigidActor           = DynamicActor;
     RigidActor->userData = this; // 나중에 콜백에서 FBodyInstance로 되돌리기 용
 
-    // BodySetup에서 생성한 Material은 release (DefaultMaterial은 PhysScene이 관리)
-    if (BodySetup && BodySetup->PhysMaterial)
+    // 생성한 Material은 release (DefaultMaterial은 PhysScene이 관리)
+    if (bCreatedMaterial)
     {
         Material->release();
     }
@@ -267,10 +295,25 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
     if (!Physics || !Scene)
         return;
 
-    // BodySetup의 PhysMaterial이 있으면 사용, 없으면 DefaultMaterial 사용
+    // Material 생성: Override 값 사용 여부에 따라 결정
     PxMaterial* Material = nullptr;
-    if (BodySetup && BodySetup->PhysMaterial)
+    bool bCreatedMaterial = false;
+
+    if (bUseOverrideValues)
     {
+        // Override 값을 사용하여 Material 생성
+        Material = Physics->createMaterial(
+            StaticFrictionOverride,
+            DynamicFrictionOverride,
+            RestitutionOverride
+        );
+        Material->setFrictionCombineMode(ToPxCombineMode(FrictionCombineModeOverride));
+        Material->setRestitutionCombineMode(ToPxCombineMode(RestitutionCombineModeOverride));
+        bCreatedMaterial = true;
+    }
+    else if (BodySetup && BodySetup->PhysMaterial)
+    {
+        // BodySetup의 PhysMaterial 사용
         UPhysicalMaterial* PhysMat = BodySetup->PhysMaterial;
         Material = Physics->createMaterial(
             PhysMat->StaticFriction,
@@ -281,6 +324,7 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
         // Combine Mode 설정 (언리얼 스타일 우선순위 기반, 기본값 Multiply)
         Material->setFrictionCombineMode(ToPxCombineMode(PhysMat->FrictionCombineMode));
         Material->setRestitutionCombineMode(ToPxCombineMode(PhysMat->RestitutionCombineMode));
+        bCreatedMaterial = true;
     }
     else
     {
@@ -400,8 +444,8 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
     RigidActor           = StaticActor;
     RigidActor->userData = this;
 
-    // BodySetup에서 생성한 Material은 release (DefaultMaterial은 PhysScene이 관리)
-    if (BodySetup && BodySetup->PhysMaterial)
+    // 생성한 Material은 release (DefaultMaterial은 PhysScene이 관리)
+    if (bCreatedMaterial)
     {
         Material->release();
     }

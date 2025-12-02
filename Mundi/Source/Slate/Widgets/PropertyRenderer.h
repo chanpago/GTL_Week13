@@ -53,6 +53,10 @@ private:
 	// Transform 프로퍼티 렌더링 헬퍼 함수
 	static bool RenderTransformProperty(const FProperty& Prop, void* Instance);
 
+	// Physics 관련 프로퍼티 렌더링 함수
+	static bool RenderPhysMaterialPresetProperty(const FProperty& Prop, void* Instance);
+	static bool RenderCombineModeProperty(const FProperty& Prop, void* Instance);
+
 	static void CacheResources();	// 필요할 때 리소스 목록을 멤버 변수에 캐시합니다.
 	static void ClearResourcesCache();	// 렌더링 패스가 끝날 때 캐시를 비웁니다.
 

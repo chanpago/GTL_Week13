@@ -124,7 +124,7 @@ bool FPhysScene::Initialize()
 
     // 3) Default Material
     // 기본 표면 성질
-    DefaultMaterial = Physics->createMaterial(0.5f, 0.4f, 0.0f);
+    DefaultMaterial = Physics->createMaterial(0.5f, 0.4f, 0.5f);
 
     if (!DefaultMaterial)
     {
