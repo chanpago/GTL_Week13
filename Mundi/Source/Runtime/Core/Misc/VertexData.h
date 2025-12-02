@@ -364,16 +364,76 @@ struct FVertexWeight
     float Weight; // 가중치
 };
 
+/**
+ * Cloth 시뮬레이션 에셋 데이터
+ * SkeletalMesh의 특정 Section에 대한 Cloth 설정을 저장
+ */
+struct FClothAssetData
+{
+    // 어떤 Section(GroupInfo)이 Cloth인지
+    int32 SectionIndex = -1;
+
+    // Cloth에 사용되는 정점 인덱스들 (메시 전체 기준)
+    TArray<uint32> ClothVertexIndices;
+
+    // 고정 정점 인덱스들 (InvMass = 0, 본에 완전 바인딩)
+    TArray<uint32> FixedVertexIndices;
+
+    // Physics 설정
+    FVector Gravity = FVector(0.f, 0.f, -980.f);
+    FVector Damping = FVector(0.2f, 0.2f, 0.2f);
+    float SolverFrequency = 120.f;
+
+    // Wind 설정
+    FVector WindVelocity = FVector::Zero();
+    float DragCoefficient = 0.5f;
+    float LiftCoefficient = 0.3f;
+
+    // Stiffness (Constraint 강도)
+    float StretchStiffness = 1.0f;
+    float BendStiffness = 0.5f;
+
+    friend FArchive& operator<<(FArchive& Ar, FClothAssetData& Data)
+    {
+        Ar << Data.SectionIndex;
+
+        if (Ar.IsSaving())
+        {
+            Serialization::WriteArray(Ar, Data.ClothVertexIndices);
+            Serialization::WriteArray(Ar, Data.FixedVertexIndices);
+        }
+        else if (Ar.IsLoading())
+        {
+            Serialization::ReadArray(Ar, Data.ClothVertexIndices);
+            Serialization::ReadArray(Ar, Data.FixedVertexIndices);
+        }
+
+        Ar << Data.Gravity;
+        Ar << Data.Damping;
+        Ar << Data.SolverFrequency;
+        Ar << Data.WindVelocity;
+        Ar << Data.DragCoefficient;
+        Ar << Data.LiftCoefficient;
+        Ar << Data.StretchStiffness;
+        Ar << Data.BendStiffness;
+
+        return Ar;
+    }
+};
+
 struct FSkeletalMeshData
 {
     FString PathFileName;
     FString CacheFilePath;
-    
+
     TArray<FSkinnedVertex> Vertices; // 정점 배열
     TArray<uint32> Indices; // 인덱스 배열
     FSkeleton Skeleton; // 스켈레톤 정보
     TArray<FGroupInfo> GroupInfos; // 머티리얼 그룹 (기존 시스템 재사용)
     bool bHasMaterial = false;
+
+    // Cloth 에셋 데이터 (Section별 Cloth 설정)
+    TArray<FClothAssetData> ClothAssets;
 
     friend FArchive& operator<<(FArchive& Ar, FSkeletalMeshData& Data)
     {
@@ -401,6 +461,7 @@ struct FSkeletalMeshData
 
             // 6. CacheFilePath 저장
             Serialization::WriteString(Ar, Data.CacheFilePath);
+            // ClothAssets는 별도 JSON 파일로 저장 (바이너리 캐시와 분리)
         }
         else if (Ar.IsLoading())
         {
@@ -427,6 +488,7 @@ struct FSkeletalMeshData
 
             // 6. CacheFilePath 로드
             Serialization::ReadString(Ar, Data.CacheFilePath);
+            // ClothAssets는 별도 JSON 파일에서 로드 (바이너리 캐시와 분리)
         }
         return Ar;
     }

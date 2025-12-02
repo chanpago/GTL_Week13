@@ -16,6 +16,16 @@ public:
     const FString& GetPathFileName() const { if (Data) return Data->PathFileName; return FString(); }
     FSkeleton* GetSkeleton() const { return Data ? &Data->Skeleton : nullptr; }
     uint32 GetBoneCount() const { return Data ? Data->Skeleton.Bones.Num() : 0; }
+
+    // Cloth 에셋 데이터 접근
+    const TArray<FClothAssetData>& GetClothAssets() const { static TArray<FClothAssetData> Empty; return Data ? Data->ClothAssets : Empty; }
+    TArray<FClothAssetData>& GetClothAssetsMutable() { static TArray<FClothAssetData> Empty; return Data ? Data->ClothAssets : Empty; }
+    bool HasClothAssets() const { return Data && !Data->ClothAssets.IsEmpty(); }
+
+    // Cloth 에셋 JSON 저장/로드
+    bool SaveClothData(const FString& FilePath);
+    bool LoadClothData(const FString& FilePath);
+    FString GetClothDataPath() const;  // 메시 경로 기반 .cloth.json 경로 반환
     
     // ID3D11Buffer* GetVertexBuffer() const { return VertexBuffer; } // W10 CPU Skinning이라 Component가 VB 소유
     ID3D11Buffer* GetIndexBuffer() const { return IndexBuffer; }

@@ -330,50 +330,21 @@ public:
     // Cloth Simulation Section
     /////////////////////////////////////////////////////////////
 public:
-    /** Cloth 시뮬레이션 활성화 */
+    /** Cloth 시뮬레이션 활성화 (Asset에 ClothAssets가 있어야 동작) */
     UPROPERTY(EditAnywhere, Category="Cloth")
     bool bEnableClothSimulation = false;
 
-    /** Cloth에 사용할 본 인덱스 (이 본에 바인딩된 정점들이 Cloth 시뮬레이션) */
-    UPROPERTY(EditAnywhere, Category="Cloth")
-    TArray<int32> ClothBoneIndices;
-
-    /** Cloth 정점의 최소 가중치 (이 이상이면 Cloth 파티클로 처리) */
-    UPROPERTY(EditAnywhere, Category="Cloth")
-    float ClothBoneWeightThreshold = 0.5f;
-
-    /** 고정할 정점의 본 가중치 임계값 (이 이상이면 고정) */
-    UPROPERTY(EditAnywhere, Category="Cloth")
-    float FixedVertexWeightThreshold = 0.8f;
-
-    // Physics
-    UPROPERTY(EditAnywhere, Category="Cloth|Physics")
-    FVector ClothGravity = FVector(0.0f, 0.0f, -9.8f);
-
-    UPROPERTY(EditAnywhere, Category="Cloth|Physics")
-    FVector ClothDamping = FVector(0.2f, 0.2f, 0.2f);
-
-    UPROPERTY(EditAnywhere, Category="Cloth|Physics")
-    float ClothSolverFrequency = 120.0f;
-
-    // Wind
-    UPROPERTY(EditAnywhere, Category="Cloth|Wind")
-    FVector ClothWindVelocity = FVector(0.0f, 0.0f, 0.0f);
-
-    UPROPERTY(EditAnywhere, Category="Cloth|Wind")
-    float ClothDragCoefficient = 0.5f;
-
-    UPROPERTY(EditAnywhere, Category="Cloth|Wind")
-    float ClothLiftCoefficient = 0.3f;
-
-    /** Cloth 시뮬레이션 초기화 */
+    /** Cloth 시뮬레이션 초기화 (Asset의 ClothAssets 데이터 사용) */
     bool InitializeCloth();
 
     /** Cloth 시뮬레이션 해제 */
     void DestroyCloth();
 
     /** Cloth 유효 여부 */
-    bool IsClothValid() const { return ClothInstance != nullptr; }
+    bool IsClothValid() const { return !ClothInstances.IsEmpty(); }
+
+    /** Asset에 Cloth 데이터가 있는지 확인 */
+    bool HasClothData() const;
 
 protected:
     /** ClothSimulationSystem 가져오기 */
@@ -385,22 +356,18 @@ protected:
     /** Cloth 시뮬레이션 결과를 스키닝 결과에 블렌딩 */
     void BlendClothSimulation();
 
-    /** Cloth 설정 적용 */
-    void ApplyClothSettings();
-
 private:
-    // NvCloth 객체
-    nv::cloth::Fabric* ClothFabric = nullptr;
-    nv::cloth::Cloth* ClothInstance = nullptr;
+    /** 개별 Cloth 인스턴스 데이터 (Asset의 ClothAsset 하나당 하나씩) */
+    struct FClothInstanceData
+    {
+        int32 AssetIndex = -1;                      // FClothAssetData 인덱스
+        nv::cloth::Fabric* Fabric = nullptr;
+        nv::cloth::Cloth* Instance = nullptr;
+        TArray<int32> VertexToParticle;             // 메시 정점 → Cloth 파티클 (-1이면 Cloth 아님)
+        TArray<int32> ParticleToVertex;             // Cloth 파티클 → 원본 정점
+        TArray<FVector> SimulatedPositions;         // 시뮬레이션 결과 캐시
+    };
 
-    // Cloth 파티클 인덱스 (SkeletalMesh 정점 인덱스 -> Cloth 파티클 인덱스)
-    TArray<int32> VertexToClothParticle;  // -1이면 Cloth 아님
-
-    // Cloth 파티클의 원본 정점 인덱스
-    TArray<int32> ClothParticleToVertex;
-
-    // 시뮬레이션된 위치 캐시
-    TArray<FVector> ClothSimulatedPositions;
-
+    TArray<FClothInstanceData> ClothInstances;
     bool bClothInitialized = false;
 };
