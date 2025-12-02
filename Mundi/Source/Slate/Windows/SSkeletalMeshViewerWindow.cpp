@@ -3410,6 +3410,7 @@ void SSkeletalMeshViewerWindow::DrawPhysicsConstraintGraph(ViewerState* State)
             int32 BodyIndex = Offset % 1000;*/
 
             int32 BodyIndex = NodeIDValue - 1000000;
+            UE_LOG("Double-clicked Body node index: %d", BodyIndex);
 
             if (BodyIndex >= 0 && BodyIndex < PhysAsset->BodySetups.Num())
             {
@@ -3452,6 +3453,7 @@ void SSkeletalMeshViewerWindow::DrawPhysicsConstraintGraph(ViewerState* State)
             int32 ConstraintIndex = Offset % 1000;*/
 
             int32 ConstraintIndex = NodeIDValue - 3000000;
+            UE_LOG("Double-clicked ConstraintIndex: %d", ConstraintIndex);
 
             if (ConstraintIndex >= 0 && ConstraintIndex < PhysAsset->Constraints.Num())
             {
@@ -3461,6 +3463,32 @@ void SSkeletalMeshViewerWindow::DrawPhysicsConstraintGraph(ViewerState* State)
                 State->SelectedBoneIndex = -1;
             }
         }
+
+
+        int32 SelectedCount1 = ed::GetSelectedObjectCount();
+        UE_LOG("Selected count before clear: %d", SelectedCount1);
+        // ===== 중요: 더블클릭 후 Node Editor의 선택 상태 초기화 =====
+        ed::ClearSelection();
+
+        // 선택 해제 확인
+        int32 SelectedCount = ed::GetSelectedObjectCount();
+        UE_LOG("Selected count after clear: %d", SelectedCount);
+
+        // Node Editor 종료
+        ed::End();
+        ed::SetCurrentEditor(nullptr);
+
+        // 컨텍스트 재생성
+        if (PhysicsGraphContext)
+        {
+            ed::DestroyEditor(PhysicsGraphContext);
+        }
+
+        ed::Config PhysicsGraphConfig;
+        PhysicsGraphContext = ed::CreateEditor(&PhysicsGraphConfig);
+
+        // 즉시 반환 (다음 프레임에서 깨끗한 상태로 다시 그림)
+        return;
     }
 
     // Handle node selection
