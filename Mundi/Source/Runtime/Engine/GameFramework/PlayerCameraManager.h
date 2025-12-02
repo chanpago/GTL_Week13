@@ -23,6 +23,7 @@ protected:
 	~APlayerCameraManager() override;
 
 public:
+	void DuplicateSubObjects() override;
 	void BeginPlay() override;
 	void Destroy() override;
 	void Tick(float DeltaTime) override;
