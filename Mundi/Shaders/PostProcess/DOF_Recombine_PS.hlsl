@@ -92,18 +92,13 @@ PS_OUTPUT mainPS(PS_INPUT input)
     float4 nearBlurred = g_NearBlurredTex.Sample(g_LinearClampSample, input.texCoord);
     float4 farBlurred = g_FarBlurredTex.Sample(g_LinearClampSample, input.texCoord);
 
-    // 5. 레이어 합성
+    // 5. 레이어 합성 (Premultiplied Alpha - BlendFactor 제거)
+    // Premultiplied alpha가 이미 블렌딩 처리하므로 별도 마스크 불필요
 
     // [Layer 1] Background (Far Blur)
-    // Far Blur는 현재 픽셀이 Far 영역일 때만 완전히 적용
-    // Near 영역에서는 전경이 배경을 가리므로 Far Blur 차단
-    // In-Focus 영역에서는 약간의 보케 블리딩 허용 (부드러운 전환)
-    float farMask = smoothstep(-0.1, 0.3, CoC);
-    float4 maskedFarBlur = farBlurred * farMask;
-    float3 farColor = maskedFarBlur.rgb + sceneColor.rgb * (1.0 - maskedFarBlur.a);
+    float3 farColor = farBlurred.rgb + sceneColor.rgb * (1.0 - farBlurred.a);
 
     // [Layer 2] Foreground (Near Blur)
-    // Near Blur는 항상 맨 위에 덮어씌움 (마스킹 없음)
     float3 finalColor = nearBlurred.rgb + farColor * (1.0 - nearBlurred.a);
 
     output.Color = float4(finalColor, 1.0);
