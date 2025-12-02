@@ -63,10 +63,12 @@ protected:
      */
     TArray<FNormalVertex> NormalSkinnedVertices;
 
-private:
+protected:
     FVector SkinVertexPosition(const FSkinnedVertex& InVertex) const;
     FVector SkinVertexNormal(const FSkinnedVertex& InVertex) const;
     FVector4 SkinVertexTangent(const FSkinnedVertex& InVertex) const;
+
+private:
 
     /**
      * @brief 자식이 계산해 준, 현재 프레임의 최종 스키닝 행렬

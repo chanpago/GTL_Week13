@@ -3,6 +3,13 @@
 #include "USkeletalMeshComponent.generated.h"
 // Include for FPendingAnimNotify and FAnimNotifyEvent types
 #include "Source/Runtime/Engine/Animation/AnimTypes.h"
+
+// Forward declarations - NvCloth
+namespace nv { namespace cloth {
+    class Fabric;
+    class Cloth;
+}}
+
 class UAnimationGraph;
 class UAnimationAsset;
 class UAnimSequence;
@@ -11,6 +18,7 @@ class FBodyInstance;
 class FConstraintInstance;
 class FPhysScene;
 class UPhysicsAsset;
+class FClothSimulationSystem;
 struct FPendingAnimNotify;
 
 enum class EPhysicsAnimationState : uint8
@@ -316,4 +324,83 @@ public:
      * @brief 본 포즈를 원래 바인드 포즈로 리셋
      */
     void ResetToBindPose();
+    FDelegateHandle TestContactHit{};
+
+    /////////////////////////////////////////////////////////////
+    // Cloth Simulation Section
+    /////////////////////////////////////////////////////////////
+public:
+    /** Cloth 시뮬레이션 활성화 */
+    UPROPERTY(EditAnywhere, Category="Cloth")
+    bool bEnableClothSimulation = false;
+
+    /** Cloth에 사용할 본 인덱스 (이 본에 바인딩된 정점들이 Cloth 시뮬레이션) */
+    UPROPERTY(EditAnywhere, Category="Cloth")
+    TArray<int32> ClothBoneIndices;
+
+    /** Cloth 정점의 최소 가중치 (이 이상이면 Cloth 파티클로 처리) */
+    UPROPERTY(EditAnywhere, Category="Cloth")
+    float ClothBoneWeightThreshold = 0.5f;
+
+    /** 고정할 정점의 본 가중치 임계값 (이 이상이면 고정) */
+    UPROPERTY(EditAnywhere, Category="Cloth")
+    float FixedVertexWeightThreshold = 0.8f;
+
+    // Physics
+    UPROPERTY(EditAnywhere, Category="Cloth|Physics")
+    FVector ClothGravity = FVector(0.0f, 0.0f, -9.8f);
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Physics")
+    FVector ClothDamping = FVector(0.2f, 0.2f, 0.2f);
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Physics")
+    float ClothSolverFrequency = 120.0f;
+
+    // Wind
+    UPROPERTY(EditAnywhere, Category="Cloth|Wind")
+    FVector ClothWindVelocity = FVector(0.0f, 0.0f, 0.0f);
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Wind")
+    float ClothDragCoefficient = 0.5f;
+
+    UPROPERTY(EditAnywhere, Category="Cloth|Wind")
+    float ClothLiftCoefficient = 0.3f;
+
+    /** Cloth 시뮬레이션 초기화 */
+    bool InitializeCloth();
+
+    /** Cloth 시뮬레이션 해제 */
+    void DestroyCloth();
+
+    /** Cloth 유효 여부 */
+    bool IsClothValid() const { return ClothInstance != nullptr; }
+
+protected:
+    /** ClothSimulationSystem 가져오기 */
+    FClothSimulationSystem* GetClothSystem() const;
+
+    /** Cloth Transform 업데이트 (본 위치 기반) */
+    void UpdateClothTransform();
+
+    /** Cloth 시뮬레이션 결과를 스키닝 결과에 블렌딩 */
+    void BlendClothSimulation();
+
+    /** Cloth 설정 적용 */
+    void ApplyClothSettings();
+
+private:
+    // NvCloth 객체
+    nv::cloth::Fabric* ClothFabric = nullptr;
+    nv::cloth::Cloth* ClothInstance = nullptr;
+
+    // Cloth 파티클 인덱스 (SkeletalMesh 정점 인덱스 -> Cloth 파티클 인덱스)
+    TArray<int32> VertexToClothParticle;  // -1이면 Cloth 아님
+
+    // Cloth 파티클의 원본 정점 인덱스
+    TArray<int32> ClothParticleToVertex;
+
+    // 시뮬레이션된 위치 캐시
+    TArray<FVector> ClothSimulatedPositions;
+
+    bool bClothInitialized = false;
 };
