@@ -44,6 +44,7 @@ private:
     void ReleaseResources();
     
 public:
+    UPROPERTY()
     UPhysicsAsset* PhysicsAsset = nullptr;
 
 private:

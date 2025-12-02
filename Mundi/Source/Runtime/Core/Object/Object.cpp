@@ -284,6 +284,36 @@ void UObject::Serialize(const bool bInIsLoading, JSON& InOutHandle)
 			}
 			break;
 		}
+		case EPropertyType::PhysicsAsset:
+		{
+			// PhysicsAsset의 주소 저장(파일 이름)
+			UPhysicsAsset** Value = Prop.GetValuePtr<UPhysicsAsset*>(this);
+			if (bInIsLoading)
+			{
+				FString AssetPath;
+				FJsonSerializer::ReadString(InOutHandle, Prop.Name, AssetPath);
+				if (!AssetPath.empty())
+				{
+					*Value = UResourceManager::GetInstance().Load<UPhysicsAsset>(AssetPath);
+				}
+				else
+				{
+					*Value = nullptr;
+				}
+			}
+			else
+			{
+				if (*Value)
+				{
+					InOutHandle[Prop.Name] = (*Value)->GetFilePath().c_str();
+				}
+				else
+				{
+					InOutHandle[Prop.Name] = "";
+				}
+			}
+			break;
+		}
 		case EPropertyType::Curve:
 		{
 			// Curve 프로퍼티는 float[4] 배열입니다. 따라서 FVector4로 처리

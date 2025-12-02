@@ -3039,14 +3039,47 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
 				ImGui::SameLine(0.0f, 20.0f);
                 if(ImGui::Button("Apply to Current Mesh"))
                 {
-                    if (State->CurrentMesh)
+                    if (State->CurrentMesh && State->CurrentPhysicsAsset)
                     {
+                        // 1. 현재 Mesh에 적용
                         State->CurrentMesh->PhysicsAsset = State->CurrentPhysicsAsset;
                         UE_LOG("Applied PhysicsAsset to current SkeletalMesh");
+
+                        // 2. 메타파일에 저장
+                        FString meshPath = State->CurrentMesh->GetPathFileName();
+                        if (!meshPath.empty())
+                        {
+                            FString metaPath = meshPath + ".meta.json";
+                            JSON metaJson = JSON::Make(JSON::Class::Object);
+                            metaJson["DefaultPhysicsAsset"] = State->CurrentPhysicsAsset->GetFilePath().c_str();
+
+                            std::ofstream outFile(metaPath, std::ios::out);
+                            if (outFile.is_open())
+                            {
+                                outFile << metaJson.dump(4); // Pretty print
+                                outFile.close();
+                                UE_LOG("Saved SkeletalMesh metadata to: %s", metaPath.c_str());
+                            }
+                            else
+                            {
+                                UE_LOG("Failed to open metadata file for writing: %s", metaPath.c_str());
+                            }
+                        }
+                        else
+                        {
+                            UE_LOG("Cannot save metadata: SkeletalMesh path is empty.");
+                        }
                     }
                     else
                     {
-                        UE_LOG("No SkeletalMesh loaded to apply PhysicsAsset to");
+                        if (!State->CurrentMesh)
+                        {
+                            UE_LOG("No SkeletalMesh loaded to apply PhysicsAsset to");
+                        }
+                        if (!State->CurrentPhysicsAsset)
+                        {
+                            UE_LOG("No PhysicsAsset selected to apply");
+                        }
                     }
                 }
 

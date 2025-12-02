@@ -31,6 +31,32 @@ bool USkeletalMesh::Load(const FString& InFilePath, ID3D11Device* InDevice)
         return false;
     }
 
+    // Load associated metadata
+    FString metaPath = InFilePath + ".meta.json";
+    if (std::filesystem::exists(metaPath))
+    {
+        JSON metaJson;
+        if (FJsonSerializer::LoadJsonFromFile(metaJson, UTF8ToWide(metaPath)))
+        {
+            FString physicsAssetPath;
+            if (FJsonSerializer::ReadString(metaJson, "DefaultPhysicsAsset", physicsAssetPath))
+            {
+                if (!physicsAssetPath.empty())
+                {
+                    this->PhysicsAsset = UResourceManager::GetInstance().Load<UPhysicsAsset>(physicsAssetPath);
+                    if (this->PhysicsAsset)
+                    {
+                        UE_LOG("Automatically loaded PhysicsAsset '%s' for SkeletalMesh '%s'", physicsAssetPath.c_str(), InFilePath.c_str());
+                    }
+                    else
+                    {
+                        UE_LOG("Failed to auto-load PhysicsAsset '%s' for SkeletalMesh '%s'", physicsAssetPath.c_str(), InFilePath.c_str());
+                    }
+                }
+            }
+        }
+    }
+
     // GPU 버퍼 생성
     CreateIndexBuffer(Data, InDevice);
     VertexCount = static_cast<uint32>(Data->Vertices.size());
