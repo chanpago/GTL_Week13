@@ -3193,10 +3193,10 @@ void SSkeletalMeshViewerWindow::DrawPhysicsConstraintGraph(ViewerState* State)
         ImVec2 Pos(100 + Radius * cosf(Angle), 150 + Radius * sinf(Angle));
 
         static std::unordered_map<int32, bool> NodePositionsSet;
-        if (NodePositionsSet.find(BodyIndex) == NodePositionsSet.end())
+        if (NodePositionsSet.find(NodeID) == NodePositionsSet.end())
         {
             ed::SetNodePosition(ed::NodeId(NodeID), Pos);
-            NodePositionsSet[BodyIndex] = true;
+            NodePositionsSet[NodeID] = true;
         }
 
         PhysicsGraphBuilder->Begin(ed::NodeId(NodeID));
@@ -3238,10 +3238,10 @@ void SSkeletalMeshViewerWindow::DrawPhysicsConstraintGraph(ViewerState* State)
         ImVec2 MidPos((PosA.x + PosB.x) * 0.5f, (PosA.y + PosB.y) * 0.5f);
 
         static std::unordered_map<int32, bool> ConstraintPositionsSet;
-        if (ConstraintPositionsSet.find(ConstraintIdx) == ConstraintPositionsSet.end())
+        if (ConstraintPositionsSet.find(NodeID) == ConstraintPositionsSet.end())
         {
             ed::SetNodePosition(ed::NodeId(NodeID), MidPos);
-            ConstraintPositionsSet[ConstraintIdx] = true;
+            ConstraintPositionsSet[NodeID] = true;
         }
 
         PhysicsGraphBuilder->Begin(ed::NodeId(NodeID));
