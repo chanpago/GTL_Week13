@@ -568,6 +568,8 @@ void UResourceManager::InitShaderILMap()
     layout.clear();
 
     ShaderToInputLayoutMap["Shaders/Utility/FullScreenTriangle_VS.hlsl"] = {};  // FullScreenTriangle 는 InputLayout을 사용하지 않는다
+    
+    ShaderToInputLayoutMap["Shaders/PostProcess/DOF_Scatter_VS.hlsl"] = {};  // FullScreenTriangle 는 InputLayout을 사용하지 않는다
 }
 
 TArray<D3D11_INPUT_ELEMENT_DESC>& UResourceManager::GetProperInputLayout(const FString& InShaderName)

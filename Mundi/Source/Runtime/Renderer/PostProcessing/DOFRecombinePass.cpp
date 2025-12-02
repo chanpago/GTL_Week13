@@ -32,18 +32,21 @@ void FDOFRecombinePass::Execute(const FPostProcessModifier& M, FSceneView* View,
     RHIDevice->PrepareShader(FullScreenVS, RecombinePS);
 
     // 4) SRV 바인딩 (t0~t3)
+    // t0: SceneColor, t1: SceneDepth, t2: Near Blur, t3: Far Blur
     ID3D11ShaderResourceView* SceneSRV = RHIDevice->GetSRV(RHI_SRV_Index::SceneColorSource);
     ID3D11ShaderResourceView* DepthSRV = RHIDevice->GetSRV(RHI_SRV_Index::SceneDepth);
-    ID3D11ShaderResourceView* FarSRV = RHIDevice->GetSRV(RHI_SRV_Index::DOFFar);
-    ID3D11ShaderResourceView* NearSRV = RHIDevice->GetSRV(RHI_SRV_Index::DOFNear);
+    ID3D11ShaderResourceView* NearBlurredSRV = RHIDevice->GetDOFSRV(1);  // Near Blur (DOF[1])
+    ID3D11ShaderResourceView* FarBlurredSRV = RHIDevice->GetDOFSRV(2);   // Far Blur (DOF[2])
 
-    if (!SceneSRV || !DepthSRV || !FarSRV || !NearSRV)
+    if (!SceneSRV || !DepthSRV || !NearBlurredSRV || !FarBlurredSRV)
     {
         UE_LOG("DOFRecombine: SRV 없음!\n");
         return;
     }
 
-    ID3D11ShaderResourceView* InputSRVs[4] = { SceneSRV, DepthSRV, FarSRV, NearSRV };
+    ID3D11ShaderResourceView* InputSRVs[4] = {
+        SceneSRV, DepthSRV, NearBlurredSRV, FarBlurredSRV
+    };
     RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 4, InputSRVs);
 
     // 5) Sampler 바인딩

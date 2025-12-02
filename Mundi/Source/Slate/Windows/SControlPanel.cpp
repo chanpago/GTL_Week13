@@ -33,7 +33,7 @@ void SControlPanel::OnRender()
             ControlPanelWidget->RenderWidget();
     }
     ImGui::End();
-	
+
 }
 
 void SControlPanel::OnUpdate(float deltaSecond)

@@ -8,7 +8,8 @@ class UWorld;
 class AActor;
 class AGizmoActor;
 class USceneComponent;
-class UStaticMeshComponent;   // 추가
+class UStaticMeshComponent;
+class APlayerCameraManager;
 
 static const char* kDisplayItems[] = {
 				"Pawn_64x.png",
@@ -45,6 +46,7 @@ public:
 	void RenderComponentHierarchy(AActor* SelectedActor, UActorComponent* SelectedComponent);
 	void RenderSelectedActorDetails(AActor* SelectedActor);
 	void RenderSelectedComponentDetails(UActorComponent* SelectedComponent);
+	void RenderDOFSettings(APlayerCameraManager* CamMgr);
 
 private:
 	UUIManager* UIManager = nullptr;

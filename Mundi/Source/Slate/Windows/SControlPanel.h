@@ -3,6 +3,7 @@
 
 class UControlPanelWindow;
 class USceneWindow;
+
 class SControlPanel :
     public SWindow
 {
