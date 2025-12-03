@@ -13,6 +13,8 @@ USpringArmComponent::USpringArmComponent()
     , bUsePawnControlRotation(true)
     , CurrentArmLength(300.0f)
 {
+    // TickComponent가 호출되도록 설정
+    bCanEverTick = true;
 }
 
 USpringArmComponent::~USpringArmComponent()
@@ -133,8 +135,8 @@ void USpringArmComponent::Serialize(const bool bInIsLoading, JSON& InOutHandle)
     else
     {
         InOutHandle["TargetArmLength"] = TargetArmLength;
-        InOutHandle["TargetOffset"] = FJsonSerializer::WriteVector(TargetOffset);
-        InOutHandle["SocketOffset"] = FJsonSerializer::WriteVector(SocketOffset);
+        InOutHandle["TargetOffset"] = FJsonSerializer::VectorToJson(TargetOffset);
+        InOutHandle["SocketOffset"] = FJsonSerializer::VectorToJson(SocketOffset);
         InOutHandle["bDoCollisionTest"] = bDoCollisionTest;
         InOutHandle["ProbeSize"] = ProbeSize;
         InOutHandle["bUsePawnControlRotation"] = bUsePawnControlRotation;
