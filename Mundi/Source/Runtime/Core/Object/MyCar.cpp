@@ -99,6 +99,22 @@ void AMyCar::EndPlay()
     Super::EndPlay();
 }
 
+void AMyCar::DuplicateSubObjects()
+{
+    Super::DuplicateSubObjects();
+	// Duplicate any sub-objects if necessary
+
+    // Find skeletal mesh component (always exists)
+    for (UActorComponent* Component : OwnedComponents)
+    {
+        if (auto* Comp = Cast<USkeletalMeshComponent>(Component))
+        {
+            VehicleMesh = Comp;
+            break;
+        }
+    }
+}
+
 void AMyCar::InitializeVehiclePhysics()
 {
     UWorld* World = GetWorld();

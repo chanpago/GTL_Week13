@@ -35,7 +35,6 @@ const bool AMyCar::bPropertiesRegistered = []() {
 
 BEGIN_PROPERTIES(AMyCar)
     MARK_AS_SPAWNABLE("자동차 컴포넌트", "화살표키로 제어 가능한 차량 컴포넌트")
-    ADD_PROPERTY_SKELETALMESH(USkeletalMeshComponent*, VehicleMesh, "", false)
     ADD_PROPERTY(float, ChassisMass, "Vehicle", true)
     ADD_PROPERTY(FVector, ChassisDimensions, "Vehicle", true)
     ADD_PROPERTY(float, WheelRadius, "Vehicle", true)

@@ -54,6 +54,7 @@ public:
     virtual void Tick(float DeltaTime) override;
     virtual void EndPlay() override;
 
+    void DuplicateSubObjects() override;
 protected:
     // Physics initialization
     void InitializeVehiclePhysics();
@@ -71,8 +72,6 @@ protected:
     void ApplyHandbrake(float Value);
 
 protected:
-    // Components
-    UPROPERTY()
     USkeletalMeshComponent* VehicleMesh = nullptr;
 
     // PhysX vehicle data
