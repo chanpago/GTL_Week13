@@ -18,7 +18,13 @@ USkinnedMeshComponent::~USkinnedMeshComponent()
       CPUSkinnedVertexBuffer->Release();
       CPUSkinnedVertexBuffer = nullptr;
    }
-
+   
+   if (GPUSkinnedVertexBuffer)
+   {
+      GPUSkinnedVertexBuffer->Release();
+      GPUSkinnedVertexBuffer = nullptr;
+   }
+   
    if (SkinningMatrixSRV)
    {
       SkinningMatrixSRV->Release();
@@ -69,6 +75,7 @@ void USkinnedMeshComponent::DuplicateSubObjects()
 {
    Super::DuplicateSubObjects();
    SkeletalMesh->CreateCPUSkinnedVertexBuffer(&CPUSkinnedVertexBuffer);
+   SkeletalMesh->CreateGPUSkinnedVertexBuffer(&GPUSkinnedVertexBuffer);
    SkeletalMesh->CreateStructuredBuffer(&SkinningMatrixBuffer, &SkinningMatrixSRV, FinalSkinningMatrices.Num());
    SkeletalMesh->CreateStructuredBuffer(&SkinningNormalMatrixBuffer, &SkinningNormalMatrixSRV, FinalSkinningNormalMatrices.Num());
 }
@@ -302,6 +309,12 @@ void USkinnedMeshComponent::SetSkeletalMesh(const FString& PathFileName)
    {
       CPUSkinnedVertexBuffer->Release();
       CPUSkinnedVertexBuffer = nullptr;
+   }
+
+   if (GPUSkinnedVertexBuffer)
+   {
+      GPUSkinnedVertexBuffer->Release();
+      GPUSkinnedVertexBuffer = nullptr;
    }
 
    if (SkinningMatrixSRV)

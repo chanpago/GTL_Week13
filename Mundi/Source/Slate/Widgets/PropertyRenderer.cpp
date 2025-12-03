@@ -1059,6 +1059,10 @@ bool UPropertyRenderer::RenderPrimitiveComponentDetails(UPrimitiveComponent* Pri
 	ImGui::Text("Collision Settings");
 
 	ImGui::Checkbox("Use Collision Override", &PrimitiveComponent->bOverrideCollisionSetting);
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip("뷰어에서 세팅된 메시의 기본 콜리전 값을 오버라이드 합니다.");
+	}
 	int CurrentIndex = static_cast<int>(PrimitiveComponent->CollisionEnabled);
 	static const char* CollisionItems[] = {
 		"NoCollision",

@@ -123,13 +123,7 @@ APawn* AGameModeBase::SpawnDefaultPawnFor(AController* NewPlayer, AActor* StartS
 
 AActor* AGameModeBase::FindPlayerStart(AController* Player)
 {
-	// TODO:
-	// PlayerStart Actor를 찾아서, 그 위치를 가져와야 함
-	// 현재는 0,0,0에 임시로 생성 중 
-
-	AActor* Spot = GWorld->SpawnActor<AActor>();
-	Spot->SetActorLocation(FVector(0, 0, 0));
-
-	return Spot;
+	// TODO: PlayerStart Actor를 찾아서 반환하도록 구현 필요
+	return nullptr;
 }
   
