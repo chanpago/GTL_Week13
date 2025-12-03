@@ -2543,9 +2543,30 @@ void SParticleViewerWindow::CreateParticleSystem()
 void SParticleViewerWindow::LoadParticleSystem()
 {
 	// 다이얼로그로 로드
-	FWideString WideInitialPath = UTF8ToWide(ParticlePath.string());
+	FWideString WideInitialPath;
+	if (!ParticlePath.empty())
+	{
+		WideInitialPath = ParticlePath.wstring();
+	}
+	else
+	{
+		WideInitialPath = UTF8ToWide(GDataDir) + L"/NewParticleAsset.phys";
+	}
+
 	std::filesystem::path WidePath = FPlatformProcess::OpenLoadFileDialog(WideInitialPath, L"particle", L"Particle Files");
-	FString PathStr = ResolveAssetRelativePath(WidePath.string(), ParticlePath.string());
+	if (WidePath.empty()) { return; }
+	FString AbsolutePathUtf8 = NormalizePath(WideToUTF8(WidePath.wstring()));
+	FString BaseDirUtf8;
+	if (!ParticlePath.empty())
+	{
+		std::filesystem::path BaseDirPath = ParticlePath.parent_path();
+		BaseDirUtf8 = NormalizePath(WideToUTF8(BaseDirPath.wstring()));
+	}
+	else
+	{
+		BaseDirUtf8 = GDataDir;
+	}
+	FString PathStr = ResolveAssetRelativePath(AbsolutePathUtf8, BaseDirUtf8);
 
 	UParticleSystem* LoadedSystem = RESOURCE.Load<UParticleSystem>(PathStr);
 	if (LoadedSystem)
@@ -2621,9 +2642,29 @@ void SParticleViewerWindow::SaveParticleSystem()
 	}
 
     // Create 이후 처음 저장하는 경우
-    FWideString WideInitialPath = UTF8ToWide(ParticlePath.string());
+	FWideString WideInitialPath;
+	if (!ParticlePath.empty())
+	{
+		WideInitialPath = ParticlePath.wstring();
+	}
+	else
+	{
+		WideInitialPath = UTF8ToWide(GDataDir) + L"/NewParticleAsset.particle";
+	}
+     
     std::filesystem::path WidePath = FPlatformProcess::OpenSaveFileDialog(WideInitialPath, L"particle",L"Particle Files");
-    FString PathStr = ResolveAssetRelativePath(WidePath.string(), ParticlePath.string());
+	FString AbsolutePathUtf8 = NormalizePath(WideToUTF8(WidePath.wstring()));
+	FString BaseDirUtf8;
+	if (!ParticlePath.empty())
+	{
+		std::filesystem::path BaseDirPath = ParticlePath.parent_path();
+		BaseDirUtf8 = NormalizePath(WideToUTF8(BaseDirPath.wstring()));
+	}
+	else
+	{
+		BaseDirUtf8 = GDataDir;
+	}
+	FString PathStr = ResolveAssetRelativePath(AbsolutePathUtf8, BaseDirUtf8);
     
     if (!WidePath.empty())
     {

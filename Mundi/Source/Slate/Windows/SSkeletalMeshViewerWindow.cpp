@@ -3117,23 +3117,40 @@ void SSkeletalMeshViewerWindow::DrawAssetBrowserPanel(ViewerState* State)
                 {
                     if (State->CurrentPhysicsAsset)
                     {
-                        // Get save path
-                        FWideString WideInitialPath = UTF8ToWide(PhysicsAssetPath.string());
+                        FWideString WideInitialPath;
+                        if (!PhysicsAssetPath.empty())
+                        {
+                            WideInitialPath = PhysicsAssetPath.wstring();
+                        }
+                        else
+                        {
+                            WideInitialPath = UTF8ToWide(GDataDir) + L"/NewPhysicsAsset.phys";
+                        }
+                        
                         std::filesystem::path WidePath = FPlatformProcess::OpenSaveFileDialog(WideInitialPath, L"phys", L"Physics Asset Files");
-					    FString PathStr = ResolveAssetRelativePath(WidePath.string(), PhysicsAssetPath.string());
+                        if (WidePath.empty()) { return;}
+                        FString AbsolutePathUtf8 = NormalizePath(WideToUTF8(WidePath.wstring()));
+                        FString BaseDirUtf8;
+                        if (!PhysicsAssetPath.empty())
+                        {
+                            std::filesystem::path BaseDirPath = PhysicsAssetPath.parent_path();
+                            BaseDirUtf8 = NormalizePath(WideToUTF8(BaseDirPath.wstring()));
+                        }
+                        else
+                        {
+                            BaseDirUtf8 = GDataDir;
+                        }
 
-                        if (!WidePath.empty())
-                        {               
-                            if (State->CurrentPhysicsAsset->SaveToFile(PathStr))
-                            {
-                                State->CurrentPhysicsAsset->SetFilePath(PathStr);
-                            
-                                UE_LOG("PhysicsAsset saved to: %s", PathStr.c_str());
-                            }
-                            else
-                            {
-                                UE_LOG("Failed to save PhysicsAsset to: %s", PathStr.c_str());
-                            }
+                        FString PathStr = ResolveAssetRelativePath(AbsolutePathUtf8, BaseDirUtf8);
+
+                        if (State->CurrentPhysicsAsset->SaveToFile(PathStr))
+                        {
+                            State->CurrentPhysicsAsset->SetFilePath(PathStr);
+                            UE_LOG("PhysicsAsset saved to: %s", PathStr.c_str());
+                        }
+                        else
+                        {
+                            UE_LOG("Failed to save PhysicsAsset to: %s", PathStr.c_str());
                         }
                     }
                     else
