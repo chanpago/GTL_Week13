@@ -554,28 +554,6 @@ void AMyCar::UpdateVehiclePhysics(float DeltaTime)
     // 3. Prepare wheel query results from raycast hits
     PxWheelQueryResult wheelQueryResults[PX_MAX_NB_WHEELS];
     const PxU32 numWheels = VehicleDrive4W->mWheelsSimData.getNbWheels();
-    
-    //for (PxU32 i = 0; i < numWheels; i++)
-    //{
-    //    wheelQueryResults[i].isInAir = true;
-    //    wheelQueryResults[i].tireSurfaceMaterial = nullptr;
-    //    wheelQueryResults[i].tireSurfaceType = 0;
-    //    wheelQueryResults[i].localPose = PxTransform(PxIdentity);
-    //    
-    //    // Check if this wheel's raycast hit something
-    //    if (raycastResults[i].getNbAnyHits() > 0)
-    //    {
-    //        const PxRaycastHit& hit = raycastResults[i].getAnyHit(0);
-    //        
-    //        wheelQueryResults[i].isInAir = false;
-    //        wheelQueryResults[i].tireSurfaceMaterial = hit.shape ? hit.shape->getMaterialFromInternalFaceIndex(hit.faceIndex) : nullptr;
-    //        wheelQueryResults[i].tireSurfaceType = 0;
-    //        
-    //        // Calculate wheel local pose
-    //        const PxVec3 wheelOffset = VehicleDrive4W->mWheelsSimData.getWheelCentreOffset(i);
-    //        wheelQueryResults[i].localPose = PxTransform(wheelOffset);
-    //    }
-    //}
 
     // 레이캐스트 결과 디버깅 추가
     for (PxU32 i = 0; i < numWheels; i++)
@@ -602,17 +580,13 @@ void AMyCar::UpdateVehiclePhysics(float DeltaTime)
     // 4. Update vehicle physics
     const PxVec3 grav = PxScenePtr->getGravity();
     
-    //PxVehicleUpdates(DeltaTime/* * 100000*/, grav, *FrictionPairs, 1, vehicles, vehicleQueryResults);
-    
     const float FixedTimeStep = 1.0f / 60.0f;
     PxVehicleUpdates(FixedTimeStep, grav, *FrictionPairs, 1, vehicles, vehicleQueryResults);
 
     // Check if vehicle is in air
 	bool bIsSleeping = VehicleDrive4W->getRigidDynamicActor()->isSleeping();
 
-    bIsVehicleInAir = bIsSleeping
-        ? false 
-        : PxVehicleIsInAir(vehicleQueryResults[0]);
+    bIsVehicleInAir = PxVehicleIsInAir(vehicleQueryResults[0]);
     
     // 5. Sync transform
     if (VehicleDrive4W->getRigidDynamicActor())
