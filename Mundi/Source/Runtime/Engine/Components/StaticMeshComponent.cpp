@@ -25,7 +25,7 @@ UStaticMeshComponent::~UStaticMeshComponent()
 {
 	if (BodySetupOverride)
 	{
-		delete BodySetupOverride;
+		ObjectFactory::DeleteObject(BodySetupOverride);
 		BodySetupOverride = nullptr;
 	}
 }
@@ -394,7 +394,7 @@ void UStaticMeshComponent::RecreateBodySetup()
 {
 	if (BodySetupOverride)
 	{
-		delete BodySetupOverride;
+		ObjectFactory::DeleteObject(BodySetupOverride);
 		BodySetupOverride = nullptr;
 	}
 	
@@ -411,7 +411,7 @@ void UStaticMeshComponent::RecreateBodySetup()
 		return;
 	}
 
-	BodySetupOverride = new UBodySetup();
+	BodySetupOverride = ObjectFactory::NewObject<UBodySetup>();
 	BodySetupOverride->BoneName = FName("None");
 	
 	FAABB LocalBound = StaticMesh->GetLocalBound();

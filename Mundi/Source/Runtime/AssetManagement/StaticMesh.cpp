@@ -213,12 +213,12 @@ void UStaticMesh::CreateBodySetupFromBounds()
     // 기존 BodySetup이 있으면 삭제
     if (BodySetup)
     {
-        delete BodySetup;
+        ObjectFactory::DeleteObject(BodySetup);
         BodySetup = nullptr;
     }
 
     // BodySetup 생성
-    BodySetup = new UBodySetup();
+    BodySetup = ObjectFactory::NewObject<UBodySetup>();
 	BodySetup->AggGeom.ConvexElements.Add(FKConvexElem());
 }
 
@@ -344,14 +344,7 @@ void UStaticMesh::ReleaseResources()
     }
     if (BodySetup)
     {
-        for (FKConvexElem& Convex : BodySetup->AggGeom.ConvexElements)
-        {
-            if (Convex.ConvexMesh)
-            {
-                Convex.ConvexMesh = nullptr;
-            }
-        }
-        delete BodySetup;
+        ObjectFactory::DeleteObject(BodySetup);
         BodySetup = nullptr;
     }
 }
