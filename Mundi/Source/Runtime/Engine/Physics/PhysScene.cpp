@@ -8,6 +8,46 @@
 #include "Actor.h"
 #include <Windows.h>
 
+/**
+ * @brief 차량 서스펜션 레이캐스트용 Pre-Filter 셰이더
+ * 
+ * 차량의 레이캐스트가 자기 자신을 감지하지 않고, 
+ * 운전 가능한 표면만 감지하도록 하는 필터링 함수
+ */
+PxQueryHitType::Enum VehicleWheelRaycastPreFilter(
+    PxFilterData filterData0, // 레이캐스트의 필터 데이터
+    PxFilterData filterData1, // 충돌 대상 Shape의 필터 데이터  
+    const void* constantBlock, 
+    PxU32 constantBlockSize,
+    PxHitFlags& queryFlags)
+{
+    PX_UNUSED(constantBlockSize);
+    PX_UNUSED(constantBlock);
+    PX_UNUSED(filterData0);
+    PX_UNUSED(queryFlags);
+
+    // 차량 자체의 Shape는 무시 (word3에서 SURFACE_TYPE_VEHICLE 체크)
+    if (filterData1.word3 & SURFACE_TYPE_VEHICLE)
+    {
+        return PxQueryHitType::eNONE;
+    }
+
+    // 운전 가능한 표면만 블록으로 처리 (바퀴가 감지해야 하는 표면)
+    if (filterData1.word3 & SURFACE_TYPE_DRIVABLE)
+    {
+        return PxQueryHitType::eBLOCK;
+    }
+
+    // 운전 불가능한 표면도 블록으로 처리 (벽 등과 충돌)
+    if (filterData1.word3 & SURFACE_TYPE_UNDRIVABLE)
+    {
+        return PxQueryHitType::eBLOCK;
+    }
+
+    // 알 수 없는 표면은 무시
+    return PxQueryHitType::eNONE;
+}
+
 // ===== FPhysXSharedResources Static Members =====
 PxDefaultAllocator FPhysXSharedResources::Allocator;
 PxDefaultErrorCallback FPhysXSharedResources::ErrorCallback;
@@ -105,7 +145,7 @@ bool FPhysXSharedResources::Initialize()
     UE_LOG("[PhysXSharedResources] Initialized successfully (Workers: %d)", numWorkerThreads);
     return true;
 
-    
+
 }
 
 void FPhysXSharedResources::Shutdown()
@@ -175,6 +215,48 @@ void FPhysXSharedResources::Release()
         Shutdown();
         RefCount = 0;
     }
+}
+
+// ===== Helper Functions for Surface Setup =====
+
+/**
+ * @brief 운전 가능한 표면 설정 (도로, 지면 등)
+ */
+void SetupDrivableSurface(PxFilterData& filterData)
+{
+    filterData.word0 = COLLISION_GROUP_DRIVABLE_SURFACE;
+    filterData.word1 = ~0; // 모든 것과 충돌
+    filterData.word2 = 0;
+    filterData.word3 = SURFACE_TYPE_DRIVABLE;
+}
+
+/**
+ * @brief 운전 불가능한 표면 설정 (벽, 장애물 등)  
+ */
+void SetupUndrivableSurface(PxFilterData& filterData)
+{
+    filterData.word0 = COLLISION_GROUP_UNDRIVABLE_SURFACE;
+    filterData.word1 = ~0; // 모든 것과 충돌
+    filterData.word2 = 0;
+    filterData.word3 = SURFACE_TYPE_UNDRIVABLE;
+}
+
+/**
+ * @brief 차량 표면 설정
+ */
+void SetupVehicleSurface(PxFilterData& filterData, bool bIsChassis)
+{
+    if (bIsChassis)
+    {
+        filterData.word0 = COLLISION_GROUP_VEHICLE_CHASSIS;
+    }
+    else
+    {
+        filterData.word0 = COLLISION_GROUP_VEHICLE_WHEEL;
+    }
+    filterData.word1 = ~(COLLISION_GROUP_VEHICLE_CHASSIS | COLLISION_GROUP_VEHICLE_WHEEL); // 차량끼리는 충돌 안함
+    filterData.word2 = 0;
+    filterData.word3 = SURFACE_TYPE_VEHICLE;
 }
 
 /**
@@ -276,32 +358,46 @@ public:
 static FContactModifyCallback GContactModifyCallback;
 
 /**
- * @brief 래그돌용 커스텀 충돌 필터 셰이더
+ * @brief 래그돌 + 차량용 커스텀 충돌 필터 셰이더
  *
  * PxFilterData 사용법:
- * - word0: 오브젝트 그룹 ID (같은 스켈레탈 메쉬 = 같은 ID)
+ * - word0: 오브젝트 그룹 ID (충돌 그룹)
  * - word1: 충돌 마스크 (어떤 그룹과 충돌할지)
  * - word2: 예약
- * - word3: 예약
- *
- * 같은 word0을 가진 바디들끼리는 충돌하지 않음 (Self-Collision 비활성화)
+ * - word3: 표면 타입 (차량용)
  */
-static PxFilterFlags RagdollFilterShader(
+static PxFilterFlags RagdollVehicleFilterShader(
     PxFilterObjectAttributes attributes0, PxFilterData filterData0,
     PxFilterObjectAttributes attributes1, PxFilterData filterData1,
     PxPairFlags& pairFlags, const void* constantBlock, PxU32 constantBlockSize)
 {
-    // 1) Self Collision 처리
-    // : word0이 같으면 같은 스켈레탈 메쉬의 바디들 → Self-Collision 비활성화
-    // word0 == 0은 일반 오브젝트 (래그돌이 아님) → 서로 충돌함
-    if (filterData0.word0 != 0 && filterData0.word0 == filterData1.word0)
+    // 1) Self Collision 처리 (래그돌)
+    // : word0이 같고 1보다 크면 같은 스켈레탈 메쉬의 바디들 → Self-Collision 비활성화
+    if (filterData0.word0 > 1 && filterData0.word0 == filterData1.word0 && 
+        !(filterData0.word3 & SURFACE_TYPE_VEHICLE) && !(filterData1.word3 & SURFACE_TYPE_VEHICLE))
     {
         return PxFilterFlag::eSUPPRESS;  // 충돌 무시
     }
 
-    // 2) 트리거 처리 
-    // : 물리 처리 없고, CallBack 등으로 Event 발생용
-    // Trigger가 Contact보다 우선 순위가 높다. 둘 중 하나만 Trigger라도 Contact 무시하고 Trigger 처리
+    // 2) 차량 내부 충돌 방지
+    // : 둘 다 차량이면서 같은 차량인 경우 충돌 방지
+    if ((filterData0.word3 & SURFACE_TYPE_VEHICLE) && (filterData1.word3 & SURFACE_TYPE_VEHICLE))
+    {
+        // 같은 차량의 부품들끼리는 충돌하지 않음
+        if (filterData0.word0 == filterData1.word0)
+        {
+            return PxFilterFlag::eSUPPRESS;
+        }
+    }
+
+    // 3) 충돌 그룹 기반 필터링
+    // word1은 충돌 마스크 - 비트 AND 연산으로 충돌 여부 결정
+    if (!(filterData0.word1 & filterData1.word0) || !(filterData1.word1 & filterData0.word0))
+    {
+        return PxFilterFlag::eSUPPRESS;
+    }
+
+    // 4) 트리거 처리 
     if (PxFilterObjectIsTrigger(attributes0) || PxFilterObjectIsTrigger(attributes1))
     {
         pairFlags = PxPairFlag::eTRIGGER_DEFAULT
@@ -310,15 +406,13 @@ static PxFilterFlags RagdollFilterShader(
         return PxFilterFlag::eDEFAULT;
     }
 
-    // 3) 기본 충돌 처리
+    // 5) 기본 충돌 처리
     pairFlags = PxPairFlag::eCONTACT_DEFAULT
               | PxPairFlag::eNOTIFY_TOUCH_FOUND
               | PxPairFlag::eNOTIFY_TOUCH_PERSISTS
               | PxPairFlag::eNOTIFY_TOUCH_LOST;
 
-    // 5) Dynamic 바디가 포함된 모든 충돌에 Contact Modify 활성화
-    // Kinematic 플래그는 런타임에 변경될 수 있으므로, 콜백에서 실시간으로 체크
-    // PxFilterObjectIsKinematic()은 캐시된 값을 사용해서 부정확할 수 있음
+    // 6) Dynamic 바디가 포함된 모든 충돌에 Contact Modify 활성화
     pairFlags |= PxPairFlag::eMODIFY_CONTACTS;
 
     return PxFilterFlag::eDEFAULT;
@@ -363,10 +457,10 @@ bool FPhysScene::Initialize()
     // simulate() 호출 시, 이 Dispatcher에 등록된 워커 스레드가 병렬로 처리함
     sceneDesc.cpuDispatcher = FPhysXSharedResources::GetDispatcher();
 
-    // 충돌 필터링 로직을 담당하는 함수포인터
+    // 업데이트된 충돌 필터링 로직을 담당하는 함수포인터
     // actor/shape의 PxFilterData를 보고 "이 둘을 충돌시킬지? 트리거로 볼지?"를 결정
-    // 한줄요약 : Dispatcher : "이 씬의 물리 계산을 몇 개의 쓰레드에서 돌릴지"  filterShader : "어떤 객체들 끼리 충돌을 계산/무시 할지 결정"
-    sceneDesc.filterShader = RagdollFilterShader;
+    // 차량 표면 타입도 고려하는 필터 셰이더 사용
+    sceneDesc.filterShader = RagdollVehicleFilterShader;
 
     // Scene 생성
     // PxScene = 실제 물리 시뮬레이션 월드하나
@@ -397,7 +491,7 @@ bool FPhysScene::Initialize()
         }
     }
 
-    UE_LOG("[PhysScene] Initialized successfully");
+    UE_LOG("[PhysScene] Initialized successfully with vehicle surface filtering");
     return true;
 }
 
@@ -804,4 +898,48 @@ bool FPhysScene::SweepSphere(
     }
 
     return false;
+}
+
+// ===== Vehicle Surface Setup Functions =====
+
+void FPhysScene::SetupActorAsDrivableSurface(PxRigidActor* actor)
+{
+    if (!actor) return;
+
+    // 액터의 모든 Shape에 운전 가능한 표면 필터 적용
+    PxU32 numShapes = actor->getNbShapes();
+    PxShape** shapes = new PxShape*[numShapes];
+    actor->getShapes(shapes, numShapes);
+
+    for (PxU32 i = 0; i < numShapes; i++)
+    {
+        PxFilterData filterData;
+        SetupDrivableSurface(filterData);
+        shapes[i]->setSimulationFilterData(filterData);
+        shapes[i]->setQueryFilterData(filterData);
+    }
+
+    delete[] shapes;
+    UE_LOG("[PhysScene] Actor set up as drivable surface");
+}
+
+void FPhysScene::SetupActorAsUndrivableSurface(PxRigidActor* actor)
+{
+    if (!actor) return;
+
+    // 액터의 모든 Shape에 운전 불가능한 표면 필터 적용
+    PxU32 numShapes = actor->getNbShapes();
+    PxShape** shapes = new PxShape*[numShapes];
+    actor->getShapes(shapes, numShapes);
+
+    for (PxU32 i = 0; i < numShapes; i++)
+    {
+        PxFilterData filterData;
+        SetupUndrivableSurface(filterData);
+        shapes[i]->setSimulationFilterData(filterData);
+        shapes[i]->setQueryFilterData(filterData);
+    }
+
+    delete[] shapes;
+    UE_LOG("[PhysScene] Actor set up as undrivable surface");
 }

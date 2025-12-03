@@ -7,6 +7,40 @@ struct FHitResult;
 using namespace physx;
 using namespace DirectX;
 
+// ===== Vehicle Surface Types =====
+// PhysX Vehicle SDK에서 사용하는 표면 타입 정의
+enum ESurfaceType : PxU32
+{
+    SURFACE_TYPE_UNKNOWN = 0,
+    SURFACE_TYPE_DRIVABLE = 1,       // 차량이 운전할 수 있는 표면 (도로, 지면 등)
+    SURFACE_TYPE_UNDRIVABLE = 2,     // 차량이 운전할 수 없는 표면 (벽, 장애물 등)
+    SURFACE_TYPE_VEHICLE = 4         // 차량 자체
+};
+
+// ===== Vehicle Filter Groups =====
+// 차량과 일반 오브젝트를 구분하는 충돌 그룹
+enum ECollisionGroup : PxU32
+{
+    COLLISION_GROUP_DEFAULT = 1,
+    COLLISION_GROUP_VEHICLE_CHASSIS = 2,
+    COLLISION_GROUP_VEHICLE_WHEEL = 4,
+    COLLISION_GROUP_DRIVABLE_SURFACE = 8,
+    COLLISION_GROUP_UNDRIVABLE_SURFACE = 16
+};
+
+// ===== Helper Functions for Surface Setup =====
+void SetupDrivableSurface(PxFilterData& filterData);
+void SetupUndrivableSurface(PxFilterData& filterData);
+void SetupVehicleSurface(PxFilterData& filterData, bool bIsChassis = true);
+
+// 차량 서스펜션 레이캐스트용 Pre-Filter 셰이더
+PxQueryHitType::Enum VehicleWheelRaycastPreFilter(
+    PxFilterData filterData0,
+    PxFilterData filterData1,
+    const void* constantBlock,
+    PxU32 constantBlockSize,
+    PxHitFlags& queryFlags);
+
 // 물리 데이터 접근 시 Thread-Safe Lock 매크로
 #define SCOPED_PHYSX_READ_LOCK(scene) PxSceneReadLock scopedReadLock(scene)
 #define SCOPED_PHYSX_WRITE_LOCK(scene) PxSceneWriteLock scopedWriteLock(scene)
@@ -100,6 +134,17 @@ public:
     PxScene*                GetScene()           const;
     PxMaterial*             GetDefaultMaterial() const;
     PxDefaultCpuDispatcher* GetDispatcher()      const;
+
+    // ===== Surface Setup for Vehicles =====
+    /**
+     * @brief 일반 지면/도로를 운전 가능한 표면으로 설정
+     */
+    void SetupActorAsDrivableSurface(PxRigidActor* actor);
+    
+    /**
+     * @brief 벽/장애물을 운전 불가능한 표면으로 설정
+     */
+    void SetupActorAsUndrivableSurface(PxRigidActor* actor);
 
     // ===== Sweep Query =====
     /**

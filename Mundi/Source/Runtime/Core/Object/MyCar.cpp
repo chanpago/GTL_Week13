@@ -25,15 +25,15 @@ static void SetupWheelsSimulationData(
 
     // Front wheels - 앞쪽이 +Y 방향 (Z-up 왼손좌표계)
     WheelCentreOffsets[PxVehicleDrive4WWheelOrder::eFRONT_LEFT] =
-        PxVec3(-1.0f, 1.5f, 0.5f);  // 좌측 앞바퀴: X-, Y+, Z-
+        PxVec3(-2.0f, 1.5f, 0.4f);  // 좌측 앞바퀴: X-, Y+, Z-
     WheelCentreOffsets[PxVehicleDrive4WWheelOrder::eFRONT_RIGHT] =
-        PxVec3(1.0f, 1.5f, 0.5f);   // 우측 앞바퀴: X+, Y+, Z-
+        PxVec3(2.0f, 1.5f, 0.4f);   // 우측 앞바퀴: X+, Y+, Z-
 
     // Rear wheels - 뒤쪽이 -Y 방향 (Z-up 왼손좌표계)
     WheelCentreOffsets[PxVehicleDrive4WWheelOrder::eREAR_LEFT] =
-        PxVec3(-1.0f, -1.5f, 0.5f); // 좌측 뒷바퀴: X-, Y-, Z-
+        PxVec3(-2.0f, -1.5f, 0.4f); // 좌측 뒷바퀴: X-, Y-, Z-
     WheelCentreOffsets[PxVehicleDrive4WWheelOrder::eREAR_RIGHT] =
-        PxVec3(1.0f, -1.5f, 0.5f);  // 우측 뒷바퀴: X+, Y-, Z-
+        PxVec3(2.0f, -1.5f, 0.4f);  // 우측 뒷바퀴: X+, Y-, Z-
 
     // CRITICAL: Get chassis mass and calculate sprung mass per wheel
     const float ChassisMass = InChassisMass;
@@ -97,12 +97,12 @@ static void SetupWheelsSimulationData(
         WheelsSimData->setTireForceAppPointOffset(i, PxVec3(WheelCentreOffsets[i].x, WheelCentreOffsets[i].y, -0.3f));
 
         // CRITICAL: Set scene query filter data to prevent vehicle from hitting itself
-        // 차량이 자기 자신을 감지하지 않도록 필터 데이터 설정
+        // 차량 서스펜션 레이캐스트용 필터 데이터 설정
         PxFilterData suspensionFilterData;
-        suspensionFilterData.word0 = 4;    // RAYCAST_GROUP
-        suspensionFilterData.word1 = ~(1 | 2 | 4);   // Exclude VEHICLE_CHASSIS_GROUP, VEHICLE_WHEEL_GROUP, and RAYCAST_GROUP
+        suspensionFilterData.word0 = 0;    // 레이캐스트 자체는 특별한 그룹 없음
+        suspensionFilterData.word1 = ~SURFACE_TYPE_VEHICLE;   // 차량 표면은 제외
         suspensionFilterData.word2 = 0;
-        suspensionFilterData.word3 = 0;
+        suspensionFilterData.word3 = 0;    // 레이캐스트는 표면 타입 없음
         WheelsSimData->setSceneQueryFilterData(i, suspensionFilterData);
     }
 }
@@ -206,12 +206,12 @@ void AMyCar::InitializeVehiclePhysics()
     RaycastResults.SetNum(NumWheels);
     RaycastHitBuffer.SetNum(NumWheels);
     
-    // Create batch query for vehicle raycasts with nullptr pre-filter (handle filtering in scene query filter data)
+    // Create batch query for vehicle raycasts with vehicle pre-filter
     PxBatchQueryDesc batchQueryDesc(NumWheels, 0, 0);
     batchQueryDesc.queryMemory.userRaycastResultBuffer = RaycastResults.GetData();
     batchQueryDesc.queryMemory.userRaycastTouchBuffer = RaycastHitBuffer.GetData();
     batchQueryDesc.queryMemory.raycastTouchBufferSize = NumWheels;
-    batchQueryDesc.preFilterShader = nullptr;  // Use scene query filter data instead
+    batchQueryDesc.preFilterShader = VehicleWheelRaycastPreFilter;  // 차량용 pre-filter 사용
     BatchQuery = PxScenePtr->createBatchQuery(batchQueryDesc);
 
     // Friction Pairs 생성 - 더 많은 타이어 타입과 표면 타입 지원
@@ -240,7 +240,7 @@ void AMyCar::InitializeVehiclePhysics()
     // Create the vehicle
     CreateVehicle4W();
     
-    UE_LOG("[MyCarComponent] PhysX Vehicle SDK initialized");
+    UE_LOG("[MyCarComponent] PhysX Vehicle SDK initialized with vehicle surface filtering");
 }
 
 void AMyCar::CreateVehicle4W()
@@ -292,19 +292,6 @@ void AMyCar::CreateVehicle4W()
         return;
     }
 
-    // CRITICAL: Define collision filter groups
-    // 차량 바디와 바퀴를 위한 별도 충돌 그룹 정의
-    const PxU32 VEHICLE_CHASSIS_GROUP = 1;
-    const PxU32 VEHICLE_WHEEL_GROUP = 2;
-    const PxU32 RAYCAST_GROUP = 4;
-
-    // Set collision filter data for chassis to prevent self-collision
-    PxFilterData vehicleChassisFilterData;
-    vehicleChassisFilterData.word0 = VEHICLE_CHASSIS_GROUP;    // This object's group
-    vehicleChassisFilterData.word1 = ~(VEHICLE_CHASSIS_GROUP | VEHICLE_WHEEL_GROUP | RAYCAST_GROUP); // Collides with everything except vehicle parts and raycast
-    vehicleChassisFilterData.word2 = 0;
-    vehicleChassisFilterData.word3 = 0;
-
     // Create chassis shape
     PxShape* ChassisShape = PxRigidActorExt::createExclusiveShape(
         *VehicleActor,
@@ -319,16 +306,11 @@ void AMyCar::CreateVehicle4W()
         return;
     }
 
-    // Set filter data for chassis shape
-    ChassisShape->setSimulationFilterData(vehicleChassisFilterData);
-    
-    // Set query filter data for chassis (different from simulation filter)
-    PxFilterData chassisQueryFilterData;
-    chassisQueryFilterData.word0 = VEHICLE_CHASSIS_GROUP;
-    chassisQueryFilterData.word1 = 0;  // Don't filter anything in queries by default
-    chassisQueryFilterData.word2 = 0;
-    chassisQueryFilterData.word3 = 0;
-    ChassisShape->setQueryFilterData(chassisQueryFilterData);
+    // CRITICAL: Set vehicle surface filter data for chassis
+    PxFilterData chassisFilterData;
+    SetupVehicleSurface(chassisFilterData, true); // true = chassis
+    ChassisShape->setSimulationFilterData(chassisFilterData);
+    ChassisShape->setQueryFilterData(chassisFilterData);
 
     // Create wheel shapes with proper filtering
     for (int32 i = 0; i < NumWheels; i++)
@@ -346,21 +328,11 @@ void AMyCar::CreateVehicle4W()
             return;
         }
 
-        // Set filter data for wheel shape
+        // CRITICAL: Set vehicle surface filter data for wheels
         PxFilterData wheelFilterData;
-        wheelFilterData.word0 = VEHICLE_WHEEL_GROUP;    // This object's group
-        wheelFilterData.word1 = ~(VEHICLE_CHASSIS_GROUP | VEHICLE_WHEEL_GROUP | RAYCAST_GROUP); // Collides with everything except vehicle parts and raycast
-        wheelFilterData.word2 = 0;
-        wheelFilterData.word3 = 0;
+        SetupVehicleSurface(wheelFilterData, false); // false = wheel
         WheelShape->setSimulationFilterData(wheelFilterData);
-
-        // Set query filter data for wheel
-        PxFilterData wheelQueryFilterData;
-        wheelQueryFilterData.word0 = VEHICLE_WHEEL_GROUP;
-        wheelQueryFilterData.word1 = 0;
-        wheelQueryFilterData.word2 = 0;
-        wheelQueryFilterData.word3 = 0;
-        WheelShape->setQueryFilterData(wheelQueryFilterData);
+        WheelShape->setQueryFilterData(wheelFilterData);
     }
 
     // Set mass and inertia
@@ -634,20 +606,19 @@ void AMyCar::UpdateVehiclePhysics(float DeltaTime)
         PxVehicleDrive4WControl::eANALOG_INPUT_HANDBRAKE, 
         VehicleInput.AnalogHandbrake);
     
-    // 2. Setup raycast batch using PxVehicleSuspensionRaycasts helper
+    // 2. Perform suspension raycasts using the new vehicle filter system
     PxVehicleWheels* vehicles[1] = {VehicleDrive4W};
     PxRaycastQueryResult* raycastResults = RaycastResults.GetData();
     const PxU32 raycastResultsSize = RaycastResults.Num();
     
-    // Perform suspension raycasts
     PxVehicleSuspensionRaycasts(
-        BatchQuery,           // The batch query
+        BatchQuery,           // Batch query with vehicle pre-filter
         1,                    // Number of vehicles
         vehicles,             // Array of vehicle pointers
         raycastResultsSize,   // Size of raycast results array
         raycastResults        // Output raycast results
     );
-    
+
     // 3. Prepare wheel query results from raycast hits
     PxWheelQueryResult wheelQueryResults[PX_MAX_NB_WHEELS];
     const PxU32 numWheels = VehicleDrive4W->mWheelsSimData.getNbWheels();

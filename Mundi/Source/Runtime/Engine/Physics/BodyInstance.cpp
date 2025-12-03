@@ -289,8 +289,8 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
         Terminate(World);
     }
 
-    PxPhysics*   Physics   = World.GetPhysics();
-    PxScene*     Scene     = World.GetScene();
+    PxPhysics* Physics = World.GetPhysics();
+    PxScene* Scene = World.GetScene();
 
     if (!Physics || !Scene)
         return;
@@ -358,11 +358,11 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
         {
             // 스피어 중심도 스케일 적용
             FVector ScaledCenter = Sphere.Center * Scale3D;
-            FTransform LocalXform(ScaledCenter, FQuat::Identity(), FVector(1,1,1));
+            FTransform LocalXform(ScaledCenter, FQuat::Identity(), FVector(1, 1, 1));
             PxTransform LocalPose = ToPx(LocalXform);
 
             // 균등 스케일이 아닌 경우 가장 큰 축 사용
-            float MaxScale = std::max({AbsScale.X, AbsScale.Y, AbsScale.Z});
+            float MaxScale = std::max({ AbsScale.X, AbsScale.Y, AbsScale.Z });
             PxSphereGeometry Geom(Sphere.Radius * MaxScale);
             PxShape* Shape = Physics->createShape(Geom, *Material);
             if (Shape)
@@ -379,7 +379,7 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
         {
             // 박스 중심도 스케일 적용
             FVector ScaledCenter = Box.Center * Scale3D;
-            FTransform LocalXform(ScaledCenter, Box.Rotation, FVector(1,1,1));
+            FTransform LocalXform(ScaledCenter, Box.Rotation, FVector(1, 1, 1));
             PxTransform LocalPose = ToPx(LocalXform);
 
             // 박스 Extents에 스케일 적용
@@ -408,7 +408,7 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
             FQuat ZToX = FQuat::FromAxisAngle(FVector(0, 1, 0), -XM_PIDIV2);
             FQuat PhysRot = Capsule.Rotation * ZToX;
 
-            FTransform LocalXform(ScaledCenter, PhysRot, FVector(1,1,1));
+            FTransform LocalXform(ScaledCenter, PhysRot, FVector(1, 1, 1));
             PxTransform LocalPose = ToPx(LocalXform);
 
             // 캡슐: 반지름은 XY 평균, 높이는 Z 스케일 적용
@@ -439,9 +439,13 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
         }
     }
 
+    // 씬에 액터 추가
     Scene->addActor(*StaticActor);
 
-    RigidActor           = StaticActor;
+    // ★★★ 핵심 추가: 모든 Static Body를 기본적으로 운전 가능한 표면으로 설정 ★★★
+    World.SetupActorAsDrivableSurface(StaticActor);
+
+    RigidActor = StaticActor;
     RigidActor->userData = this;
 
     // 생성한 Material은 release (DefaultMaterial은 PhysScene이 관리)
@@ -449,6 +453,8 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
     {
         Material->release();
     }
+
+    UE_LOG("[BodyInstance] Static actor created and set as drivable surface");
 }
 
 void FBodyInstance::Terminate(FPhysScene& World)
