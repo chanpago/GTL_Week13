@@ -821,9 +821,11 @@ bool FPhysScene::SweepCapsule(
     // PhysX의 halfHeight는 원통 부분만의 반높이 (반구 제외)
     // 전체 캡슐 높이 = 2 * (cylinderHalfHeight + radius)
     float CylinderHalfHeight = FMath::Max(0.0f, HalfHeight - Radius);
+
+    // 1) 캡슐 지오메트리 생성 (PhysX X축 기준)
     PxCapsuleGeometry CapsuleGeom(Radius, CylinderHalfHeight);
 
-    // 캡슐 방향 설정 (Z-up으로 회전)
+    // 2) 캡슐 방향 설정 (Z-up - X-up 변환)
     PxQuat CapsuleRotation(PxHalfPi, PxVec3(0, 1, 0)); // Y축 기준 90도 회전
     PxTransform StartPose(PxVec3(Start.X, Start.Y, Start.Z), CapsuleRotation);
 

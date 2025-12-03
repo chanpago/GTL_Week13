@@ -36,6 +36,9 @@ public:
     // Serialize to persist AnimGraphPath and reuse base behavior
     void Serialize(const bool bInIsLoading, JSON& InOutHandle) override;
 
+    // PIE 복제 시 AnimGraph를 새로 로드하여 shallow copy 문제 방지
+    void DuplicateSubObjects() override;
+
 public:
     void SetSkeletalMesh(const FString& PathFileName) override;
 

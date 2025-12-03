@@ -45,13 +45,72 @@ static FBodyInstance* FindBodyInstanceByName(const TArray<FBodyInstance*>& Bodie
 }
 
 USkeletalMeshComponent::USkeletalMeshComponent()
-{ 
+{
     SetSkeletalMesh("Data/James/James.fbx");
+}
+
+void USkeletalMeshComponent::DuplicateSubObjects()
+{
+    Super::DuplicateSubObjects();
+
+    UE_LOG("[SkeletalMeshComponent] DuplicateSubObjects CALLED! AnimGraph was: %p", AnimGraph);
+
+    // PIE 복제 시 shallow copy된 포인터들을 모두 초기화
+    // BeginPlay에서 새로 생성되거나, PIE에서는 사용하지 않음
+    AnimGraph = nullptr;  // 파일에서 다시 로드하지 않음 - PIE에서는 애니메이션 없이 실행
+    AnimInstance = nullptr;
+    CurrentAnimation = nullptr;
+    PhysicsAsset = nullptr;
+    PhysicsAssetOverride = nullptr;
+    Bodies.Empty();
+    Constraints.Empty();
+
+    UE_LOG("[SkeletalMeshComponent] DuplicateSubObjects DONE! AnimGraph is now: %p", AnimGraph);
 }
 
 void USkeletalMeshComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	UWorld* World = GetWorld();
+	bool bIsPIE = World && World->bPie;
+
+	UE_LOG("[SkeletalMeshComponent] BeginPlay! AnimGraph: %p, AnimGraphPath: %s, PIE: %d",
+		AnimGraph, AnimGraphPath.c_str(), bIsPIE ? 1 : 0);
+
+	// PIE 모드에서는 항상 AnimGraph를 새로 로드하여 dangling pointer 문제 방지
+	// Editor에서 로드된 AnimGraph의 노드가 PIE 종료 후 corrupted 될 수 있음
+	if (bIsPIE && !AnimGraphPath.empty())
+	{
+		// 기존 AnimGraph 포인터는 Editor 컴포넌트의 것이므로 여기서 삭제하면 안됨
+		// 새로운 그래프를 로드하여 완전히 독립적인 인스턴스 사용
+		JSON GraphJson;
+		if (FJsonSerializer::LoadJsonFromFile(GraphJson, UTF8ToWide(AnimGraphPath)))
+		{
+			UAnimationGraph* NewGraph = NewObject<UAnimationGraph>();
+			NewGraph->Serialize(true, GraphJson);
+			AnimGraph = NewGraph;
+			UE_LOG("[SkeletalMeshComponent] PIE: Loaded fresh AnimGraph from path: %s", AnimGraphPath.c_str());
+		}
+		else
+		{
+			// 로드 실패 시 null로 설정하여 컴파일 시도하지 않음
+			AnimGraph = nullptr;
+			UE_LOG("[SkeletalMeshComponent] PIE: Failed to load AnimGraph from path: %s", AnimGraphPath.c_str());
+		}
+	}
+	else if (!AnimGraph && !AnimGraphPath.empty())
+	{
+		// Editor 모드에서 AnimGraph가 null이지만 path가 있는 경우 로드
+		JSON GraphJson;
+		if (FJsonSerializer::LoadJsonFromFile(GraphJson, UTF8ToWide(AnimGraphPath)))
+		{
+			UAnimationGraph* NewGraph = NewObject<UAnimationGraph>();
+			NewGraph->Serialize(true, GraphJson);
+			AnimGraph = NewGraph;
+			UE_LOG("[SkeletalMeshComponent] Editor: Loaded AnimGraph from path: %s", AnimGraphPath.c_str());
+		}
+	}
 
 	if (!PhysicsAssetOverridePath.empty())
 	{
@@ -100,7 +159,6 @@ void USkeletalMeshComponent::BeginPlay()
 	UE_LOG("  Speed >= 5.0: Run animation");
 
 	// PhysicsAsset이 있으면 물리 바디 생성
-	UWorld* World = GetWorld();
 	if (World && World->GetPhysScene() && PhysicsAsset)
 	{
 		InstantiatePhysicsAssetBodies(*World->GetPhysScene());
