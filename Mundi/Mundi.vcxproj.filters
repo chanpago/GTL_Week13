@@ -998,6 +998,8 @@
     <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFBlurPass.cpp" />
     <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFRecombinePass.cpp" />
     <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFSetupPass.cpp" />
+    <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFTilePass.cpp" />
+  <ClCompile Include="Generated\USpringArmComponent.generated.cpp"><Filter>Generated</Filter></ClCompile></ItemGroup>
     <ClCompile Include="SnippetVehicle4W.cpp" />
     <ClCompile Include="Source\Runtime\Core\Object\MyCarComponent.cpp" />
   <ClCompile Include="Generated\AMyCarComponent.generated.cpp"><Filter>Generated</Filter></ClCompile><ClCompile Include="Generated\AMyCar.generated.cpp"><Filter>Generated</Filter></ClCompile></ItemGroup>
@@ -2070,6 +2072,8 @@
     <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFBlurPass.h" />
     <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFRecombinePass.h" />
     <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFSetupPass.h" />
+    <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFTilePass.h" />
+  <ClInclude Include="Generated\USpringArmComponent.generated.h"><Filter>Generated</Filter></ClInclude></ItemGroup>
     <ClInclude Include="Source\Runtime\Core\Object\MyCarComponent.h" />
   <ClInclude Include="Generated\AMyCarComponent.generated.h"><Filter>Generated</Filter></ClInclude><ClInclude Include="Generated\AMyCar.generated.h"><Filter>Generated</Filter></ClInclude></ItemGroup>
   <ItemGroup>

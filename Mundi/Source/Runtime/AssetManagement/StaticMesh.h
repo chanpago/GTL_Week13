@@ -47,6 +47,7 @@ private:
     void CreateLocalBound(const FMeshData* InMeshData);
     void CreateLocalBound(const FStaticMesh* InStaticMesh);
     void CreateBodySetupFromBounds();
+    void InitConvexMesh();
     void ReleaseResources();
 
 public:

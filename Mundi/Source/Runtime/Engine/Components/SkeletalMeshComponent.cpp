@@ -733,6 +733,25 @@ void USkeletalMeshComponent::SetPhysicsAnimationState(EPhysicsAnimationState New
     PhysicsState = NewState;
     BlendTime = InBlendTime;
 
+    // PhysicsDriven으로 전환 시, 먼저 바디를 현재 애니메이션 포즈로 동기화
+    if (NewState == EPhysicsAnimationState::PhysicsDriven)
+    {
+        // 현재 애니메이션 포즈로 바디 위치 설정 (이전 래그돌 포즈가 아닌 현재 포즈에서 시작)
+        for (FBodyInstance* BI : Bodies)
+        {
+            if (!BI || !BI->BodySetup || !BI->RigidActor)
+                continue;
+
+            int32 BoneIndex = GetBoneIndexByName(BI->BodySetup->BoneName);
+            if (BoneIndex < 0)
+                continue;
+
+            FTransform BoneWorldTM = GetBoneWorldTransform(BoneIndex);
+            PxTransform PxPose = ToPx(BoneWorldTM);
+            BI->RigidActor->setGlobalPose(PxPose);
+        }
+    }
+
     // 모든 바디의 Kinematic 플래그를 전환
     for (FBodyInstance* BI : Bodies)
     {
@@ -752,6 +771,10 @@ void USkeletalMeshComponent::SetPhysicsAnimationState(EPhysicsAnimationState New
         {
             // Dynamic 모드로 전환 (물리가 제어 - 래그돌)
             Dyn->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, false);
+
+            // 속도 초기화 (튕김 방지)
+            Dyn->setLinearVelocity(PxVec3(0, 0, 0));
+            Dyn->setAngularVelocity(PxVec3(0, 0, 0));
         }
     }
 }

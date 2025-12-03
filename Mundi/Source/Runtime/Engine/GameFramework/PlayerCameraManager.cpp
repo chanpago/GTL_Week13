@@ -44,7 +44,7 @@ APlayerCameraManager::~APlayerCameraManager()
 	{
 		if (Modifier)
 		{
-			delete Modifier;
+			DeleteObject(Modifier);
 		}
 	}
 	ActiveModifiers.Empty();
@@ -190,7 +190,7 @@ void APlayerCameraManager::BuildForFrame(float DeltaTime)
 
 		if (M->Duration >= 0.f && !M->bEnabled)
 		{
-			delete M;
+			DeleteObject(M);
 			ActiveModifiers.RemoveAtSwap(i); 
 			continue; 
 		}
@@ -220,7 +220,7 @@ void APlayerCameraManager::BuildForFrame(float DeltaTime)
 void APlayerCameraManager::StartCameraShake(float InDuration, float AmpLoc, float AmpRotDeg, float Frequency,
 	int32 InPriority)
 {
-	UCamMod_Shake* ShakeModifier = new UCamMod_Shake();
+	UCamMod_Shake* ShakeModifier = NewObject<UCamMod_Shake>();
 	ShakeModifier->Priority = InPriority;
 	ShakeModifier->Initialize(InDuration, AmpLoc, AmpRotDeg, Frequency);
 	ActiveModifiers.Add(ShakeModifier);
@@ -229,7 +229,7 @@ void APlayerCameraManager::StartCameraShake(float InDuration, float AmpLoc, floa
 void APlayerCameraManager::StartFade(float InDuration, float FromAlpha, float ToAlpha, const FLinearColor& InColor,
 	int32 InPriority)
 {
-	UCamMod_Fade* FadeModifier = new UCamMod_Fade();
+	UCamMod_Fade* FadeModifier = NewObject<UCamMod_Fade>();
 	FadeModifier->Priority = InPriority;
 	FadeModifier->bEnabled = true;
 
@@ -246,7 +246,7 @@ void APlayerCameraManager::StartFade(float InDuration, float FromAlpha, float To
 
 void APlayerCameraManager::StartLetterBox(float InDuration, float Aspect, float BarHeight, const FLinearColor& InColor, int32 InPriority)
 {
-	UCamMod_LetterBox* LetterBoxModifier = new UCamMod_LetterBox();
+	UCamMod_LetterBox* LetterBoxModifier = NewObject<UCamMod_LetterBox>();
 	LetterBoxModifier->Duration = InDuration;
 	LetterBoxModifier->Priority = InPriority;
 	LetterBoxModifier->AspectRatio = Aspect;
@@ -258,7 +258,7 @@ void APlayerCameraManager::StartLetterBox(float InDuration, float Aspect, float 
 
 int APlayerCameraManager::StartVignette(float InDuration, float Radius, float Softness, float Intensity, float Roundness, const FLinearColor& InColor, int32 InPriority)
 {
-	UCamMod_Vignette* VignetteModifier = new UCamMod_Vignette();
+	UCamMod_Vignette* VignetteModifier = NewObject<UCamMod_Vignette>();
 	VignetteModifier->Duration = InDuration;
 	VignetteModifier->Priority = InPriority;
 	VignetteModifier->Radius = Radius;
@@ -315,7 +315,7 @@ void APlayerCameraManager::StartGamma(float Gamma)
 {
 	//if (ActiveModifiers.size() > 0) return;
 
-	UCamMod_Gamma* GammaModifier = new UCamMod_Gamma();
+	UCamMod_Gamma* GammaModifier = NewObject<UCamMod_Gamma>();
 	GammaModifier->Gamma = Gamma;
 
 	ActiveModifiers.Add(GammaModifier);
@@ -335,12 +335,12 @@ void APlayerCameraManager::StartDOF(
 	{
 		if (UCamMod_DOF* ExistingDOF = Cast<UCamMod_DOF>(ActiveModifiers[i]))
 		{
-			delete ExistingDOF;
+			DeleteObject(ExistingDOF);
 			ActiveModifiers.RemoveAt(i);
 		}
 	}
 
-	UCamMod_DOF* DOFModifier = new UCamMod_DOF();
+	UCamMod_DOF* DOFModifier = NewObject<UCamMod_DOF>();
 	DOFModifier->Priority = InPriority;
 	DOFModifier->bEnabled = true;
 

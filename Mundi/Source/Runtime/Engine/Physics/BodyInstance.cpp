@@ -165,7 +165,7 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
     // ★★★★★ 여기부터가 핵심: BodySetup->AggGeom 기반으로 Shape 생성
     if (BodySetup)
     {
-        const FKAggregateGeom& Agg = BodySetup->AggGeom;
+        FKAggregateGeom& Agg = BodySetup->AggGeom;
 
         // 스케일의 절대값 사용 (음수 스케일 대응)
         const FVector AbsScale(std::fabs(Scale3D.X), std::fabs(Scale3D.Y), std::fabs(Scale3D.Z));
@@ -242,6 +242,35 @@ void FBodyInstance::InitDynamic(FPhysScene& World, const FTransform& WorldTransf
                 SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
                 Shape->setLocalPose(LocalPose);
                 Shape->setSimulationFilterData(FilterData);  // Self-Collision 방지
+                DynamicActor->attachShape(*Shape);
+                Shape->release();
+            }
+        }
+
+        // 4) Convex Meshes
+        for (FKConvexElem& Convex : Agg.ConvexElements) // Changed to non-const reference
+        {
+            if (Convex.CookedData.IsEmpty()) continue;
+
+            // Create PxConvexMesh from cooked data if not already created
+            if (!Convex.ConvexMesh)
+            {
+                PxDefaultMemoryInputData input(Convex.CookedData.GetData(), Convex.CookedData.Num());
+                Convex.ConvexMesh = Physics->createConvexMesh(input);
+                if (!Convex.ConvexMesh)
+                {
+                    UE_LOG("Failed to create PxConvexMesh from cooked data for component %s", OwnerComponent ? OwnerComponent->GetName().c_str() : "Unknown");
+                    continue;
+                }
+            }
+            
+            PxConvexMeshGeometry Geom(Convex.ConvexMesh, PxMeshScale(ToPx(AbsScale)));
+            PxShape* Shape = Physics->createShape(Geom, *Material);
+            if (Shape)
+            {
+                SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
+                Shape->setLocalPose(PxTransform(PxIdentity)); // Convex meshes are typically in local space already
+                Shape->setSimulationFilterData(FilterData);
                 DynamicActor->attachShape(*Shape);
                 Shape->release();
             }
@@ -348,7 +377,7 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
     // BodySetup->AggGeom 기반으로 Shape 생성
     if (BodySetup)
     {
-        const FKAggregateGeom& Agg = BodySetup->AggGeom;
+        FKAggregateGeom& Agg = BodySetup->AggGeom;
 
         // 스케일의 절대값 사용 (음수 스케일 대응)
         const FVector AbsScale(std::fabs(Scale3D.X), std::fabs(Scale3D.Y), std::fabs(Scale3D.Z));
@@ -421,6 +450,34 @@ void FBodyInstance::InitStatic(FPhysScene& World, const FTransform& WorldTransfo
             {
                 SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
                 Shape->setLocalPose(LocalPose);
+                StaticActor->attachShape(*Shape);
+                Shape->release();
+            }
+        }
+
+        // 4) Convex Meshes
+        for (FKConvexElem& Convex : Agg.ConvexElements) // Changed to non-const reference
+        {
+            if (Convex.CookedData.IsEmpty()) continue;
+
+            // Create PxConvexMesh from cooked data if not already created
+            if (!Convex.ConvexMesh)
+            {
+                PxDefaultMemoryInputData input(Convex.CookedData.GetData(), Convex.CookedData.Num());
+                Convex.ConvexMesh = Physics->createConvexMesh(input);
+                if (!Convex.ConvexMesh)
+                {
+                    UE_LOG("Failed to create PxConvexMesh from cooked data for component %s", OwnerComponent ? OwnerComponent->GetName().c_str() : "Unknown");
+                    continue;
+                }
+            }
+            
+            PxConvexMeshGeometry Geom(Convex.ConvexMesh, PxMeshScale(ToPx(AbsScale)));
+            PxShape* Shape = Physics->createShape(Geom, *Material);
+            if (Shape)
+            {
+                SetShapeCollisionFlags(Shape, OwnerComponent, BodySetup);
+                Shape->setLocalPose(PxTransform(PxIdentity)); // Convex meshes are typically in local space already
                 StaticActor->attachShape(*Shape);
                 Shape->release();
             }

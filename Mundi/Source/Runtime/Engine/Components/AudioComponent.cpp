@@ -40,7 +40,7 @@ void UAudioComponent::TickComponent(float DeltaTime)
 {
     Super::TickComponent(DeltaTime);
 
-    if (bIsPlaying && SourceVoice)
+    if (bIsPlaying && SourceVoice && FAudioDevice::IsInitialized())
     {
         FVector CurrentLocation = GetWorldLocation();
         FAudioDevice::UpdateSoundPosition(SourceVoice, CurrentLocation);

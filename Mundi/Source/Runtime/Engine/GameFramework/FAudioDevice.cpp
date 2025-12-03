@@ -100,6 +100,18 @@ bool FAudioDevice::Initialize()
 }
 void FAudioDevice::Shutdown()
 {
+    // 먼저 재생 중인 모든 SourceVoice 정리
+    for (IXAudio2SourceVoice* voice : OneShotVoices)
+    {
+        if (voice)
+        {
+            voice->Stop(0);
+            voice->FlushSourceBuffers();
+            voice->DestroyVoice();
+        }
+    }
+    OneShotVoices.Empty();
+
     if (pMasteringVoice)
     {
         pMasteringVoice->DestroyVoice();
@@ -117,6 +129,8 @@ void FAudioDevice::Shutdown()
 
 void FAudioDevice::Update()
 {
+    if (!pXAudio2) return;
+
     // For future: process queued commands, streaming, etc.
 
     // 뒤에서 앞으로 순회하며 완료된 보이스 정리
@@ -216,7 +230,7 @@ void FAudioDevice::SetListenerPosition(const FVector& Position, const FVector& F
     Listener.OrientTop = X3DAUDIO_VECTOR{ UpVec.X, UpVec.Y, UpVec.Z };
 }void FAudioDevice::UpdateSoundPosition(IXAudio2SourceVoice* pSourceVoice, const FVector& EmitterPosition)
 {
-    if (!pSourceVoice || !pMasteringVoice)
+    if (!pSourceVoice || !pXAudio2 || !pMasteringVoice)
     {
         return;
     }
@@ -399,7 +413,7 @@ void FAudioDevice::PlaySoundAtLocationOneShot(USound* Sound, const FVector& Pos,
 }
 void FAudioDevice::StopSound(IXAudio2SourceVoice* pSourceVoice)
 {
-    if (!pSourceVoice) return;
+    if (!pSourceVoice || !pXAudio2) return;
     pSourceVoice->Stop(0);
     pSourceVoice->FlushSourceBuffers();
     pSourceVoice->DestroyVoice();

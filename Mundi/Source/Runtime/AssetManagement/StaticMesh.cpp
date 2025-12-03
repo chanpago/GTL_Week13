@@ -5,6 +5,9 @@
 #include "ResourceManager.h"
 #include "Source/Editor/FBX/FbxLoader.h"
 #include "Source/Runtime/Engine/Physics/BodySetup.h"
+#include "Source/Runtime/Core/Misc/PathUtils.h"
+#include "Source/Runtime/Core/Misc/WindowsBinReader.h"
+#include "Source/Runtime/Core/Misc/WindowsBinWriter.h"
 #include <filesystem>
 
 IMPLEMENT_CLASS(UStaticMesh)
@@ -93,6 +96,7 @@ bool UStaticMesh::Load(const FString& InFilePath, ID3D11Device* InDevice, EVerte
         CreateIndexBuffer(StaticMeshAsset, InDevice);
         CreateLocalBound(StaticMeshAsset);
         CreateBodySetupFromBounds();
+        InitConvexMesh();
         VertexCount = static_cast<uint32>(StaticMeshAsset->Vertices.size());
         IndexCount = static_cast<uint32>(StaticMeshAsset->Indices.size());
     }
@@ -213,24 +217,117 @@ void UStaticMesh::CreateBodySetupFromBounds()
         BodySetup = nullptr;
     }
 
-    // LocalBound가 유효한지 확인
-    FVector Min = LocalBound.Min;
-    FVector Max = LocalBound.Max;
-    if (Min == Max)
-    {
-        return;
-    }
-
     // BodySetup 생성
     BodySetup = new UBodySetup();
+	BodySetup->AggGeom.ConvexElements.Add(FKConvexElem());
+}
 
-    // LocalBound 기반으로 박스 콜라이더 생성
-    FKBoxElem BoxElem;
-    BoxElem.Center = (Min + Max) * 0.5f;                    // AABB 중심
-    BoxElem.Extents = (Max - Min) * 0.5f;                   // half-size
-    BoxElem.Rotation = FQuat::Identity();
+void UStaticMesh::InitConvexMesh()
+{
+	if (!BodySetup || BodySetup->AggGeom.ConvexElements.IsEmpty() || !StaticMeshAsset || StaticMeshAsset->Vertices.empty())
+	{
+		return;
+	}
 
-    BodySetup->AddBox(BoxElem);
+	FString convexCachePath = ConvertDataPathToCachePath(GetAssetPathFileName()) + ".convex.bin";
+
+	bool bShouldRegenerate = true;
+	if (std::filesystem::exists(convexCachePath))
+	{
+		try
+		{
+			auto cacheTime = std::filesystem::last_write_time(convexCachePath);
+			auto originalTime = std::filesystem::last_write_time(GetAssetPathFileName());
+			if (cacheTime >= originalTime)
+			{
+				bShouldRegenerate = false;
+			}
+		}
+		catch (const std::filesystem::filesystem_error& e)
+		{
+			UE_LOG("Filesystem error during cache validation: %s. Forcing regeneration.", e.what());
+			bShouldRegenerate = true;
+		}
+	}
+
+	FKConvexElem& convexElem = BodySetup->AggGeom.ConvexElements[0];
+
+	if (!bShouldRegenerate)
+	{
+		try
+		{
+			FWindowsBinReader reader(convexCachePath);
+			if (reader.IsOpen())
+			{
+				Serialization::ReadArray(reader, convexElem.CookedData);
+				reader.Close();
+				UE_LOG("Loaded convex mesh from cache: %s", convexCachePath.c_str());
+			}
+			else
+			{
+				bShouldRegenerate = true;
+			}
+		}
+		catch (const std::exception& e)
+		{
+			UE_LOG("Error loading convex cache: %s. Forcing regeneration.", e.what());
+			bShouldRegenerate = true;
+		}
+	}
+
+	if (bShouldRegenerate)
+	{
+		UE_LOG("Cooking convex mesh for: %s", GetAssetPathFileName().c_str());
+
+		physx::PxDefaultAllocator      gAllocator;
+		physx::PxDefaultErrorCallback  gErrorCallback;
+		physx::PxFoundation*           gFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gAllocator, gErrorCallback);
+		if (!gFoundation) { UE_LOG("PxCreateFoundation failed!"); return; }
+
+		physx::PxPhysics*              gPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *gFoundation, physx::PxTolerancesScale(), false, nullptr);
+		if (!gPhysics) { UE_LOG("PxCreatePhysics failed!"); gFoundation->release(); return; }
+
+		physx::PxCooking*              gCooking = PxCreateCooking(PX_PHYSICS_VERSION, *gFoundation, physx::PxCookingParams(gPhysics->getTolerancesScale()));
+		if (!gCooking) { UE_LOG("PxCreateCooking failed!"); gPhysics->release(); gFoundation->release(); return; }
+
+
+		TArray<physx::PxVec3> pxVertices;
+		pxVertices.Reserve(StaticMeshAsset->Vertices.size());
+		for (const auto& vert : StaticMeshAsset->Vertices)
+		{
+			pxVertices.Add(physx::PxVec3(vert.pos.X, vert.pos.Y, vert.pos.Z));
+		}
+
+		physx::PxConvexMeshDesc convexDesc;
+		convexDesc.points.count = static_cast<uint32>(pxVertices.size());
+		convexDesc.points.stride = sizeof(physx::PxVec3);
+		convexDesc.points.data = pxVertices.GetData();
+        convexDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
+
+		physx::PxDefaultMemoryOutputStream buf;
+		physx::PxConvexMeshCookingResult::Enum result;
+		if (!gCooking->cookConvexMesh(convexDesc, buf, &result))
+		{
+			UE_LOG("Failed to cook convex mesh for %s", GetAssetPathFileName().c_str());
+			gCooking->release();
+			gPhysics->release();
+			gFoundation->release();
+			return;
+		}
+
+		convexElem.CookedData.SetNum(buf.getSize());
+		memcpy(convexElem.CookedData.GetData(), buf.getData(), buf.getSize());
+
+		FWindowsBinWriter writer(convexCachePath);
+
+        Serialization::WriteArray(writer, convexElem.CookedData);
+        writer.Close();
+        UE_LOG("Saved cooked convex mesh to cache: %s", convexCachePath.c_str());
+
+		gCooking->release();
+		gPhysics->release();
+		gFoundation->release();
+	}
 }
 
 void UStaticMesh::ReleaseResources()
@@ -247,6 +344,13 @@ void UStaticMesh::ReleaseResources()
     }
     if (BodySetup)
     {
+        for (FKConvexElem& Convex : BodySetup->AggGeom.ConvexElements)
+        {
+            if (Convex.ConvexMesh)
+            {
+                Convex.ConvexMesh = nullptr;
+            }
+        }
         delete BodySetup;
         BodySetup = nullptr;
     }

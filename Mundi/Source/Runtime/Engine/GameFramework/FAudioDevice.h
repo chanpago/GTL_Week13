@@ -21,6 +21,7 @@ public:
     static bool Initialize();
     static void Shutdown();
     static void Update();
+    static bool IsInitialized() { return pXAudio2 != nullptr; }
 
     static IXAudio2SourceVoice* PlaySound3D(USound* SoundToPlay, const FVector& EmitterPosition, float Volume = 1.0f, bool bIsLooping = false);
     static void StopSound(IXAudio2SourceVoice* pSourceVoice);

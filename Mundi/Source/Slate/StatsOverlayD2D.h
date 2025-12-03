@@ -50,7 +50,7 @@ private:
 
 private:
     bool bInitialized = false;
-    bool bShowFPS = false;
+    bool bShowFPS = true;
     bool bShowMemory = false;
     bool bShowPicking = false;
     bool bShowDecal = false;

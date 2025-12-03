@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "PhysScene.h"
 #include "SimulationEventCallback.h"
 #include "Source/Runtime/Engine/Collision/Collision.h"
@@ -6,6 +6,8 @@
 #include "Source/Runtime/Engine/Physics/BodySetup.h"
 #include "Source/Runtime/Engine/Components/PrimitiveComponent.h"
 #include "Actor.h"
+#include "ObjectIterator.h"
+#include "StaticMesh.h"
 #include <Windows.h>
 
 /**
@@ -582,6 +584,17 @@ void FPhysScene::Shutdown()
         SimulationEventCallback = nullptr;
     }
 
+    for (TObjectIterator<UStaticMesh> It; It; ++It)
+    {
+        UStaticMesh* Mesh = *It;
+        if (Mesh && Mesh->BodySetup)
+        {
+            for (FKConvexElem& Convex : Mesh->BodySetup->AggGeom.ConvexElements)
+            {
+                Convex.ConvexMesh = nullptr;
+            }
+        }
+    }
     // 공유 리소스 참조 해제 (마지막 사용자면 자동으로 Shutdown됨)
     FPhysXSharedResources::Release();
 }

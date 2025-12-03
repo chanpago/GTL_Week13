@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include "PxPhysicsAPI.h"
+
 struct FKShapeElem
 {
     EAggCollisionShapeType ShapeType = EAggCollisionShapeType::Unknown;
@@ -36,4 +38,10 @@ struct FKConvexElem
 {
     // Convex Hull 데이터
     TArray<FVector> Vertices;
+
+    // Serialized PhysX convex mesh
+    TArray<uint8> CookedData;
+
+    // Runtime convex mesh
+    physx::PxConvexMesh* ConvexMesh = nullptr;
 };

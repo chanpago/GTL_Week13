@@ -583,17 +583,25 @@ void UTargetActorTransformWidget::RenderDOFSettings(APlayerCameraManager* CamMgr
 				// DOF 활성화 - Modifier 생성
 				if (!DOF)
 				{
-					DOF = new UCamMod_DOF();
+					DOF = NewObject<UCamMod_DOF>();
 					CamMgr->ActiveModifiers.Add(DOF);
 				}
 				DOF->bEnabled = true;
 			}
 			else if (!bDOFEnabled && bPrevEnabled)
 			{
-				// DOF 비활성화
+				// DOF 비활성화 - Modifier 제거
 				if (DOF)
 				{
-					DOF->bEnabled = false;
+					for (int32 i = CamMgr->ActiveModifiers.Num() - 1; i >= 0; --i)
+					{
+						if (CamMgr->ActiveModifiers[i] == DOF)
+						{
+							CamMgr->ActiveModifiers.RemoveAt(i);
+							DeleteObject(DOF);
+							break;
+						}
+					}
 				}
 			}
 		}
