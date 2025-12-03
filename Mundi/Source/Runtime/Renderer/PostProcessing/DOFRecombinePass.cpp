@@ -35,8 +35,8 @@ void FDOFRecombinePass::Execute(const FPostProcessModifier& M, FSceneView* View,
     // t0: SceneColor, t1: SceneDepth, t2: Near Blur, t3: Far Blur
     ID3D11ShaderResourceView* SceneSRV = RHIDevice->GetSRV(RHI_SRV_Index::SceneColorSource);
     ID3D11ShaderResourceView* DepthSRV = RHIDevice->GetSRV(RHI_SRV_Index::SceneDepth);
-    ID3D11ShaderResourceView* NearBlurredSRV = RHIDevice->GetDOFSRV(1);  // Near Blur (DOF[1])
-    ID3D11ShaderResourceView* FarBlurredSRV = RHIDevice->GetDOFSRV(2);   // Far Blur (DOF[2])
+    ID3D11ShaderResourceView* NearBlurredSRV = RHIDevice->GetDOFSRV(2);  // Near Blur (DOF[2])
+    ID3D11ShaderResourceView* FarBlurredSRV = RHIDevice->GetDOFSRV(3);   // Far Blur (DOF[3])
 
     if (!SceneSRV || !DepthSRV || !NearBlurredSRV || !FarBlurredSRV)
     {

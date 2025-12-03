@@ -7,7 +7,6 @@
 #include "PostProcessing/HeightFogPass.h"
 #include "PostProcessing/GammaPass.h"
 #include "PostProcessing/DOFSetupPass.h"
-#include "PostProcessing/DOFTilePass.h"
 #include "PostProcessing/DOFBlurPass.h"
 #include "PostProcessing/DOFRecombinePass.h"
 
@@ -163,7 +162,6 @@ private:
 	FVignettePass VignettePass;
 	FGammaPass GammaPass;
 	FDOFSetupPass DOFSetupPass;
-	FDOFTilePass DOFTilePass;
 	FDOFBlurPass DOFBlurPass;
 	FDOFRecombinePass DOFRecombinePass;
 };

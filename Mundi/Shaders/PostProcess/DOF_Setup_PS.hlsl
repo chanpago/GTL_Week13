@@ -52,10 +52,11 @@ cbuffer ViewportConstants : register(b10)
     float4 ScreenSize;
 }
 
-// 단일 출력 (Near/Far 혼합, CoC 부호로 구분)
+// MRT 출력 (Near/Far 분리)
 struct PS_OUTPUT
 {
-    float4 Color : SV_Target0;  // RGB + CoC (Near: 음수, Far: 양수, Focus: 0)
+    float4 Near : SV_Target0;  // Near 전용 (RGB + |CoC|, Focus/Far는 투명)
+    float4 Far  : SV_Target1;  // Far 전용 (RGB + CoC, Focus/Near는 투명)
 };
 
 PS_OUTPUT mainPS(PS_INPUT input)
@@ -80,8 +81,13 @@ PS_OUTPUT mainPS(PS_INPUT input)
         FarClip
     );
 
-    // 3. 원본 색상 + CoC 출력
-    output.Color = float4(sceneColor.rgb, CoC);
+    // 3. Near/Far 분리 출력
+    // 색상은 항상 넣고, alpha만 CoC 기반
+    // Near: CoC < 0일 때 alpha = |CoC|, 아니면 0
+    // Far: CoC > 0일 때 alpha = CoC, 아니면 0
+    // Focus 영역도 색상은 있음 (블러가 번질 때 참조용)
+    output.Near = float4(sceneColor.rgb, saturate(-CoC));
+    output.Far = float4(sceneColor.rgb, saturate(CoC));
 
     return output;
 }

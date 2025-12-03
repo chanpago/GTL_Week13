@@ -477,7 +477,6 @@
     <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFBlurPass.cpp" />
     <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFRecombinePass.cpp" />
     <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFSetupPass.cpp" />
-    <ClCompile Include="Source\Runtime\Renderer\PostProcessing\DOFTilePass.cpp" />
     <ClCompile Include="Source\Runtime\Renderer\PostProcessing\GammaPass.cpp" />
     <ClCompile Include="Source\Runtime\Renderer\PostProcessing\HeightFogPass.cpp" />
     <ClCompile Include="Source\Runtime\Renderer\PostProcessing\FadeInOutPass.cpp" />
@@ -997,7 +996,6 @@
     <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFBlurPass.h" />
     <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFRecombinePass.h" />
     <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFSetupPass.h" />
-    <ClInclude Include="Source\Runtime\Renderer\PostProcessing\DOFTilePass.h" />
     <ClInclude Include="Source\Runtime\Renderer\PostProcessing\GammaPass.h" />
     <ClInclude Include="Source\Runtime\Renderer\PostProcessing\HeightFogPass.h" />
     <ClInclude Include="Source\Runtime\Renderer\PostProcessing\FadeInOutPass.h" />

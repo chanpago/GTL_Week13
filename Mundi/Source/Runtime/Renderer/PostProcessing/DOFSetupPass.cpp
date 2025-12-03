@@ -17,10 +17,12 @@ void FDOFSetupPass::Execute(const FPostProcessModifier& M, FSceneView* View, D3D
     ID3D11ShaderResourceView* NullSRVs[2] = { nullptr, nullptr };
     RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 2, NullSRVs);
 
-    // 3) 단일 RTV 설정: DOF[0]
-    ID3D11RenderTargetView** DOFRTVs = RHIDevice->GetDOFRTVs();
-
-    RHIDevice->OMSetCustomRenderTargets(1, DOFRTVs, nullptr);
+    // 3) MRT 설정: DOF[0]=Near, DOF[1]=Far
+    ID3D11RenderTargetView* RTVs[2] = {
+        RHIDevice->GetDOFRTV(0),  // Near
+        RHIDevice->GetDOFRTV(1)   // Far
+    };
+    RHIDevice->OMSetCustomRenderTargets(2, RTVs, nullptr);
 
     // 3-1) Viewport를 ViewRect/2 기준으로 설정 (게임 영역만)
     D3D11_VIEWPORT halfViewport;
@@ -32,9 +34,10 @@ void FDOFSetupPass::Execute(const FPostProcessModifier& M, FSceneView* View, D3D
     halfViewport.MaxDepth = 1.0f;
     RHIDevice->GetDeviceContext()->RSSetViewports(1, &halfViewport);
 
-    // 3-2) Clear RTV (검은색, 알파=0)
+    // 3-2) Clear RTVs (검은색, 알파=0)
     float ClearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    RHIDevice->GetDeviceContext()->ClearRenderTargetView(DOFRTVs[0], ClearColor);
+    RHIDevice->GetDeviceContext()->ClearRenderTargetView(RTVs[0], ClearColor);
+    RHIDevice->GetDeviceContext()->ClearRenderTargetView(RTVs[1], ClearColor);
 
     // 4) Depth State: Depth Test/Write OFF
     RHIDevice->OMSetDepthStencilState(EComparisonFunc::Always);

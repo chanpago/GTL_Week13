@@ -46,12 +46,6 @@ void FDOFBlurPass::Execute(const FPostProcessModifier& M, FSceneView* View, D3D1
     ID3D11SamplerState* samplers[2] = { LinearClamp, PointClamp };
     RHIDevice->GetDeviceContext()->PSSetSamplers(0, 2, samplers);
 
-    // Tile SRV 바인딩 (t1)
-    if (TileSRV)
-    {
-        RHIDevice->GetDeviceContext()->PSSetShaderResources(1, 1, &TileSRV);
-    }
-
     // Depth/Blend State
     RHIDevice->OMSetDepthStencilState(EComparisonFunc::Always);
     RHIDevice->OMSetBlendState(false);
@@ -84,26 +78,29 @@ void FDOFBlurPass::Execute(const FPostProcessModifier& M, FSceneView* View, D3D1
     ID3D11ShaderResourceView* NullSRV = nullptr;
     float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-    // Input SRV: DOF[0] (혼합 텍스처, CoC 부호 있음)
-    ID3D11ShaderResourceView* inputSRV = RHIDevice->GetDOFSRV(0);
+    // Near/Far 분리 텍스처
+    // DOF[0] = Near 소스, DOF[1] = Far 소스
+    // DOF[2] = Near 블러 결과, DOF[3] = Far 블러 결과
+    ID3D11ShaderResourceView* nearSourceSRV = RHIDevice->GetDOFSRV(0);
+    ID3D11ShaderResourceView* farSourceSRV = RHIDevice->GetDOFSRV(1);
 
     // ===========================================
     // Pass 1: Near (Foreground) Blur
-    // DOF[0] → DOF[1], IsFarField = 0 (CoC < 0 만 포함)
+    // DOF[0] → DOF[2]
     // ===========================================
     {
         RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &NullSRV);
 
-        ID3D11RenderTargetView* nearRTV = RHIDevice->GetDOFRTV(1);
-        RHIDevice->OMSetCustomRenderTargets(1, &nearRTV, nullptr);
-        RHIDevice->GetDeviceContext()->ClearRenderTargetView(nearRTV, clearColor);
+        ID3D11RenderTargetView* nearBlurRTV = RHIDevice->GetDOFRTV(2);
+        RHIDevice->OMSetCustomRenderTargets(1, &nearBlurRTV, nullptr);
+        RHIDevice->GetDeviceContext()->ClearRenderTargetView(nearBlurRTV, clearColor);
 
-        RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &inputSRV);
+        RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &nearSourceSRV);
 
         FDOFBlurBufferType blurCB;
         blurCB.BlurDirection = FVector2D(0.0f, 0.0f);
-        blurCB.BlurRadius = NearBlurRadius;  // Near용
-        blurCB.IsFarField = 0;  // Near (Foreground)
+        blurCB.BlurRadius = NearBlurRadius;
+        blurCB.IsFarField = 0;  // Near
         RHIDevice->SetAndUpdateConstantBuffer(blurCB);
 
         RHIDevice->DrawFullScreenQuad();
@@ -112,89 +109,86 @@ void FDOFBlurPass::Execute(const FPostProcessModifier& M, FSceneView* View, D3D1
 
     // ===========================================
     // Pass 2: Far (Background) Blur
-    // DOF[0] → DOF[2], IsFarField = 1 (CoC >= 0 만 포함)
+    // DOF[1] → DOF[3]
     // ===========================================
     {
         RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &NullSRV);
 
-        ID3D11RenderTargetView* farRTV = RHIDevice->GetDOFRTV(2);
-        RHIDevice->OMSetCustomRenderTargets(1, &farRTV, nullptr);
-        RHIDevice->GetDeviceContext()->ClearRenderTargetView(farRTV, clearColor);
+        ID3D11RenderTargetView* farBlurRTV = RHIDevice->GetDOFRTV(3);
+        RHIDevice->OMSetCustomRenderTargets(1, &farBlurRTV, nullptr);
+        RHIDevice->GetDeviceContext()->ClearRenderTargetView(farBlurRTV, clearColor);
 
-        RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &inputSRV);
+        RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &farSourceSRV);
 
         FDOFBlurBufferType blurCB;
         blurCB.BlurDirection = FVector2D(0.0f, 0.0f);
-        blurCB.BlurRadius = FarBlurRadius;  // Far용
-        blurCB.IsFarField = 1;  // Far (Background)
+        blurCB.BlurRadius = FarBlurRadius;
+        blurCB.IsFarField = 1;  // Far
         RHIDevice->SetAndUpdateConstantBuffer(blurCB);
 
         RHIDevice->DrawFullScreenQuad();
         RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &NullSRV);
     }
 
-    // Tile SRV 언바인드
-    if (TileSRV)
-    {
-        RHIDevice->GetDeviceContext()->PSSetShaderResources(1, 1, &NullSRV);
-    }
-
     // ===========================================
-    // Pass 3 & 4: Denoise (지터링 노이즈 제거)
-    // DOF[3]을 임시 버퍼로 사용하는 Ping-Pong 방식
+    // Pass 3 & 4: Denoise
+    // 블러 후 소스 텍스처(DOF[0], DOF[1])를 임시 버퍼로 재사용
     // ===========================================
     if (bEnableDenoise)
     {
         RHIDevice->PrepareShader(FullScreenVS, DenoisePS);
 
-        ID3D11RenderTargetView* tempRTV = RHIDevice->GetDOFRTV(3);
-        ID3D11ShaderResourceView* tempSRV = RHIDevice->GetDOFSRV(3);
+        // --- Near Denoise: DOF[2] → DOF[0] → DOF[2] ---
+        ID3D11RenderTargetView* nearTempRTV = RHIDevice->GetDOFRTV(0);
+        ID3D11ShaderResourceView* nearTempSRV = RHIDevice->GetDOFSRV(0);
 
-        // --- Near Denoise: DOF[1] → DOF[3] → DOF[1] ---
-        // Pass 3a: DOF[1] → DOF[3]
+        // Pass 3a: DOF[2] → DOF[0]
         {
             RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &NullSRV);
-            RHIDevice->OMSetCustomRenderTargets(1, &tempRTV, nullptr);
-            RHIDevice->GetDeviceContext()->ClearRenderTargetView(tempRTV, clearColor);
+            RHIDevice->OMSetCustomRenderTargets(1, &nearTempRTV, nullptr);
+            RHIDevice->GetDeviceContext()->ClearRenderTargetView(nearTempRTV, clearColor);
 
-            ID3D11ShaderResourceView* nearSRV = RHIDevice->GetDOFSRV(1);
-            RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &nearSRV);
+            ID3D11ShaderResourceView* nearBlurSRV = RHIDevice->GetDOFSRV(2);
+            RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &nearBlurSRV);
 
             RHIDevice->DrawFullScreenQuad();
             RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &NullSRV);
         }
 
-        // Pass 3b: DOF[3] → DOF[1]
+        // Pass 3b: DOF[0] → DOF[2]
         {
-            ID3D11RenderTargetView* nearRTV = RHIDevice->GetDOFRTV(1);
-            RHIDevice->OMSetCustomRenderTargets(1, &nearRTV, nullptr);
+            ID3D11RenderTargetView* nearBlurRTV = RHIDevice->GetDOFRTV(2);
+            RHIDevice->OMSetCustomRenderTargets(1, &nearBlurRTV, nullptr);
 
-            RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &tempSRV);
+            RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &nearTempSRV);
 
             RHIDevice->DrawFullScreenQuad();
             RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &NullSRV);
         }
 
-        // --- Far Denoise: DOF[2] → DOF[3] → DOF[2] ---
-        // Pass 4a: DOF[2] → DOF[3]
+        // --- Far Denoise: DOF[3] → DOF[1] → DOF[3] ---
+        ID3D11RenderTargetView* farTempRTV = RHIDevice->GetDOFRTV(1);
+        ID3D11ShaderResourceView* farTempSRV = RHIDevice->GetDOFSRV(1);
+
+        // Pass 4a: DOF[3] → DOF[1]
         {
             RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &NullSRV);
-            RHIDevice->OMSetCustomRenderTargets(1, &tempRTV, nullptr);
-            RHIDevice->GetDeviceContext()->ClearRenderTargetView(tempRTV, clearColor);
+            RHIDevice->OMSetCustomRenderTargets(1, &farTempRTV, nullptr);
+            RHIDevice->GetDeviceContext()->ClearRenderTargetView(farTempRTV, clearColor);
 
-            ID3D11ShaderResourceView* farSRV = RHIDevice->GetDOFSRV(2);
-            RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &farSRV);
+            ID3D11ShaderResourceView* farBlurSRV = RHIDevice->GetDOFSRV(3);
+            RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &farBlurSRV);
 
             RHIDevice->DrawFullScreenQuad();
             RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &NullSRV);
         }
 
-        // Pass 4b: DOF[3] → DOF[2]
+        // Pass 4b: DOF[1] → DOF[3]
         {
-            ID3D11RenderTargetView* farRTV = RHIDevice->GetDOFRTV(2);
-            RHIDevice->OMSetCustomRenderTargets(1, &farRTV, nullptr);
+            ID3D11RenderTargetView* farBlurRTV = RHIDevice->GetDOFRTV(3);
+            RHIDevice->OMSetCustomRenderTargets(1, &farBlurRTV, nullptr);
 
-            RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &tempSRV);
+            RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &farTempSRV);
 
             RHIDevice->DrawFullScreenQuad();
             RHIDevice->GetDeviceContext()->PSSetShaderResources(0, 1, &NullSRV);

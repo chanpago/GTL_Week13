@@ -1,8 +1,7 @@
 #include "DOF_Common.hlsli"
 
-// Input Textures
-Texture2D    g_InputTex : register(t0);
-Texture2D    g_TileTex  : register(t1);   // Dilated Tile (Min/Max CoC)
+// Input Textures (Near 또는 Far 분리 텍스처)
+Texture2D    g_InputTex : register(t0);   // Near: DOF[0], Far: DOF[1]
 
 SamplerState g_LinearClampSample : register(s0);
 SamplerState g_PointClampSample  : register(s1);
@@ -16,9 +15,9 @@ struct PS_INPUT
 // Constant Buffer
 cbuffer DOFBlurCB : register(b2)
 {
-    float2 BlurDirection;      // (사용 안함 - Ring은 2D)
+    float2 BlurDirection;      // (사용 안함)
     float  BlurRadius;         // pixels (최대 블러 반경)
-    int    IsFarField;         // 0 = Near (Foreground), 1 = Far (Background)
+    int    IsFarField;         // 0 = Near, 1 = Far
 }
 
 cbuffer ViewportConstants : register(b10)
@@ -27,79 +26,67 @@ cbuffer ViewportConstants : register(b10)
     float4 ScreenSize;
 }
 
-#define TILE_SIZE 8
 #define PI 3.14159265359
+#define COC_THRESHOLD 0.001
 
-// 출력
 struct PS_OUTPUT
 {
     float4 Color : SV_Target0;
 };
 
-// Ring-based 2D DOF Blur
-// 1패스로 원형 보케 생성
 PS_OUTPUT mainPS(PS_INPUT input)
 {
     PS_OUTPUT output;
 
-    // 1. 중앙 샘플 (자기 자신)
+    // 1. 중앙 샘플 (소스가 이미 Near/Far 분리됨)
     float4 centerSample = g_InputTex.Sample(g_PointClampSample, input.texCoord);
     float3 centerColor = centerSample.rgb;
-    float centerCocSigned = centerSample.a;  // Near: 음수, Far: 양수
-    float centerCoc = abs(centerCocSigned);  // 블러 크기는 절대값
+    float centerCoc = centerSample.a;  // 이미 양수 (절대값)
 
-    // 2. Tile에서 Max CoC 가져오기 (Near/Far 분리)
-    // tileData: x=MaxNearCoC, y=MaxFarCoC
-    float2 pixelPos = input.texCoord * ScreenSize.xy;
-    float2 tileCount = ScreenSize.xy / TILE_SIZE;
-    int2 tileIdx = int2(pixelPos / TILE_SIZE);
-    tileIdx = clamp(tileIdx, int2(0, 0), int2(tileCount) - 1);
-    float4 tileData = g_TileTex.Load(int3(tileIdx, 0));
-    float tileMaxCoc = (IsFarField == 0) ? tileData.x : tileData.y;
+    // 2. 검색 반경 결정
+    float halfBlurRadius = BlurRadius * 0.5;
+    float2 texelSize = ScreenSize.zw;
 
-    // In-Focus 임계값 (이 이하는 선명 영역)
-    const float COC_THRESHOLD = 0.01;
-
-    // 4. 검색 반경 결정
-    // CoC는 0~1 정규화, BlurRadius는 Full Res 픽셀
-    float halfBlurRadius = BlurRadius * 0.5;  // Half Res로 변환
-
-    // BlurRadius가 0이면 블러 없음
     if (halfBlurRadius < 0.5)
     {
-        output.Color = float4(centerColor, centerCoc);
+        output.Color = float4(centerColor * centerCoc, centerCoc);
         return output;
     }
 
-    // Edge bleeding
-    float searchRadius = max(centerCoc, tileMaxCoc);
-    float pixelRadius = searchRadius * halfBlurRadius;  // Half Res 픽셀
+    // Inline dilate: 주변 최대 CoC 샘플링 (Tile Dilation 대체)
+    float dilateRadius = halfBlurRadius * 0.5;
+    float maxCoc = centerCoc;
+    maxCoc = max(maxCoc, g_InputTex.Sample(g_LinearClampSample, input.texCoord + float2(dilateRadius, 0) * texelSize).a);
+    maxCoc = max(maxCoc, g_InputTex.Sample(g_LinearClampSample, input.texCoord - float2(dilateRadius, 0) * texelSize).a);
+    maxCoc = max(maxCoc, g_InputTex.Sample(g_LinearClampSample, input.texCoord + float2(0, dilateRadius) * texelSize).a);
+    maxCoc = max(maxCoc, g_InputTex.Sample(g_LinearClampSample, input.texCoord - float2(0, dilateRadius) * texelSize).a);
+
+    // 주변에 블러 대상이 없으면 early out
+    if (maxCoc < COC_THRESHOLD)
+    {
+        output.Color = float4(0, 0, 0, 0);
+        return output;
+    }
+
+    float pixelRadius = maxCoc * halfBlurRadius;
     pixelRadius = clamp(pixelRadius, 1.0, halfBlurRadius);
 
-    // 5. Ring-based 2D Gather (단순화)
-    float2 texelSize = ScreenSize.zw;
+    // 3. Ring-based Gather
     float3 accColor = float3(0, 0, 0);
     float accWeight = 0.0;
     float validSampleCount = 0.0;
 
-    // Ring 설정
     const int MAX_RING = 5;
 
-    // Ring 0: 중심 (1 샘플)
+    // Ring 0: 중심
+    if (centerCoc > COC_THRESHOLD)
     {
-        bool isCorrectLayer = (IsFarField == 0)
-            ? (centerCocSigned < -COC_THRESHOLD)
-            : (centerCocSigned > COC_THRESHOLD);
-
-        if (isCorrectLayer)
-        {
-            accColor += centerColor;
-            accWeight += 1.0;
-            validSampleCount += 1.0;
-        }
+        accColor += centerColor;
+        accWeight += 1.0;
+        validSampleCount += 1.0;
     }
 
-    // Ring 1~MAX_RING: 원형 샘플링
+    // Ring 1~MAX_RING
     [unroll]
     for (int ring = 1; ring <= MAX_RING; ring++)
     {
@@ -115,38 +102,27 @@ PS_OUTPUT mainPS(PS_INPUT input)
 
             float4 sampleVal = g_InputTex.Sample(g_LinearClampSample, sampleUV);
             float3 sampleColor = sampleVal.rgb;
-            float sampleCocSigned = sampleVal.a;
-            float sampleCoc = abs(sampleCocSigned);
+            float sampleCoc = sampleVal.a;
 
-            // Layer Processing: 해당 레이어만 포함
-            bool isCorrectLayer = (IsFarField == 0)
-                ? (sampleCocSigned < -COC_THRESHOLD)
-                : (sampleCocSigned > COC_THRESHOLD);
-
-            if (!isCorrectLayer)
+            // 소스가 이미 분리되어 있으므로 CoC > 0이면 유효한 샘플
+            if (sampleCoc < COC_THRESHOLD)
             {
                 continue;
             }
 
-            // 깊이 체크: 샘플이 나한테 번질 수 있는 방향인지
-            // Near: 샘플이 나보다 앞에 있어야 (CoC 더 음수)
-            // Far: 샘플이 나보다 뒤에 있어야 (CoC 더 양수)
-            bool canBleedToMe = (IsFarField == 0)
-                ? (sampleCocSigned <= centerCocSigned)  // Near: 더 음수 = 더 앞
-                : (sampleCocSigned >= centerCocSigned); // Far: 더 양수 = 더 뒤
-
-            if (!canBleedToMe)
+            // 깊이 체크: 샘플의 CoC가 나보다 크거나 같아야 번질 수 있음
+            if (sampleCoc < centerCoc - 0.05)
             {
                 continue;
             }
 
-            // Scatter-as-Gather: 샘플의 블러가 현재 거리까지 도달하는지 체크
+            // Scatter-as-Gather: 샘플의 블러가 현재 거리까지 도달하는지
             float sampleRadiusPx = sampleCoc * halfBlurRadius;
             float coverage = saturate((sampleRadiusPx - ringRadius + 1.0) / max(sampleRadiusPx, 1.0));
 
             if (coverage < 0.01)
             {
-                continue;  // 도달 못하면 스킵
+                continue;
             }
 
             accColor += sampleColor * coverage;
@@ -155,23 +131,16 @@ PS_OUTPUT mainPS(PS_INPUT input)
         }
     }
 
-    // 6. 출력
-    // 해당 레이어 샘플이 없으면 투명 출력
+    // 5. 출력
     if (accWeight < 0.0001)
     {
         output.Color = float4(0, 0, 0, 0);
         return output;
     }
 
-    // RGB: 가중 평균
     float3 avgColor = accColor / accWeight;
-
-    // Alpha: 유효 샘플 수 기반 (정규화)
-    // 샘플이 충분하면 불투명, 부족하면 반투명 (블리딩)
     float finalAlpha = saturate(validSampleCount / 32.0);
 
-    // Premultiplied Alpha 변환
     output.Color = float4(avgColor * finalAlpha, finalAlpha);
-
     return output;
 }

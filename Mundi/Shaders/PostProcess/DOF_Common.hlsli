@@ -50,14 +50,17 @@ float CalculateCoC(
     {
         // 근경 (Near Field) - 음수 CoC
         float distance = focalStart - viewDepth;
-        float normalizedCoC = saturate(distance / nearTransition);
+        // smoothstep 시작점을 당겨서 경계에서 기울기 확보
+        float edgeOffset = nearTransition * 0.1;
+        float normalizedCoC = smoothstep(-edgeOffset, nearTransition, distance);
         coc = -normalizedCoC;  // 0~1 정규화
     }
     else  // viewDepth > focalEnd
     {
         // 원경 (Far Field) - 양수 CoC
         float distance = viewDepth - focalEnd;
-        float normalizedCoC = saturate(distance / farTransition);
+        float edgeOffset = farTransition * 0.1;
+        float normalizedCoC = smoothstep(-edgeOffset, farTransition, distance);
         coc = normalizedCoC;  // 0~1 정규화
     }
 
