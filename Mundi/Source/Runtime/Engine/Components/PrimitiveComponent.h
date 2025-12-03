@@ -64,9 +64,7 @@ public:
     virtual const TArray<FOverlapInfo>& GetOverlapInfos() const { static TArray<FOverlapInfo> Empty; return Empty; }
 
     // BodySetup 설정을 무시하고 싶을 때
-    UPROPERTY(EditAnywhere, Category = "Collision")
     bool bOverrideCollisionSetting = false;
-
     ECollisionState CollisionEnabled = ECollisionState::QueryAndPhysics;
     
     // ───── 복사 관련 ────────────────────────────
