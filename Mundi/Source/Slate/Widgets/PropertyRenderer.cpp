@@ -1127,23 +1127,15 @@ bool UPropertyRenderer::RenderSkeletalMeshComponentDetails(USkeletalMeshComponen
 
 	USkeletalMesh* Mesh = Component->GetSkeletalMesh();
 	UPhysicsAsset* DefaultAsset = Mesh ? Mesh->PhysicsAsset : nullptr;
+	FString PhysicsAssetPath = DefaultAsset->GetFilePath();
+
 	if (DefaultAsset)
 	{
-		ImGui::Text("Mesh Default: %s", DefaultAsset->GetName().ToString().c_str());
+		ImGui::Text("Mesh Default: %s", PhysicsAssetPath.c_str());
 	}
 	else
 	{
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Mesh Default: None");
-	}
-
-	UPhysicsAsset* ActiveAsset = Component->GetPhysicsAsset();
-	if (ActiveAsset)
-	{
-		ImGui::Text("Active Asset: %s", ActiveAsset->GetName().ToString().c_str());
-	}
-	else
-	{
-		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Active Asset: None");
 	}
 
 	const bool bHasOverride = Component->HasPhysicsAssetOverride();
@@ -1304,38 +1296,6 @@ bool UPropertyRenderer::RenderSkeletalMeshProperty(const FProperty& Prop, void* 
 		ImGui::EndTooltip();
 	}
 	
-	ImGui::Spacing();
-	ImGui::Separator(); 
-	ImGui::Spacing();
-
-	UPhysicsAsset* PhysicsAsset = nullptr;
-	if(*MeshPtr)
-	{
-		PhysicsAsset = (*MeshPtr)->PhysicsAsset;
-	}
-	
-	if (PhysicsAsset)
-	{
-		// PhysicsAsset 이름 표시
-		FString PhysicsAssetName = PhysicsAsset->GetName().ToString();
-		ImGui::Text("PhysicsAsset: %s", PhysicsAssetName.c_str());
-
-		// PhysicsAsset 파일 경로 표시
-		FString PhysicsAssetPath = PhysicsAsset->GetFilePath();
-		ImGui::Text("경로: %s", PhysicsAssetPath.c_str());
-
-		ImGui::Spacing();
-		ImGui::Separator();
-		ImGui::Spacing();
-	}
-	else
-	{
-		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "PhysicsAsset: None");
-		ImGui::Spacing();
-		ImGui::Separator();
-		ImGui::Spacing();
-	}
-
 	return false;
 }
 

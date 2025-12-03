@@ -61,27 +61,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Static Mesh", Tooltip="Static mesh asset to render")
 	UStaticMesh* StaticMesh = nullptr;
 
-	UPROPERTY()
-	FVector BoxExtent = FVector(50.f);
-
-	UPROPERTY()
-	float SphereRadius = 50.f;
-
-	UPROPERTY()
-	float CapsuleRadius = 22.f;
-
-	UPROPERTY()
-	float CapsuleHalfHeight = 44.f;
-
-	UPROPERTY()
-	FVector CollisionOffset = FVector::Zero();
-
-	UPROPERTY()
-	FQuat CollisionRotation = FQuat::Identity();
-
-	UPROPERTY(Transient)
-	class UBodySetup* BodySetupOverride = nullptr;
-
 	// Physics 설정
 	UPROPERTY(EditAnywhere, Category="Physics", Tooltip="Enable collision for this mesh (creates static collider)")
 	bool bEnableCollision = true;
@@ -111,6 +90,25 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Physics", Tooltip = "Collision type")
 	EAggCollisionShapeType CollisionType = EAggCollisionShapeType::Box;
 
+	UPROPERTY(EditAnywhere, Category = "Physics", Tooltip = "For Sphere Collision Shape")
+	float SphereRadius = 50.f;
+
+	UPROPERTY(EditAnywhere, Category = "Physics", Tooltip = "For Box Collision Shape")
+	FVector BoxExtent = FVector(50.f);
+
+	UPROPERTY(EditAnywhere, Category = "Physics", Tooltip = "For Capsule Collision Shape")
+	float CapsuleRadius = 22.f;
+
+	UPROPERTY(EditAnywhere, Category = "Physics", Tooltip = "For Capsule Collision Shape")
+	float CapsuleHalfHeight = 44.f;
+
+	UPROPERTY(EditAnywhere, Category = "Physics", Tooltip = "Collision Shape Position")
+	FVector CollisionOffset = FVector::Zero();
+
+	UPROPERTY(EditAnywhere, Category = "Physics", Tooltip = "Collision Shape Rotation")
+	FQuat CollisionRotation = FQuat::Identity();
+
+	class UBodySetup* BodySetupOverride = nullptr;
 public:
 	// Collision/Physics simulation toggles
 	bool IsCollisionEnabled() const { return bEnableCollision; }
