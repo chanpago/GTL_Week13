@@ -314,6 +314,15 @@ void UPropertyRenderer::RenderAllPropertiesWithInheritance(UObject* Object)
 	const TArray<FProperty>& AllProperties = Class->GetAllProperties();
 
 	RenderProperties(AllProperties, Object);
+
+	if (UPrimitiveComponent* Prim = Cast<UPrimitiveComponent>(Object))
+	{
+		RenderPrimitiveComponentDetails(Prim);
+	}
+	if (USkeletalMeshComponent* Skel = Cast<USkeletalMeshComponent>(Object))
+	{
+		RenderSkeletalMeshComponentDetails(Skel);
+	}
 }
 
 // ===== 리소스 캐싱 =====
@@ -1040,7 +1049,160 @@ bool UPropertyRenderer::RenderSpotLightShadowMap(FLightManager* LightManager, UL
 	ImGui::Text("Full Atlas:");
 	ImGui::Image((ImTextureID)AtlasSRV, ImVec2(256, 256), ImVec2(0, 0), ImVec2(1, 1));
 
-	return false;
+	return true;
+}
+
+bool UPropertyRenderer::RenderPrimitiveComponentDetails(UPrimitiveComponent* PrimitiveComponent)
+{
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Text("Collision Settings");
+
+	ImGui::Checkbox("Use Collision Override", &PrimitiveComponent->bOverrideCollisionSetting);
+	int CurrentIndex = static_cast<int>(PrimitiveComponent->CollisionEnabled);
+	static const char* CollisionItems[] = {
+		"NoCollision",
+		"QueryOnly (Trigger)",
+		"Query + Physics",
+	};
+	if (ImGui::Combo("Collision Settings", &CurrentIndex, CollisionItems, IM_ARRAYSIZE(CollisionItems)))
+	{
+		PrimitiveComponent->CollisionEnabled = static_cast<ECollisionState>(CurrentIndex);
+	}
+
+	return true;
+}
+
+bool UPropertyRenderer::RenderSkeletalMeshComponentDetails(USkeletalMeshComponent* Component)
+{
+	bool bChanged = false;
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Text("Physics Asset Override");
+
+	USkeletalMesh* Mesh = Component->GetSkeletalMesh();
+	UPhysicsAsset* DefaultAsset = Mesh ? Mesh->PhysicsAsset : nullptr;
+	if (DefaultAsset)
+	{
+		ImGui::Text("Mesh Default: %s", DefaultAsset->GetName().ToString().c_str());
+	}
+	else
+	{
+		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Mesh Default: None");
+	}
+
+	UPhysicsAsset* ActiveAsset = Component->GetPhysicsAsset();
+	if (ActiveAsset)
+	{
+		ImGui::Text("Active Asset: %s", ActiveAsset->GetName().ToString().c_str());
+	}
+	else
+	{
+		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Active Asset: None");
+	}
+
+	const bool bHasOverride = Component->HasPhysicsAssetOverride();
+	const FString& OverridePath = Component->GetPhysicsAssetOverridePath();
+	if (bHasOverride)
+	{
+		ImGui::Text("Override Path: %s", OverridePath.empty() ? "<unsaved>" : OverridePath.c_str());
+	}
+
+	TArray<FString> AvailablePaths = UResourceManager::GetInstance().GetAllFilePaths<UPhysicsAsset>();
+	TArray<FString> ComboPaths;
+	ComboPaths.push_back("");
+	TArray<FString> ComboLabels;
+	ComboLabels.push_back("Use Mesh Default");
+
+	for (const FString& Path : AvailablePaths)
+	{
+		ComboPaths.push_back(Path);
+		std::filesystem::path PathView(Path);
+		FString Label = PathView.filename().string();
+		if (Label.empty())
+		{
+			Label = Path;
+		}
+		ComboLabels.push_back(Label);
+	}
+
+	int SelectedIndex = 0;
+	bool bOverrideMissing = false;
+	if (bHasOverride)
+	{
+		for (int32 Index = 1; Index < ComboPaths.Num(); ++Index)
+		{
+			if (ComboPaths[Index] == OverridePath)
+			{
+				SelectedIndex = Index;
+				break;
+			}
+		}
+		if (SelectedIndex == 0 && !OverridePath.empty())
+		{
+			bOverrideMissing = true;
+		}
+	}
+
+	const char* CurrentLabel = ComboLabels[SelectedIndex].c_str();
+	ImGui::SetNextItemWidth(-1);
+	if (ImGui::BeginCombo("##PhysicsAssetOverrideCombo", CurrentLabel))
+	{
+		for (int32 Index = 0; Index < ComboLabels.Num(); ++Index)
+		{
+			bool bSelected = (SelectedIndex == Index);
+			if (ImGui::Selectable(ComboLabels[Index].c_str(), bSelected))
+			{
+				if (Index == 0)
+				{
+					Component->ClearPhysicsAssetOverride();
+				}
+				else if (Index < ComboPaths.Num())
+				{
+					Component->SetPhysicsAssetOverrideByPath(ComboPaths[Index]);
+				}
+				bChanged = true;
+			}
+			if (bSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
+
+	// Animation Graph part
+	ImGui::Spacing();
+	ImGui::Separator();
+
+	FString GraphName = Component->GetAnimGraph() ? Component->GetAnimGraph()->GetName() : "None";
+	ImGui::Text("애니메이션 그래프: %s", GraphName.c_str());
+
+	if (Component->GetAnimGraph() == nullptr)
+	{
+		if (ImGui::Button("새로운 애니메이션 그래프 생성"))
+		{
+			UAnimationGraph* NewGraph = NewObject<UAnimationGraph>();
+			Component->SetAnimGraph(NewGraph);
+			USlateManager::GetInstance().OpenAnimationGraphEditor(NewGraph);
+		}
+	}
+	else
+	{
+		if (ImGui::Button("그래프 에디터 열기"))
+		{
+			if (USlateManager::GetInstance().IsAnimationGraphEditorOpen())
+			{
+				USlateManager::GetInstance().OpenAnimationGraphEditor(Component->GetAnimGraph());
+			}
+			else
+			{
+				USlateManager::GetInstance().OpenAnimationGraphEditor(Component->GetAnimGraph());
+			}
+		}
+	}
+
+	return bChanged;
 }
 
 bool UPropertyRenderer::RenderSkeletalMeshProperty(const FProperty& Prop, void* Instance)
@@ -1107,7 +1269,6 @@ bool UPropertyRenderer::RenderSkeletalMeshProperty(const FProperty& Prop, void* 
 			return true;
 		}
 	}
-	// @todo 호버링 고쳐주세요 고장났어요
 	if (ImGui::IsItemHovered())
 	{
 		ImGui::BeginTooltip();
