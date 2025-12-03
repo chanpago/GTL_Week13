@@ -579,6 +579,15 @@ void AMyCar::UpdateVehiclePhysics(float DeltaTime)
     if (!VehicleDrive4W || !BatchQuery)
         return;
 
+    PxTransform PxTrans = VehicleDrive4W->getRigidDynamicActor()->getGlobalPose();
+
+    FTransform NewTransform;
+    NewTransform.Translation = FVector(PxTrans.p.x, PxTrans.p.y, PxTrans.p.z);
+    NewTransform.Rotation = FQuat(PxTrans.q.x, PxTrans.q.y, PxTrans.q.z, PxTrans.q.w);
+    NewTransform.Scale3D = FVector(1, 1, 1);
+
+    SetActorTransform(NewTransform);
+
     UWorld* World = GetWorld();
     if (!World || !World->GetPhysScene())
         return;
@@ -656,8 +665,8 @@ void AMyCar::UpdateVehiclePhysics(float DeltaTime)
 
     bIsVehicleInAir = PxVehicleIsInAir(vehicleQueryResults[0]);
     
-	PhysScene->StepSimulation(1.0 / 60.0f);
-    PhysScene->WaitForSimulation();
+	/*PhysScene->StepSimulation(1.0 / 60.0f);
+    PhysScene->WaitForSimulation();*/
 
     // 5. Sync transform
     if (VehicleDrive4W->getRigidDynamicActor())
@@ -670,15 +679,6 @@ void AMyCar::UpdateVehiclePhysics(float DeltaTime)
             VehicleDrive4W->getRigidDynamicActor()->getGlobalPose().p.x,
             VehicleDrive4W->getRigidDynamicActor()->getGlobalPose().p.y,
             VehicleDrive4W->getRigidDynamicActor()->getGlobalPose().p.z);
-
-        PxTransform PxTrans = VehicleDrive4W->getRigidDynamicActor()->getGlobalPose();
-
-        FTransform NewTransform;
-        NewTransform.Translation = FVector(PxTrans.p.x, PxTrans.p.y, PxTrans.p.z);
-        NewTransform.Rotation = FQuat(PxTrans.q.x, PxTrans.q.y, PxTrans.q.z, PxTrans.q.w);
-        NewTransform.Scale3D = FVector(1, 1, 1);
-
-        SetActorTransform(NewTransform);
     }
 }
 
