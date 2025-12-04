@@ -722,7 +722,7 @@ void AMyCar::UpdateVehiclePhysics(float DeltaTime)
         }
         else
         {
-            UE_LOG("[MyCarComponent] Wheel %d: NO CONTACT - wheel may be in air", i);
+            //UE_LOG("[MyCarComponent] Wheel %d: NO CONTACT - wheel may be in air", i);
         }
     }
     
@@ -766,25 +766,25 @@ void AMyCar::UpdateVehiclePhysics(float DeltaTime)
     }
 
     // 5. Enhanced logging
-    static float LogCounter = 0.0f;
-    if (LogCounter >= 1.0f) // Log every second at 60 FPS
-    {
-        LogCounter = 0.0f;
-        UE_LOG("[MyCarComponent] === Vehicle State ===");
-        UE_LOG("[MyCarComponent] Sleeping: %s | InAir: %s | Gear: %d | Reverse: %s",
-            bIsSleeping ? "YES" : "NO", 
-            bIsVehicleInAir ? "YES" : "NO", 
-            currentGear,
-            bIsReversing ? "YES" : "NO");
-        UE_LOG("[MyCarComponent] Speed: %.2f m/s | Engine RPM: %.1f",
-            forwardSpeed, engineRotationSpeed);
-        UE_LOG("[MyCarComponent] Input - Accel: %.2f | Brake: %.2f | Steer: %.2f",
-            VehicleInput.AnalogAccel, VehicleInput.AnalogBrake, VehicleInput.AnalogSteer);
-        UE_LOG("[MyCarComponent] Position: (%.2f, %.2f, %.2f)",
-            PxTrans.p.x, PxTrans.p.y, PxTrans.p.z);
-        UE_LOG("[MyCarComponent] =====================");
-    }
-    LogCounter += DeltaTime;
+    //static float LogCounter = 0.0f;
+    //if (LogCounter >= 1.0f) // Log every second at 60 FPS
+    //{
+    //    LogCounter = 0.0f;
+    //    UE_LOG("[MyCarComponent] === Vehicle State ===");
+    //    UE_LOG("[MyCarComponent] Sleeping: %s | InAir: %s | Gear: %d | Reverse: %s",
+    //        bIsSleeping ? "YES" : "NO", 
+    //        bIsVehicleInAir ? "YES" : "NO", 
+    //        currentGear,
+    //        bIsReversing ? "YES" : "NO");
+    //    UE_LOG("[MyCarComponent] Speed: %.2f m/s | Engine RPM: %.1f",
+    //        forwardSpeed, engineRotationSpeed);
+    //    UE_LOG("[MyCarComponent] Input - Accel: %.2f | Brake: %.2f | Steer: %.2f",
+    //        VehicleInput.AnalogAccel, VehicleInput.AnalogBrake, VehicleInput.AnalogSteer);
+    //    UE_LOG("[MyCarComponent] Position: (%.2f, %.2f, %.2f)",
+    //        PxTrans.p.x, PxTrans.p.y, PxTrans.p.z);
+    //    UE_LOG("[MyCarComponent] =====================");
+    //}
+    //LogCounter += DeltaTime;
     
     // Update wheel bone rotations based on PhysX wheel rotation
     UpdateWheelBoneRotations(vehicleQueryResults[0]);
@@ -837,7 +837,7 @@ void AMyCar::CleanupVehiclePhysics()
     // Cleanup PhysX Vehicle SDK
     //PxCloseVehicleSDK();
     
-    UE_LOG("[MyCarComponent] Vehicle physics cleaned up");
+    //UE_LOG("[MyCarComponent] Vehicle physics cleaned up");
 }
 
 void AMyCar::ApplyThrottle(float Value)
@@ -888,22 +888,22 @@ void AMyCar::FindWheelBones()
         if (WheelBoneIndices[i] == INDEX_NONE)
         {
             bWheelBonesFound = false;
-            UE_LOG("[MyCarComponent] Wheel bone %d not found", i);
+            //UE_LOG("[MyCarComponent] Wheel bone %d not found", i);
         }
         else
         {
-            UE_LOG("[MyCarComponent] Found wheel bone %d at index %d", i, WheelBoneIndices[i]);
+            //UE_LOG("[MyCarComponent] Found wheel bone %d at index %d", i, WheelBoneIndices[i]);
         }
     }
 
-    if (bWheelBonesFound)
+    /*if (bWheelBonesFound)
     {
         UE_LOG("[MyCarComponent] All wheel bones found successfully");
     }
     else
     {
         UE_LOG("[MyCarComponent] WARNING: Some wheel bones not found. Wheel rotation animation will be disabled.");
-    }
+    }*/
 }
 
 void AMyCar::UpdateWheelBoneRotations(const PxVehicleWheelQueryResult& Result)
@@ -913,6 +913,9 @@ void AMyCar::UpdateWheelBoneRotations(const PxVehicleWheelQueryResult& Result)
         return;
     }
 
+    // Track cumulative wheel spin rotation for each wheel
+    static float CumulativeWheelSpin[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
     // Get wheel rotation speeds from PhysX vehicle
     for (int32 WheelIdx = 0; WheelIdx < 4; WheelIdx++)
     {
@@ -921,15 +924,11 @@ void AMyCar::UpdateWheelBoneRotations(const PxVehicleWheelQueryResult& Result)
 
         // Get wheel rotation speed (rad/s) from PhysX
         const PxF32 WheelRotationSpeed = VehicleDrive4W->mWheelsDynData.getWheelRotationSpeed(WheelIdx);
-        
-        // Get current bone transform
-        FTransform CurrentBoneTransform = VehicleMesh->GetBoneLocalTransform(WheelBoneIndices[WheelIdx]);
-        
+
         // Calculate rotation delta based on wheel speed
-        // WheelRotationSpeed is in radians per second, so multiply by DeltaTime to get rotation this frame
         UWorld* World = GetWorld();
         float DeltaTime = World ? World->GetDeltaTime(EDeltaTime::Game) : 0.016f;
-        
+
         float RotationDelta = 0.0f;
         if (WheelIdx % 2 == 0)
         {
@@ -937,55 +936,56 @@ void AMyCar::UpdateWheelBoneRotations(const PxVehicleWheelQueryResult& Result)
         }
         else
         {
-			RotationDelta = WheelRotationSpeed * DeltaTime;
+            RotationDelta = WheelRotationSpeed * DeltaTime;
         }
-        
-        // Create rotation around Y-axis (wheel spinning axis in vehicle local space)
-        FQuat SpinRotation = FQuat::FromAxisAngle(FVector(0, 1, 0), RotationDelta);
 
-        // For front wheels (FL: 0, FR: 1), apply steering rotation around Z-axis
+        // Accumulate wheel spin rotation
+        CumulativeWheelSpin[WheelIdx] += RotationDelta;
+
+        // Get current bone transform
+        FTransform CurrentBoneTransform = VehicleMesh->GetBoneLocalTransform(WheelBoneIndices[WheelIdx]);
+
+        // For front wheels (FL: 0, FR: 1), apply both steering and cumulative spin
         if (WheelIdx == 0 || WheelIdx == 1) // Front Left and Front Right
         {
-            // Use current steering input instead of PhysX steer value
-			//static float PrevSteerAngle = 0.0f;
-            //float SteerAngle = -CurrentSteerInput * (PxPi * 0.5f * 0.3333f); // Max steer angle from wheel setup
-			float SteerAngle = Result.wheelQueryResults[WheelIdx].steerAngle; // Get steer angle from PhysX (in radians)
-			//UE_LOG("[MyCarComponent] Wheel %d steer angle from PhysX: %.2f degrees", WheelIdx, FMath::RadiansToDegrees(SteerAngle));
-
-            // Create steering rotation around Z-axis (vertical axis)
-            //FQuat SteerRotation = FQuat::FromAxisAngle(FVector(0, 0, 1), SteerAngle);
-            
+            // Get steer angle from PhysX (in radians)
+            float SteerAngle = Result.wheelQueryResults[WheelIdx].steerAngle;
             float SteerAngleDegree = RadiansToDegrees(SteerAngle);
 
+            // Apply both rotations using cumulative spin
+            float XAngle = WheelIdx == 0 ? 0.0f : 180.0f;
+            float YAngle = -RadiansToDegrees(CumulativeWheelSpin[WheelIdx]); // Cumulative spin in degrees
+            float ZAngle = -SteerAngleDegree + 90.0f; // Steering
 
-            UE_LOG("[MyCarComponent] Wheel %d steer angle from PhysX: %.2f degrees", WheelIdx, SteerAngleDegree);
+            FVector NewEuler = FVector(XAngle, YAngle, ZAngle);
+            CurrentBoneTransform.Rotation = FQuat::MakeFromEulerZYX(NewEuler);
 
-            // Apply both steering and spin rotations
-            FVector RotationAxis = CurrentBoneTransform.Rotation.ToEulerZYXDeg();
-			float XAngle = WheelIdx == 0 ? 0.0f : 180.0f;
-			FVector NewEuler = FVector(XAngle, RotationAxis.Y, -SteerAngleDegree + 90.0f);
-			//NewEuler.Z = NewEuler.Y > 0.0f ? NewEuler.Z /*- 180.0f*/ : NewEuler.Z;
-			CurrentBoneTransform.Rotation = FQuat::MakeFromEulerZYX(NewEuler);
-            //CurrentBoneTransform.Rotation = SteerRotation;
-            CurrentBoneTransform.Rotation = CurrentBoneTransform.Rotation * SpinRotation;
+            /*UE_LOG("[MyCarComponent] Wheel %d - Cumulative spin: %.2f deg, Steer: %.2f deg",
+                WheelIdx, YAngle, SteerAngleDegree);*/
         }
         else
         {
-            CurrentBoneTransform.Rotation = CurrentBoneTransform.Rotation * SpinRotation;
+            // For rear wheels, just apply cumulative spin rotation
+            float YAngle = -RadiansToDegrees(CumulativeWheelSpin[WheelIdx]);
+            //float XAngle = WheelIdx == 2 ? 0.0f : 180.0f; // Rear wheels orientation
+
+			FVector RotationEuler = CurrentBoneTransform.Rotation.ToEulerZYXDeg();
+
+            FVector NewEuler = FVector(RotationEuler.X, YAngle, RotationEuler.Z);
+            CurrentBoneTransform.Rotation = FQuat::MakeFromEulerZYX(NewEuler);
         }
-        
+
         CurrentBoneTransform.Rotation.Normalize();
-        
+
         // Set the updated bone transform
         VehicleMesh->SetBoneLocalTransform(WheelBoneIndices[WheelIdx], CurrentBoneTransform);
-        
+
         // Optional: Log wheel rotation for debugging (every 60 frames)
         static int32 LogFrameCounter = 0;
-        if (LogFrameCounter++ % 60 == 0 && (WheelIdx == 0 || WheelIdx == 1))
+        /*if (LogFrameCounter++ % 60 == 0 && (WheelIdx == 0 || WheelIdx == 1))
         {
-            float SteerAngleDegrees = CurrentSteerInput * 60.0f; // Convert to degrees (max 60 degrees)
-            UE_LOG("[MyCarComponent] Wheel %d - Spin speed: %.2f rad/s, Steer angle: %.1f deg", 
-                   WheelIdx, WheelRotationSpeed, SteerAngleDegrees);
-        }
+            UE_LOG("[MyCarComponent] Wheel %d - Spin speed: %.2f rad/s, Cumulative: %.2f deg",
+                WheelIdx, WheelRotationSpeed, RadiansToDegrees(CumulativeWheelSpin[WheelIdx]));
+        }*/
     }
 }
